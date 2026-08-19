@@ -579,7 +579,6 @@ import { BiTestTube } from 'react-icons/bi';
 import { FaCheckCircle } from 'react-icons/fa';
 import { IoIosArrowBack } from 'react-icons/io';
 import { SetStateAction } from 'jotai';
-import { JsxElement } from 'typescript';
 import mellat from 'public/mellat.png';
 import zarinPal from 'public/zarinPal.webp';
 import Image from 'next/image';
@@ -620,18 +619,21 @@ const cardsOptions = [
     default: true,
     value: 'credit',
     isIcon: true,
+    disabled: false,
   },
   {
     icon: zarinPal,
     title: 'درگاه زرین پال',
     default: false,
     value: 'zarinPal',
+    disabled: true,
   },
   {
     icon: mellat,
     title: 'درگاه بانک ملت',
     default: false,
     value: 'mellat',
+    disabled: true,
   },
 ];
 
@@ -873,7 +875,13 @@ export function CardDetails() {
                   onChange={() => setPaymentMethod(cards.value)}
                   defaultChecked={cards.value === paymentMethod}
                   value={cards.value}
-                  className="flex gap-3 rounded-xl border border-gray-300 p-5 text-sm hover:cursor-pointer hover:border-gray-900"
+                  disabled={cards.disabled}
+                  className={cn(
+                      'flex gap-3 rounded-xl border border-gray-300 p-5 text-sm',
+                      cards.disabled
+                          ? 'cursor-not-allowed opacity-50'
+                          : 'hover:cursor-pointer hover:border-gray-900'
+                  )}
                   inputClassName="[&:checked~span_div>.icon]:block [&:checked~span]:ring-1 [&:checked~span]:ring-offset-0 [&:checked~span]:ring-gray-900 [&:checked~span]:!border-gray-900"
               >
                 <div className="flex items-center justify-center">

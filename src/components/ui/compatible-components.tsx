@@ -275,74 +275,79 @@ export const Pagination = ({
                                onChange,
                                className,
                            }: PaginationProps) => {
-    const totalPages = Math.ceil(total / pageSize);
+    const totalPages = pageSize > 0 ? Math.ceil(total / pageSize) : 0;
+    const activePage = Math.min(Math.max(current, 1), Math.max(totalPages, 1));
 
     const renderPageButton = (pageNumber: number) => (
         <button
+            type="button"
             key={pageNumber}
             className={cn(
-                "relative inline-flex items-center px-4 py-2 text-sm font-medium",
-                pageNumber === current
+                "relative inline-flex items-center px-4 py-2 text-sm font-medium ring-1 ring-inset ring-gray-300 focus:z-20 focus:outline-offset-0 dark:ring-gray-700",
+                pageNumber === activePage
                     ? "z-10 bg-primary text-white focus:z-20"
                     : "bg-white text-gray-500 hover:bg-gray-50 focus:z-20 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
             )}
             onClick={() => onChange(pageNumber)}
+            aria-current={pageNumber === activePage ? 'page' : undefined}
+            aria-label={`صفحه ${pageNumber}`}
         >
             {pageNumber}
         </button>
     );
 
     const renderPageNumbers = () => {
-        const pageNumbers = [];
+        const range = (start: number, end: number) =>
+            Array.from({ length: end - start + 1 }, (_, index) => start + index);
+        let items: Array<number | 'ellipsis-start' | 'ellipsis-end'>;
 
-        // Always show first page
-        if (current > 3) {
-            pageNumbers.push(renderPageButton(1));
-
-            // Add ellipsis if needed
-            if (current > 4) {
-                pageNumbers.push(
-                    <span key="ellipsis-start" className="relative inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-            ...
-          </span>
-                );
-            }
+        if (totalPages <= 7) {
+            items = range(1, totalPages);
+        } else if (activePage <= 4) {
+            items = [...range(1, 5), 'ellipsis-end', totalPages];
+        } else if (activePage >= totalPages - 3) {
+            items = [1, 'ellipsis-start', ...range(totalPages - 4, totalPages)];
+        } else {
+            items = [
+                1,
+                'ellipsis-start',
+                activePage - 1,
+                activePage,
+                activePage + 1,
+                'ellipsis-end',
+                totalPages,
+            ];
         }
 
-        // Show current page and neighbors
-        const startPage = Math.max(1, current - 1);
-        const endPage = Math.min(totalPages, current + 1);
-
-        for (let i = startPage; i <= endPage; i++) {
-            pageNumbers.push(renderPageButton(i));
-        }
-
-        // Always show last page
-        if (current < totalPages - 2) {
-            // Add ellipsis if needed
-            if (current < totalPages - 3) {
-                pageNumbers.push(
-                    <span key="ellipsis-end" className="relative inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-            ...
-          </span>
-                );
-            }
-
-            pageNumbers.push(renderPageButton(totalPages));
-        }
-
-        return pageNumbers;
+        return items.map((item) =>
+            typeof item === 'number' ? renderPageButton(item) : (
+                <span
+                    key={item}
+                    className="relative inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 ring-1 ring-inset ring-gray-300 dark:text-gray-300 dark:ring-gray-700"
+                    aria-hidden="true"
+                >
+                    ...
+                </span>
+            )
+        );
     };
+
+    if (totalPages === 0) return null;
 
     return (
         <div className={cn("flex items-center justify-center", className)}>
-            <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+            <nav
+                dir="rtl"
+                className="isolate inline-flex -space-x-px rounded-md shadow-sm"
+                aria-label="صفحه‌بندی"
+            >
                 <button
-                    className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 dark:ring-gray-700 dark:hover:bg-gray-700"
-                    onClick={() => onChange(Math.max(1, current - 1))}
-                    disabled={current === 1}
+                    type="button"
+                    className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent dark:ring-gray-700 dark:hover:bg-gray-700"
+                    onClick={() => onChange(activePage - 1)}
+                    disabled={activePage <= 1}
                 >
-                    <span className="sr-only">Previous</span>
+                    <span className="sr-only">صفحه قبل</span>
                     <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                         <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
                     </svg>
@@ -352,11 +357,12 @@ export const Pagination = ({
                 {renderPageNumbers()}
 
                 <button
-                    className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 dark:ring-gray-700 dark:hover:bg-gray-700"
-                    onClick={() => onChange(Math.min(totalPages, current + 1))}
-                    disabled={current === totalPages}
+                    type="button"
+                    className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent dark:ring-gray-700 dark:hover:bg-gray-700"
+                    onClick={() => onChange(activePage + 1)}
+                    disabled={activePage >= totalPages}
                 >
-                    <span className="sr-only">Next</span>
+                    <span className="sr-only">صفحه بعد</span>
                     <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                         <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
                     </svg>

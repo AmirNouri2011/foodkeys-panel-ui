@@ -545,6 +545,7 @@ export function defaultValues(company?: CreateCompanyInput | null) {
         telegramId: company?.telegramId ?? '',
         telegramPhoneNo: company?.telegramPhoneNo ?? '',
         smsNumber: company?.smsNumber ?? '',
+        hotlineNumber: company?.hotlineNumber ?? '',
         specialLineNumber: company?.specialLineNumber ?? '',
         whatsAppId: company?.whatsAppId ?? '',
         whatsAppPhoneNo: company?.whatsAppPhoneNo ?? '',

@@ -157,8 +157,8 @@ export default function CreateExhibition({
         additionalDataFileIds: null,
       };
 
-      console.log('data: ', JSON.stringify(data));
-      console.log('payload: ', JSON.stringify(payload));
+      // console.log('data: ', JSON.stringify(data));
+      // console.log('payload: ', JSON.stringify(payload));
 
       const response = await _axios.post(
         `${API_BASE_URL}/service`,

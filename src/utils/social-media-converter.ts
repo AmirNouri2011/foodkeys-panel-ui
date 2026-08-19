@@ -9,7 +9,8 @@ export const socialMediaConverter = (formValues: { [x: string]: any; }) => {
         {key: 'skypeId', type: 'SKYPE_ID'},
         {key: 'eitaaPhoneNo', type: 'EITAA_PHONE_NO'},
         {key: 'rubikaPhoneNo', type: 'RUBIKA_PHONE_NO'},
-        {key: 'website', type: 'WEBSITE'}
+        {key: 'website', type: 'WEBSITE'},
+        {key: 'hotlineNumber', type: 'HOTLINE_NUMBER'},
     ];
 
     const socialMediaList = socialMediaKeys

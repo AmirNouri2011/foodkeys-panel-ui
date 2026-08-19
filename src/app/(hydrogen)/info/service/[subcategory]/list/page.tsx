@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Button, Input, Textarea, Badge, ActionIcon } from 'rizzui';
-import { ChevronLeft, Edit, Eye, Search as SearchIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Edit, Eye, Search as SearchIcon } from 'lucide-react';
 import { useServiceApi, ServiceDTO, ServicesListResponse } from '@/app/api/services';
 import { routes } from '@/config/routes';
 import Spinner from '@/components/ui/spinner';
@@ -25,19 +25,33 @@ export default function ServiceListPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [services, setServices] = useState<ServiceDTO[]>([]);
+    const [pageNumber, setPageNumber] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
+    const [pageSizeInput, setPageSizeInput] = useState('10');
     const [pagination, setPagination] = useState({
-        pageNumber: 1,
-        pageSize: 10,
         totalPages: 0,
         totalElements: 0
     });
     const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
+
+    useEffect(() => {
+        const timeoutId = window.setTimeout(() => {
+            setPageNumber(1);
+            setDebouncedSearch(searchTerm.trim());
+        }, 500);
+
+        return () => window.clearTimeout(timeoutId);
+    }, [searchTerm]);
 
     // Fetch services for this subcategory
     useEffect(() => {
+        let isCurrentRequest = true;
+
         const fetchServices = async () => {
             try {
                 setIsLoading(true);
+                setError(null);
 
                 // For now, using getServices with the subcategory's ID if available
                 let response: ServicesListResponse;
@@ -52,47 +66,58 @@ export default function ServiceListPage() {
                     // Fallback - try to get by subcategory name
                     response = await serviceApi.getServicesBySubcategory(
                         subcategory as string,
-                        pagination.pageNumber,
-                        pagination.pageSize
+                        pageNumber,
+                        pageSize,
+                        debouncedSearch,
                     );
                 // }
 
+                if (!isCurrentRequest) return;
+
                 if (response && response.status === 'SUCCESS') {
                     setServices(response.data);
-                    setPagination(response.pagination);
+                    setPagination({
+                        totalPages: response.pagination.totalPages,
+                        totalElements: response.pagination.totalElements,
+                    });
                 } else {
                     setError('خطا در دریافت لیست سرویس‌ها');
                 }
             } catch (err) {
+                if (!isCurrentRequest) return;
+
                 console.error('Error fetching services:', err);
                 setError('خطا در دریافت لیست سرویس‌ها');
                 setServices([]); // Reset in case of error
             } finally {
-                setIsLoading(false);
+                if (isCurrentRequest) {
+                    setIsLoading(false);
+                }
             }
         };
 
         if (subcategory) {
             fetchServices();
         }
-    }, [subcategory, pagination.pageNumber, pagination.pageSize, currentSubcategory, serviceApi]);
+
+        return () => {
+            isCurrentRequest = false;
+        };
+    }, [subcategory, pageNumber, pageSize, debouncedSearch, serviceApi]);
 
     // Handle page change
     const handlePageChange = (page: number) => {
-        setPagination(prev => ({
-            ...prev,
-            pageNumber: page - 1 // API uses 0-based pagination
-        }));
+        setPageNumber(Math.min(Math.max(page, 1), pagination.totalPages));
     };
 
-    // Handle search
-    const handleSearch = () => {
-        // Reset to first page and perform search
-        setPagination(prev => ({
-            ...prev,
-            pageNumber: 0
-        }));
-        // In a real implementation, you would pass the search term to your API call
+    const handlePageSizeChange = (value: string) => {
+        setPageSizeInput(value);
+        const nextPageSize = Number(value);
+
+        if (value && Number.isInteger(nextPageSize) && nextPageSize > 0) {
+            setPageNumber(1);
+            setPageSize(nextPageSize);
+        }
     };
 
     // Format date
@@ -120,7 +145,7 @@ export default function ServiceListPage() {
                         className="mr-2"
                         onClick={() => router.back()}
                     >
-                        <ChevronLeft className="h-5 w-5" />
+                        <ChevronRight className="h-5 w-5" />
                     </Button>
                     <Title className="text-xl md:text-2xl">
                         لیست {currentSubcategory?.subCategoryDisplayName || subcategory}
@@ -129,16 +154,24 @@ export default function ServiceListPage() {
 
                 <div className="flex flex-col md:flex-row gap-3">
                     <div className="relative">
-                        <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+                        {/* <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" /> */}
                         <Search
                             placeholder="جستجو..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                             className="max-w-full md:w-[280px]"
                             inputClassName="pl-10"
                         />
                     </div>
+
+                    {/* <Input
+                        type="number"
+                        min={1}
+                        value={pageSizeInput}
+                        onChange={(e) => handlePageSizeChange(e.target.value)}
+                        onBlur={() => setPageSizeInput(String(pageSize))}
+                        className="w-full md:w-32"
+                    /> */}
 
                     <Button
                         onClick={() => router.push(routes.info.serviceIndustrySubCategoryCreate(subcategory as string))}
@@ -158,7 +191,7 @@ export default function ServiceListPage() {
                 {isLoading ? (
                     <div className="flex justify-center items-center p-10">
                         <Spinner size="xl" />
-                        <p className="ms-3">در حال بارگذاری...</p>
+                        {/* <p className="ms-3">در حال بارگذاری...</p> */}
                     </div>
                 ) : services.length === 0 ? (
                     <div className="text-center p-10">
@@ -191,7 +224,7 @@ export default function ServiceListPage() {
                                     {services.map((service, index) => (
                                         <Table.Row key={service.id}>
                                             <Table.Cell>
-                                                {pagination.pageNumber * pagination.pageSize + index + 1}
+                                                {(pageNumber - 1) * pageSize + index + 1}
                                             </Table.Cell>
                                             <Table.Cell>
                                                 <p className="font-medium">{service.name}</p>
@@ -237,9 +270,9 @@ export default function ServiceListPage() {
 
                         <div className="flex justify-center py-5">
                             <Pagination
-                                pageSize={pagination.pageSize}
+                                pageSize={pageSize}
                                 total={pagination.totalElements}
-                                current={pagination.pageNumber} // API uses 0-based pagination
+                                current={pageNumber}
                                 onChange={handlePageChange}
                             />
                         </div>

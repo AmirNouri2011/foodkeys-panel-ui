@@ -129,11 +129,11 @@ function LogoUpload(
                     onUploadSuccess(uploadedFileData);
                 }
             } else {
-                setError('خطا در آپلود لوگو. لطفا دوباره تلاش کنید.');
+                setError(response?.data?.message || 'خطا در آپلود لوگو. لطفا دوباره تلاش کنید.');
             }
         } catch (error) {
             console.error('Error uploading logo:', error);
-            setError('خطا در آپلود لوگو. لطفا دوباره تلاش کنید.');
+            setError(error?.response?.data?.message || 'خطا در آپلود لوگو. لطفا دوباره تلاش کنید.');
         } finally {
             setLoading(false);
         }

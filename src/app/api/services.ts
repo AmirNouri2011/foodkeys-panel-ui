@@ -152,9 +152,23 @@ export const useServiceApi = () => {
     );
 
     const getServicesBySubcategory = useCallback(
-        async (subCategoryName: string, page = 1, size = 10): Promise<ServicesListResponse> => {
+        async (
+            subCategoryName: string,
+            page = 1,
+            size = 10,
+            search = '',
+        ): Promise<ServicesListResponse> => {
+            const params = new URLSearchParams({
+                pageNumber: String(page),
+                pageSize: String(size),
+            });
+
+            if (search) {
+                params.set('search', search);
+            }
+
             const response = await axios.get<ServicesListResponse>(
-                `/service/subcategory/by-name/${encodeURIComponent(subCategoryName)}?pageNumber=${page}&pageSize=${size}`,
+                `/service/subcategory/by-name/${encodeURIComponent(subCategoryName)}?${params.toString()}`,
             );
             return response.data;
         },

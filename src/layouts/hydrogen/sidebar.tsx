@@ -311,16 +311,16 @@ export default function Sidebar({ className }: { className?: string }) {
         href: '/support/ticket',
         icon: <PiHeadsetDuotone />,
       },
-      {
-        name: 'ایمیل',
-        href: '/support/email',
-        icon: <PiMailboxDuotone />,
-      },
-      {
-        name: 'پیام',
-        href: '/support/message',
-        icon: <PiChatCenteredTextDuotone />,
-      },
+      // {
+      //   name: 'ایمیل',
+      //   href: '/support/email',
+      //   icon: <PiMailboxDuotone />,
+      // },
+      // {
+      //   name: 'پیام',
+      //   href: '/support/message',
+      //   icon: <PiChatCenteredTextDuotone />,
+      // },
       {
         name: 'مدیریت مالی',
       },

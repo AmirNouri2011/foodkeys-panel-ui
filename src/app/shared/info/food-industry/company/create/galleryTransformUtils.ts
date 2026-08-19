@@ -104,7 +104,7 @@ export const transformGalleryFiles = (galleryFiles: any[]) => {
  */
 export function prepareGalleryFilesForSubmission(galleryData: any) {
     if (!galleryData) return [];
-    console.log(`Gallery Data: ${JSON.stringify(galleryData)}`)
+    // console.log(`Gallery Data: ${JSON.stringify(galleryData)}`)
     const galleryFiles: any[] = [];
     const allSections = ['products', 'certificates', 'contacts', 'sliders', 'catalogs', 'videos', 'documents', 'officeEnvironments'];
 

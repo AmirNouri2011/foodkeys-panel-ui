@@ -500,7 +500,7 @@ export default function ServiceCreatePage() {
 
             if (response && response.status === 'SUCCESS') {
                 // Navigate to the service list
-                router.push(routes.info.serviceIndustrySubCategoryList(subcategory as string));
+                router.replace(routes.info.serviceIndustrySubCategoryList(subcategory as string));
             } else {
                 setError('خطا در ایجاد سرویس');
             }
@@ -595,7 +595,7 @@ export default function ServiceCreatePage() {
                     isLoading={isLoading}
                     disabled={!serviceData.name || !subCategoryId || schemaLoading}
                 >
-                    {isLoading ? 'در حال ذخیره...' : 'ذخیره سرویس'}
+                    {isLoading ? 'در حال ذخیره...' : 'ذخیره اطلاعات'}
                 </Button>
             </div>
         </div>

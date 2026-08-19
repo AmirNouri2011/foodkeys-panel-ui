@@ -222,6 +222,7 @@ export interface CompanyCreateDTO {
   website?: string
   emails?: string[]
   smsNumber?: string
+  hotlineNumber?: string
   specialLineNumber?: string
   logo?: string            // URL or ID returned from upload
   backgroundImage?: string // URL or ID returned from upload
@@ -310,6 +311,7 @@ export interface CreateCompanyInput {
   website?: string
   emails?: string[]
   smsNumber?: string
+  hotlineNumber?: string
   specialLineNumber?: string
 
   // file uploads
@@ -831,6 +833,7 @@ export default function CreateCompany({
         website: data.website,
         emails: data.emails,
         smsNumber: data.smsNumber,
+        hotlineNumber: data.hotlineNumber || data.specialLineNumber,
         specialLineNumber: data.specialLineNumber,
       })
 
@@ -945,6 +948,7 @@ export default function CreateCompany({
         website:            data.website,
         emails:             data.emails,
         smsNumber:          data.smsNumber,
+        hotlineNumber:      data.hotlineNumber,
         specialLineNumber:  data.specialLineNumber,
         logo:               data.logo,
         backgroundImage:    data.backgroundImageUrl,

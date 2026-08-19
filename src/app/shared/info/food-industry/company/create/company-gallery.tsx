@@ -564,7 +564,7 @@ export default function CompanyGallery({
                 throw new Error('Failed to upload files');
             } catch (err) {
                 console.error('Error uploading files:', err);
-                toast.error('خطا در آپلود فایل‌ها. لطفا دوباره تلاش کنید.');
+                toast.error(err?.response?.data?.message || 'خطا در آپلود فایل‌ها. لطفا دوباره تلاش کنید.');
                 return [];
             }
         },

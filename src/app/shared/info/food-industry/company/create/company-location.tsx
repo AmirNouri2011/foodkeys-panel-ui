@@ -203,6 +203,7 @@ import cn from "@/utils/class-names";
 import { Tabs, TabList, Tab, TabPanel } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import dynamic from "next/dynamic";
+import { PiWarningCircleBold } from "react-icons/pi";
 
 // Dynamically import MiniMap component with no SSR
 const MiniMap = dynamic(() => import("../../../../mini-map/MiniMap"), {
@@ -225,6 +226,26 @@ export default function CompanyLocation({ className }: { className?: string }) {
     const [activeTab, setActiveTab] = useState("factory");
     const factoryAddress = watch("factoryLocation", "");
     const officeAddress = watch("officeLocation", "");
+
+    const locationFields = [
+        { name: "factoryState", label: "استان کارخانه", tab: "factory" },
+        { name: "factoryCity", label: "شهر کارخانه", tab: "factory" },
+        { name: "industrialCity", label: "نام شهرک صنعتی", tab: "factory" },
+        { name: "factoryPoBox", label: "کد پستی کارخانه", tab: "factory" },
+        { name: "factoryLocation", label: "آدرس کارخانه", tab: "factory" },
+        { name: "officeState", label: "استان دفتر مرکزی", tab: "office" },
+        { name: "officeCity", label: "شهر دفتر مرکزی", tab: "office" },
+        { name: "officePoBox", label: "کد پستی دفتر مرکزی", tab: "office" },
+        { name: "officeLocation", label: "آدرس دفتر مرکزی", tab: "office" },
+    ] as const;
+
+    const locationErrors = locationFields.flatMap((field) => {
+        const message = errors[field.name]?.message;
+
+        return typeof message === "string" ? [{ ...field, message }] : [];
+    });
+    const factoryHasErrors = locationErrors.some(({ tab }) => tab === "factory");
+    const officeHasErrors = locationErrors.some(({ tab }) => tab === "office");
 
     // Set coordinates in form when address changes
     useEffect(() => {
@@ -252,6 +273,9 @@ export default function CompanyLocation({ className }: { className?: string }) {
                         )}
                     >
                         کارخانه
+                        {factoryHasErrors && (
+                            <span className="ms-2 inline-flex h-2 w-2 rounded-full bg-red-500" />
+                        )}
                     </Tab>
                     <Tab
                         value="office"
@@ -262,6 +286,9 @@ export default function CompanyLocation({ className }: { className?: string }) {
                         )}
                     >
                         دفتر مرکزی
+                        {officeHasErrors && (
+                            <span className="ms-2 inline-flex h-2 w-2 rounded-full bg-red-500" />
+                        )}
                     </Tab>
                 </TabList>
                 <div className="h-5" />
@@ -316,7 +343,7 @@ export default function CompanyLocation({ className }: { className?: string }) {
                                     <MiniMap
                                         className="h-full"
                                         locationPrefix="factory"
-                                        setAddress={(address) => setValue("factoryLocation", address)}
+                                        setAddress={(address) => setValue("factoryLocation", address, { shouldDirty: true, shouldValidate: true })}
                                     />
                                 </div>
                                 <div className="flex justify-between mt-4 text-xs text-gray-500">
@@ -372,7 +399,7 @@ export default function CompanyLocation({ className }: { className?: string }) {
                                     <MiniMap
                                         className="h-full"
                                         locationPrefix="office"
-                                        setAddress={(address) => setValue("officeLocation", address)}
+                                        setAddress={(address) => setValue("officeLocation", address, { shouldDirty: true, shouldValidate: true })}
                                     />
                                 </div>
                                 <div className="flex justify-between mt-4 text-xs text-gray-500">
@@ -383,6 +410,38 @@ export default function CompanyLocation({ className }: { className?: string }) {
                         </div>
                     </div>
                 </TabPanel>
+
+                {locationErrors.length > 0 && (
+                    <div
+                        role="alert"
+                        aria-live="polite"
+                        className="mt-6 overflow-hidden rounded-xl border border-red-200 bg-gradient-to-l from-red-50 to-orange-50 shadow-sm dark:border-red-300 dark:from-red-50 dark:to-orange-50"
+                    >
+                        <div className="flex gap-3 border-b border-red-200 px-5 py-4 dark:border-red-300">
+                            <PiWarningCircleBold className="mt-0.5 h-6 w-6 shrink-0 text-red-600" aria-hidden="true" />
+                            <div>
+                                <p className="font-semibold text-red-800">اطلاعات موقعیت مکانی نیاز به تکمیل دارد</p>
+                                <p className="mt-1 text-sm text-red-700">
+                                    برای مشاهده و اصلاح هر مورد، روی آن کلیک کنید تا زبانه مرتبط باز شود.
+                                </p>
+                            </div>
+                        </div>
+                        <ul className="grid gap-2 px-5 py-4 sm:grid-cols-2">
+                            {locationErrors.map(({ name, label, message, tab }) => (
+                                <li key={name} className="flex items-start gap-2 text-sm text-red-light">
+                                    <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-red-500" aria-hidden="true" />
+                                    <button
+                                        type="button"
+                                        onClick={() => setActiveTab(tab)}
+                                        className="text-right leading-6 transition-colors hover:text-red-dark hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"
+                                    >
+                                        <span className="font-semibold">{label}:</span> {message}
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
             </Tabs>
         </FormGroup>
     );
