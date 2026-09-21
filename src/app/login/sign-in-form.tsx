@@ -16,16 +16,12 @@ import { login as reduxLogin } from '@/store/userSlice';
 import { useDispatch } from 'react-redux';
 import CaptchaField from '@/components/auth/captcha-field';
 import { useCaptcha } from '@/hooks/use-captcha';
-import {
-  CAPTCHA_ERROR,
-  checkCaptchaRequired,
-} from '@/utils/auth-captcha';
+import { CAPTCHA_ERROR, checkCaptchaRequired } from '@/utils/auth-captcha';
 
 const loginSchema = z.object({
   username: z
-    .string({})
-    .min(11, 'فرمت نام کاربری اشتباه است')
-    .max(11, 'فرمت نام کاربری اشتباه است'),
+    .string()
+    .regex(/^09\d{9}$/, 'شماره موبایل باید با 09 شروع شود و ۱۱ رقم باشد'),
   password: z.string().min(1, { message: 'رمزعبور اشتباه است' }),
   remember: z.boolean(),
 });
@@ -40,8 +36,10 @@ const initialValues: Login = {
 
 export default function SignInForm({
   step,
+  onCaptchaVisibilityChange,
 }: {
   step: 'INITIAL' | 'PASSWORD' | 'SIGNUP';
+  onCaptchaVisibilityChange?: (visible: boolean) => void;
 }) {
   const [reset, setReset] = useState({});
   const reduxDispatch = useDispatch();
@@ -57,6 +55,11 @@ export default function SignInForm({
     void captcha.refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showCaptcha]);
+
+  useEffect(() => {
+    onCaptchaVisibilityChange?.(showCaptcha);
+    return () => onCaptchaVisibilityChange?.(false);
+  }, [onCaptchaVisibilityChange, showCaptcha]);
 
   useEffect(() => {
     if (step !== 'PASSWORD' || usernameForStatus.length !== 11) return;
@@ -131,7 +134,7 @@ export default function SignInForm({
           }}
         >
           {({ register, formState: { errors } }) => (
-            <div className="space-y-5">
+            <div className={showCaptcha ? 'space-y-3' : 'space-y-5'}>
               <Input
                 dir="rtl"
                 type="number"
@@ -188,13 +191,17 @@ export default function SignInForm({
           {({ register, formState: { errors } }) => (
             <div className="space-y-5">
               <Input
-                type="number"
+                type="tel"
+                dir="ltr"
                 size="lg"
-                label="نام کاربری"
-                placeholder="نام کاربری خود را وارد کنید"
-                color="info"
+                label="شماره موبایل"
+                placeholder="09 *********"
+                color="success"
                 className="[&>label>span]:font-medium"
-                inputClassName="text-sm"
+                inputClassName="h-12 text-left text-sm tracking-wide"
+                inputMode="numeric"
+                autoComplete="username"
+                maxLength={11}
                 {...register('username', {
                   onChange: (e) => setUsernameForStatus(e.target.value),
                 })}
@@ -205,8 +212,9 @@ export default function SignInForm({
                 placeholder="رمز عبور خود را وارد کنید"
                 size="lg"
                 className="[&>label>span]:font-medium"
-                inputClassName="text-sm"
-                color="info"
+                inputClassName="h-12 text-sm"
+                color="success"
+                autoComplete="current-password"
                 {...register('password')}
                 error={errors.password?.message}
               />
@@ -218,7 +226,9 @@ export default function SignInForm({
                   onRefresh={captcha.refresh}
                   loading={captcha.loading}
                   error={captcha.error}
+                  loadError={captcha.loadError}
                   color="info"
+                  compact
                 />
               )}
               <div className="flex items-center justify-between pb-2">
@@ -230,13 +240,13 @@ export default function SignInForm({
                 />
                 <Link
                   href={routes.auth.forgotPassword1}
-                  className="h-auto p-0 text-sm font-semibold text-[#129974] underline transition-colors hover:text-gray-900 hover:no-underline"
+                  className="h-auto p-0 text-xs font-semibold text-[#0d765a] transition-colors hover:text-gray-900 sm:text-sm"
                 >
                   رمز عبور را فراموش کردید؟
                 </Link>
               </div>
               <Button
-                className="group/btn w-full bg-[#129974]"
+                className="group/btn h-12 w-full bg-[#129974] text-base font-semibold shadow-[0_10px_24px_-10px_rgba(18,153,116,0.9)] transition-all hover:bg-[#0d8061] hover:shadow-[0_14px_28px_-12px_rgba(18,153,116,0.95)]"
                 type="submit"
                 size="lg"
                 color="success"

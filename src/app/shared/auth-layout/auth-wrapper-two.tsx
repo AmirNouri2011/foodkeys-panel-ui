@@ -1,152 +1,129 @@
 'use client';
 
 import Link from 'next/link';
-import logoImg from '@public/fkLogo.png';
-import logoImgText from '@public/logo-primary-text.svg';
 import Image from 'next/image';
+import logoImg from '@public/fkLogo.png';
 import { Text } from '@/components/ui/text';
 import { Button } from '@/components/ui/button';
 import {
-  PiAppleLogo,
-  PiArrowLeftBold,
-  PiArrowRightBold,
-  PiPasswordBold,
-  PiPasswordFill,
+  PiCheckCircleFill,
+  PiDeviceMobile,
+  PiLockKeyFill,
+  PiShieldCheckFill,
 } from 'react-icons/pi';
-import { FcGoogle } from 'react-icons/fc';
-import OrSeparation from './or-separation';
-import toast from 'react-hot-toast';
 
 export default function AuthWrapperTwo({
   children,
   title,
-  bannerTitle,
-  bannerDescription,
   description,
   pageImage,
-  isSocialLoginActive = false,
-  isSignIn = false,
   setStep,
+  isCaptchaVisible = false,
 }: {
   children: React.ReactNode;
   title: React.ReactNode;
-  description?: string;
   bannerTitle?: string;
   bannerDescription?: string;
+  description?: string;
   pageImage?: React.ReactNode;
   isSocialLoginActive?: boolean;
   isSignIn?: boolean;
   setStep: (arg: 'INITIAL' | 'PASSWORD' | 'SIGNUP') => void;
+  isCaptchaVisible?: boolean;
 }) {
-  function handleSignIn() {
-    // toast.error(
-    //   <Text>
-    //     این مورد در مرحله آزمون است{' '}
-    //     <Text tag="b" className="font-semibold text-gray-900">
-    //       ورود
-    //     </Text>{' '}
-    //   </Text>
-    // );
-  }
   return (
-    <>
-      <Button
-        // href={'/login'}
-        onClick={() => setStep('INITIAL')}
-        className="sticky start-0 top-0 z-20 flex items-center justify-center bg-[#129974] p-3.5 text-sm font-medium text-white md:p-4 lg:hidden"
-      >
-        <PiArrowRightBold />
-        <Text className="font-iransans font-iransans ms-1">
-          ورود از طریق یکبار مصرف
-        </Text>
-      </Button>
+    <main className="relative min-h-screen overflow-hidden bg-[#f5f8f6] px-4 py-5 sm:px-6 sm:py-8 lg:flex lg:h-screen lg:min-h-[640px] lg:items-center lg:px-8 lg:py-4">
+      <div className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-[#129974]/10 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-32 -left-24 h-96 w-96 rounded-full bg-orange-200/30 blur-3xl" />
 
-      <div className="min-h-screen justify-between gap-x-8 px-4 py-8 pt-5 md:pt-6 lg:flex lg:p-6 xl:gap-x-10 xl:p-7 2xl:p-10 2xl:pt-5 [&>div]:min-h-[calc(100vh-80px)]">
-        <div className="relative flex w-full items-center justify-center lg:w-5/12 2xl:justify-end 2xl:pe-24">
-          <div className=" w-full max-w-sm md:max-w-md lg:py-7 lg:ps-3 lg:pt-16 2xl:w-[630px] 2xl:max-w-none 2xl:ps-20 2xl:pt-7">
-            {/*<Link*/}
-            {/*  href={'/'}*/}
-            {/*  className="absolute -top-4 start-0 hidden p-3 text-gray-500 hover:text-gray-700 lg:flex lg:items-center 2xl:-top-7 2xl:ps-20 "*/}
-            {/*>*/}
-            {/*  <PiArrowRightBold />*/}
-            {/*  <b className="ms-1 font-medium">برگشت به خانه</b>*/}
-            {/*</Link>*/}
-            <div className="mb-7 px-6 pt-3 text-center md:pt-0 lg:px-0 lg:text-start xl:mb-8 2xl:mb-10">
-              <Link
-                href={'/'}
-                className="mb-6 inline-flex items-center justify-center xl:mb-8"
-              >
+      <div className="relative mx-auto grid w-full max-w-[1180px] overflow-hidden rounded-[28px] border border-white/80 bg-white shadow-[0_24px_80px_-32px_rgba(15,69,54,0.28)] lg:h-[calc(100vh-32px)] lg:max-h-[760px] lg:min-h-[608px] lg:grid-cols-[0.9fr_1.1fr]">
+        <section className={`flex items-center px-6 sm:px-10 lg:px-12 xl:px-16 ${isCaptchaVisible ? 'py-4 lg:py-3' : 'py-8 lg:py-6'}`}>
+          <div className="mx-auto w-full max-w-md">
+            <Link href="/" className={`inline-flex items-center gap-3 ${isCaptchaVisible ? 'mb-2' : 'mb-6 lg:mb-5'}`}>
+              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#edf8f4] ring-1 ring-[#129974]/10">
                 <Image
-                  className="h-12 w-12"
+                  className="h-8 w-8"
                   src={logoImg}
                   alt="مرجع صنایع غذایی و کشاورزی ایران"
+                  priority
                 />
-                <h4 className="ps-2.5 font-black  dark:invert">
-                  مرجع صنایع غذایی و کشاورزی ایران{' '}
-                </h4>
-                {/* <Image
-                  src={logoImgText}
-                  alt="Isomorphic"
-                  className="ps-2.5 dark:invert"
-                /> */}
-              </Link>
+              </span>
+              <span className="text-sm font-black leading-6 text-gray-900 sm:text-base">
+                مرجع صنایع غذایی و کشاورزی ایران
+              </span>
+            </Link>
+
+            <div className={isCaptchaVisible ? 'mb-3' : 'mb-6 lg:mb-5'}>
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-[#edf8f4] px-3 py-1.5 text-xs font-semibold text-[#0d765a]">
+                <PiLockKeyFill className="h-4 w-4" />
+                ورود امن با رمز عبور
+              </div>
               <Text
-                tag="h2"
-                className="mb-5 text-[26px] leading-snug md:text-3xl md:!leading-normal lg:mb-7 lg:pe-16 lg:text-[28px] xl:text-3xl 2xl:pe-8 2xl:text-4xl"
+                tag="h1"
+                className="mb-2 text-[28px] font-black leading-tight text-gray-900 sm:text-[34px]"
               >
                 {title}
               </Text>
-              <Text className=" leading-[1.85] text-gray-700 md:leading-loose lg:pe-8 2xl:pe-14">
+              <Text className={`max-w-sm text-sm leading-7 text-gray-500 sm:text-[15px] ${isCaptchaVisible ? 'hidden' : ''}`}>
                 {description}
               </Text>
             </div>
-            {isSocialLoginActive && (
-              <>
-                <div className="grid grid-cols-1 gap-4 pb-5 md:grid-cols-2 md:pb-6 xl:gap-5 xl:pb-7">
-                  <Button
-                    onClick={() => setStep('INITIAL')}
-                    className=":bg-orange-light h-11 w-full bg-[#129974]"
-                    color="success"
-                  >
-                    <PiPasswordFill className="me-2 h-6 w-6 shrink-0" />
-                    <span className="truncate">ورود با رمز یکبار مصرف</span>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() =>
-                      // it should be signIn('google')
-                      handleSignIn()
-                    }
-                    className="h-11 w-full"
-                  >
-                    <FcGoogle className="me-2 h-4 w-4 shrink-0" />
-                    <span className="truncate">ورود با گوگل</span>
-                  </Button>
-                </div>
-                <OrSeparation title="یا" className="mb-5 2xl:mb-7" isCenter />
-              </>
-            )}
 
             {children}
+
+            <div className={`${isCaptchaVisible ? 'my-3' : 'my-5'} flex items-center gap-4 text-xs text-gray-400 before:h-px before:flex-1 before:bg-gray-200 after:h-px after:flex-1 after:bg-gray-200`}>
+              یا
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setStep('INITIAL')}
+              className={`${isCaptchaVisible ? 'h-9' : 'h-11'} w-full border-gray-200 bg-white text-sm font-semibold text-gray-700 transition-all hover:border-[#129974]/40 hover:bg-[#f4fbf8] hover:text-[#0d765a]`}
+            >
+              <PiDeviceMobile className="me-2 h-5 w-5" />
+              ورود با رمز یکبار مصرف
+            </Button>
+
+            <div className={`${isCaptchaVisible ? 'hidden' : 'mt-5 flex'} items-center justify-center gap-2 text-xs text-gray-400`}>
+              <PiShieldCheckFill className="h-4 w-4 text-[#129974]" />
+              اطلاعات ورود شما به‌صورت امن محافظت می‌شود
+            </div>
           </div>
-        </div>
-        <div className="relative hidden w-4/12 items-center justify-center rounded-[20px] bg-[#129974] px-6 dark:bg-gray-100/40 lg:flex xl:justify-start 2xl:px-16">
-          <div className="pb-8 pt-10 text-center xl:pt-16 2xl:block 2xl:w-[1063px]">
-            {/* <div className="mx-auto mb-10 max-w-sm pt-2 2xl:max-w-lg">
-              <Text
-                tag="h2"
-                className="mb-5 font-semibold !leading-normal lg:text-[26px] 2xl:px-10 2xl:text-[32px]"
-              >
-                {bannerTitle}
-              </Text>
-              <Text className="leading-[1.85] text-gray-700 md:leading-loose 2xl:px-6">
-                {bannerDescription}
-              </Text>
-            </div> */}
+        </section>
+
+        <aside className="relative hidden overflow-hidden bg-gradient-to-br from-[#0b5f49] via-[#107e60] to-[#129974] p-9 text-white lg:flex lg:flex-col lg:justify-between xl:p-12">
+          <div className="absolute -left-24 -top-24 h-72 w-72 rounded-full border-[50px] border-white/5" />
+          <div className="absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-white/5" />
+
+          <div className="relative z-10 max-w-md">
+            <span className="mb-3 inline-block rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-medium text-white/90 backdrop-blur-sm">
+              پنل اختصاصی کسب‌وکارها
+            </span>
+            <h2 className="text-[28px] font-black leading-[1.55] !text-white xl:text-[32px]">
+              کسب‌وکار خود را حرفه‌ای‌تر مدیریت کنید
+            </h2>
+            <p className="mt-2 max-w-sm text-sm leading-6 text-white/70">
+              به خدمات، درخواست‌ها و اطلاعات کسب‌وکارتان در یک فضای یکپارچه دسترسی داشته باشید.
+            </p>
+          </div>
+
+          <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center overflow-hidden py-2">
             {pageImage}
           </div>
-        </div>
+
+          <div className="relative z-10 grid grid-cols-2 gap-3 text-xs font-medium text-white/90">
+            <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/10 px-3 py-2.5 backdrop-blur-sm">
+              <PiCheckCircleFill className="h-5 w-5 shrink-0 text-orange-300" />
+              دسترسی سریع و ساده
+            </div>
+            <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/10 px-3 py-2.5 backdrop-blur-sm">
+              <PiShieldCheckFill className="h-5 w-5 shrink-0 text-orange-300" />
+              ورود امن و مطمئن
+            </div>
+          </div>
+        </aside>
       </div>
-    </>
+    </main>
   );
 }

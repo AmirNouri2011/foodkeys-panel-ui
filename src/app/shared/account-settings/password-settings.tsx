@@ -1,265 +1,175 @@
 'use client';
 
-import React, { useState } from 'react';
-import * as z from 'zod';
-import {
-  SubmitHandler,
-  Controller,
-  useForm,
-  ErrorOption,
-} from 'react-hook-form';
-import { PiDesktop } from 'react-icons/pi';
-import cn from '@/utils/class-names';
-import { Form } from '@/components/ui/form';
-import { Text } from '@/components/ui/text';
-import { Button } from '@/components/ui/button';
-import { ProfileHeader } from './profile-settings';
-import { Password } from '@/components/ui/password';
-import HorizontalFormBlockWrapper from './horiozontal-block';
+import { useEffect, useState } from 'react';
+import axios from 'axios';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Controller, useForm, useWatch } from 'react-hook-form';
+import { PiCheckBold, PiCheckCircleFill, PiLockKey, PiShieldCheck, PiXBold } from 'react-icons/pi';
+import { Modal } from 'rizzui';
 import toast from 'react-hot-toast';
+import { Button } from '@/components/ui/button';
+import { Password } from '@/components/ui/password';
+import { ProfileHeader } from './profile-settings';
 import useAxiosPrivate from '@/hooks/use-axios-private';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/store/store';
-import { mockSession } from 'next-auth/client/__tests__/helpers/mocks';
-import user = mockSession.user;
-import Spinner from '@/components/ui/spinner';
-import {useAuth} from "@/context/AuthContext";
+import { useAuth } from '@/context/AuthContext';
 
-// form zod validation schema
-const passwordFormSchema = z
-  .object({
-    currentPassword: z
-      .string()
-      .min(8, { message: 'رمز عبور فعلی الزامی می‌باشد' }),
-    newPassword: z.string().min(8, { message: 'رمز عبور جدید الزامی می‌باشد' }),
-    confirmedPassword: z
-      .string()
-      .min(8, { message: 'تکرار رمز عبور الزامی می‌باشد' }),
-  })
-  .refine((data) => data.newPassword === data.confirmedPassword, {
-    message: 'رمز عبور جدید و تکرار رمز عبور مطابقت ندارند',
-    path: ['confirmedPassword'],
-  });
+const newPasswordSchema = z.string()
+  .min(1, 'رمز عبور جدید الزامی است')
+  .min(8, 'رمز عبور باید حداقل ۸ کاراکتر باشد')
+  .max(32, 'رمز عبور باید حداکثر ۳۲ کاراکتر باشد')
+  .regex(/[A-Z]/, 'حداقل یک حرف بزرگ انگلیسی لازم است')
+  .regex(/[a-z]/, 'حداقل یک حرف کوچک انگلیسی لازم است')
+  .regex(/[0-9]/, 'حداقل یک عدد لازم است')
+  .regex(/[^A-Za-z0-9]/, 'حداقل یک علامت ویژه لازم است');
 
-// generate form types from zod validation schema
+const passwordFormSchema = z.object({
+  currentPassword: z.string().min(1, 'رمز عبور فعلی الزامی است'),
+  newPassword: newPasswordSchema,
+  confirmedPassword: z.string().min(1, 'تکرار رمز عبور الزامی است'),
+}).superRefine((data, context) => {
+  if (data.newPassword && data.newPassword === data.currentPassword) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['newPassword'], message: 'رمز جدید باید با رمز فعلی متفاوت باشد' });
+  }
+  if (data.confirmedPassword && data.confirmedPassword !== data.newPassword) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['confirmedPassword'], message: 'تکرار رمز با رمز جدید یکسان نیست' });
+  }
+});
+
 type PasswordFormTypes = z.infer<typeof passwordFormSchema>;
+type ServerError = { formikField?: string; field?: string; message?: string };
 
-export default function PasswordSettingsView({
-  settings,
-}: {
-  settings?: PasswordFormTypes;
-}) {
+function ValidationRule({ valid, children }: { valid: boolean; children: React.ReactNode }) {
+  return (
+    <li className={`flex items-center gap-1.5 text-xs ${valid ? 'font-medium text-green-dark dark:text-green-light' : 'text-gray-500'}`}>
+      <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full ${valid ? 'bg-green text-white' : 'bg-gray-100 text-gray-400 dark:bg-gray-700'}`}>
+        {valid ? <PiCheckBold aria-hidden="true" className="h-2.5 w-2.5" /> : <PiXBold aria-hidden="true" className="h-2.5 w-2.5" />}
+      </span>
+      <span>{children}</span>
+    </li>
+  );
+}
+
+export default function PasswordSettingsView({ settings }: { settings?: PasswordFormTypes }) {
   const userInfo = useSelector((state: RootState) => state.user);
-  const _axios = useAxiosPrivate();
-  const [isLoading, setLoading] = useState(false);
-  const [reset, setReset] = useState({});
+  const api = useAxiosPrivate();
   const { logout } = useAuth();
+  const [successOpen, setSuccessOpen] = useState(false);
+  const { control, handleSubmit, reset, setError, trigger, formState: { errors, isSubmitting } } = useForm<PasswordFormTypes>({
+    resolver: zodResolver(passwordFormSchema),
+    mode: 'onChange',
+    reValidateMode: 'onChange',
+    defaultValues: {
+      currentPassword: '',
+      newPassword: '',
+      confirmedPassword: '',
+      ...settings,
+    },
+  });
+  const currentPassword = useWatch({ control, name: 'currentPassword' }) || '';
+  const newPassword = useWatch({ control, name: 'newPassword' }) || '';
+  const confirmedPassword = useWatch({ control, name: 'confirmedPassword' }) || '';
 
-  const onSubmit: SubmitHandler<PasswordFormTypes> = async (data) => {
-    // Validate password match before making API call
-    if (data.newPassword !== data.confirmedPassword) {
-      toast.error('رمز عبور جدید و تکرار رمز عبور مطابقت ندارند');
-      return;
-    }
+  useEffect(() => {
+    if (newPassword) void trigger('newPassword');
+    if (confirmedPassword) void trigger('confirmedPassword');
+  }, [currentPassword, newPassword, confirmedPassword, trigger]);
 
+  const onSubmit = async (data: PasswordFormTypes) => {
     try {
-      setLoading(true);
-      const response = await _axios.post('/profile/change-password', {
-        currentPassword: data.currentPassword,
+      const response = await api.post('/auth/change-password', {
+        oldPassword: data.currentPassword,
         newPassword: data.newPassword,
+        confirmNewPassword: data.confirmedPassword,
       });
-
-      if (response.status === 200) {
-        toast.success('رمز عبور با موفقیت تغییر کرد');
-        setReset({
-          currentPassword: '',
-          newPassword: '',
-          confirmedPassword: '',
-        });
-        logout();
+      if (response.data?.status && response.data.status !== 'SUCCESS') {
+        toast.error(response.data.message || 'تغییر رمز عبور انجام نشد');
+        return;
       }
+      reset();
+      setSuccessOpen(true);
     } catch (error) {
-      // @ts-ignore
-      if (error.response && error.response.data) {
-        // @ts-ignore
-        const backendError = error.response.data;
-        if (backendError.statusCode === 400 && backendError.error) {
-          backendError.error.forEach((err: any) => {
-            if (err.formikField === 'currentPassword') {
-              console.log(err);
-              // @ts-ignore
-              setError('currentPassword', {
-                type: err.type,
-                message: err.message,
-              });
-            }
-          });
-        } else {
-          toast.error('خطا در تغییر رمز عبور');
+      const backend = axios.isAxiosError(error) ? error.response?.data : undefined;
+      const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+      const fieldErrors: ServerError[] = Array.isArray(backend?.error) ? backend.error : [];
+      let hasFieldError = false;
+      for (const item of fieldErrors) {
+        const field = item.formikField || item.field;
+        const name = field === 'oldPassword' ? 'currentPassword' : field === 'confirmNewPassword' ? 'confirmedPassword' : field;
+        if (name === 'currentPassword' || name === 'newPassword' || name === 'confirmedPassword') {
+          setError(name, { type: 'server', message: item.message || 'مقدار واردشده معتبر نیست' }, { shouldFocus: true });
+          hasFieldError = true;
         }
-      } else {
-        toast.error('خطا در تغییر رمز عبور');
       }
-    } finally {
-      setLoading(false);
+      if (!hasFieldError && status === 400) {
+        setError('currentPassword', { type: 'server', message: backend?.message || 'رمز عبور فعلی صحیح نیست' }, { shouldFocus: true });
+      }
+      toast.error(backend?.message || (hasFieldError ? 'لطفاً خطاهای فرم را بررسی کنید' : 'خطا در تغییر رمز عبور؛ دوباره تلاش کنید'));
     }
+  };
+
+  const continueToLogin = () => {
+    setSuccessOpen(false);
+    logout();
   };
 
   return (
     <>
-      <Form<PasswordFormTypes>
-        validationSchema={passwordFormSchema}
-        resetValues={reset}
-        onSubmit={onSubmit}
-        useFormProps={{
-          defaultValues: {
-            ...settings,
-          },
-        }}
-      >
-        {({
-          register,
-          control,
-          reset,
-          setError,
-          formState: { errors },
-          getValues,
-        }) => {
-          return (
-            <>
-              <ProfileHeader
-                userInfo={userInfo}
-                description={(userInfo && userInfo.email) || ''}
-              />
-
-              <div className="mx-auto w-full max-w-screen-2xl">
-                <HorizontalFormBlockWrapper
-                  title="رمز کنونی"
-                  titleClassName="text-base font-medium"
-                >
-                  <Controller
-                    control={control}
-                    name="currentPassword"
-                    render={({ field: { onChange, value } }) => (
-                      <Password
-                        placeholder="رمز عبور خود را وارد کنید"
-                        value={value}
-                        onChange={onChange}
-                        error={errors.currentPassword?.message}
-                      />
-                    )}
-                  />
-                </HorizontalFormBlockWrapper>
-
-                <HorizontalFormBlockWrapper
-                  title="رمز جدید"
-                  titleClassName="text-base font-medium"
-                >
-                  <Controller
-                    control={control}
-                    name="newPassword"
-                    render={({ field: { onChange, value } }) => (
-                      <Password
-                        placeholder="رمز عبور خود را وارد کنید"
-                        helperText={
-                          getValues().newPassword.length < 8 &&
-                          'رمز عبور باید بیشتر از 8 کاراکتر باشد'
-                        }
-                        onChange={onChange}
-                        error={errors.newPassword?.message}
-                      />
-                    )}
-                  />
-                </HorizontalFormBlockWrapper>
-
-                <HorizontalFormBlockWrapper
-                  title="تایید رمز جدید"
-                  titleClassName="text-base font-medium"
-                >
-                  <Controller
-                    control={control}
-                    name="confirmedPassword"
-                    render={({ field: { onChange, value } }) => (
-                      <Password
-                        placeholder="رمز عبور خود را وارد کنید"
-                        onChange={onChange}
-                        error={errors.confirmedPassword?.message}
-                      />
-                    )}
-                  />
-                </HorizontalFormBlockWrapper>
-
-                <div className="mt-6 flex w-auto items-center justify-end gap-3">
-                  <Button type="button" variant="outline">
-                    انصراف
-                  </Button>
-                  <Button
-                    // onClick={(e) => {
-                    //   // @ts-ignore
-                    //   onSubmit(getValues, setError, reset);
-                    // }}
-                    type="submit"
-                    variant="solid"
-                    className="dark:bg-gray-100 dark:text-white"
-                  >
-                    بروز رسانی رمز عبور
-                  </Button>
-                </div>
+      <ProfileHeader userInfo={userInfo} description="امنیت حساب کاربری و تغییر رمز عبور" />
+      <div className="mx-auto mt-6 max-w-screen-2xl">
+        <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-900">
+          <div className="flex items-start gap-4 border-b border-gray-100 bg-gray-50/70 px-5 py-6 dark:border-gray-700 dark:bg-gray-800/50 sm:px-8">
+            <span className="rounded-xl bg-primary/10 p-3 text-primary"><PiShieldCheck className="h-6 w-6" /></span>
+            <div>
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">تغییر رمز عبور</h2>
+              <p className="mt-1 text-sm leading-6 text-gray-500">برای حفظ امنیت حساب، رمز جدیدی انتخاب کنید که قبلاً استفاده نکرده‌اید.</p>
+            </div>
+          </div>
+          <form noValidate onSubmit={handleSubmit(onSubmit)} className="px-5 py-6 sm:px-8">
+            <div className="grid max-w-3xl gap-6">
+              <Controller control={control} name="currentPassword" render={({ field }) => (
+                <Password label="رمز عبور فعلی *" placeholder="رمز فعلی را وارد کنید" autoComplete="current-password" {...field} value={field.value || ''} error={errors.currentPassword?.message} />
+              )} />
+              <ul aria-live="polite" className="-mt-3 grid gap-1">
+                <ValidationRule valid={currentPassword.length > 0}>رمز عبور فعلی وارد شده است (درستی آن پس از ثبت بررسی می‌شود)</ValidationRule>
+              </ul>
+              <div className="border-t border-dashed border-gray-200 pt-6 dark:border-gray-700">
+                <Controller control={control} name="newPassword" render={({ field }) => (
+                  <Password label="رمز عبور جدید *" placeholder="رمز جدید را وارد کنید" autoComplete="new-password" {...field} value={field.value || ''} error={errors.newPassword?.message} />
+                )} />
+                <ul aria-live="polite" className="mt-2 grid gap-x-4 gap-y-1.5 sm:grid-cols-2">
+                  <ValidationRule valid={newPassword.length >= 8 && newPassword.length <= 32}>بین ۸ تا ۳۲ کاراکتر</ValidationRule>
+                  <ValidationRule valid={/[A-Z]/.test(newPassword)}>حرف بزرگ انگلیسی</ValidationRule>
+                  <ValidationRule valid={/[a-z]/.test(newPassword)}>حرف کوچک انگلیسی</ValidationRule>
+                  <ValidationRule valid={/[0-9]/.test(newPassword)}>عدد</ValidationRule>
+                  <ValidationRule valid={/[^A-Za-z0-9]/.test(newPassword)}>علامت ویژه</ValidationRule>
+                  <ValidationRule valid={!!newPassword && !!currentPassword && newPassword !== currentPassword}>متفاوت از رمز فعلی</ValidationRule>
+                </ul>
               </div>
-            </>
-          );
-        }}
-      </Form>
-      {/*<LoggedDevices className="mt-10" />*/}
-    </>
-  );
-}
-
-// Logged devices
-function LoggedDevices({ className }: { className?: string }) {
-  return (
-    <div className={cn('mx-auto w-full max-w-screen-2xl', className)}>
-      <div className="border-b border-dashed border-gray-200">
-        <Text tag="h2" className="mb-3 text-xl font-bold text-gray-900">
-          شما کجا ها لاگین شده اید
-        </Text>
-        <Text className="mb-6 text-sm text-gray-500">
-          اگر در حساب کاربری شما فعالیت غیرمعمولی وجود داشته باشد، از طریق
-          olivia@untitledui.com به شما هشدار خواهیم داد.
-        </Text>
-      </div>
-      <div className="flex items-center gap-6 border-b border-dashed border-gray-200 py-6">
-        <PiDesktop className="h-7 w-7 text-gray-500" />
-        <div>
-          <div className="mb-2 flex items-center gap-2">
-            <Text
-              tag="h3"
-              className="text-base font-medium text-gray-900 dark:text-gray-700"
-            >
-              2021 مک بوک پرو
-            </Text>
-            <Text
-              tag="span"
-              className="relative hidden rounded-md border border-gray-200 py-1.5 pe-2.5 ps-5 text-xs font-semibold text-gray-900 before:absolute before:top-1/2 before:h-1.5 before:w-1.5 before:-translate-y-1/2 before:rounded-full before:bg-green ltr:before:left-2.5 rtl:before:right-2.5 sm:block"
-            >
-              هم اکنون آنلاین است
-            </Text>
-          </div>
-          <div className="flex items-center gap-2">
-            <Text className="text-sm text-gray-500">ایران ، شیراز</Text>
-            <span className="h-1 w-1 rounded-full bg-gray-600" />
-            <Text className="text-sm text-gray-500">
-              18 فروردین ساعت 2 بامداد
-            </Text>
-          </div>
-          <Text
-            tag="span"
-            className="relative mt-2 inline-block rounded-md border border-gray-200 py-1.5 pe-2.5 ps-5 text-xs font-semibold text-gray-900 before:absolute before:top-1/2 before:h-1.5 before:w-1.5 before:-translate-y-1/2 before:rounded-full before:bg-green ltr:before:left-2.5 rtl:before:right-2.5 sm:hidden"
-          >
-            هم اکنون آنلاین است
-          </Text>
+              <Controller control={control} name="confirmedPassword" render={({ field }) => (
+                <Password label="تکرار رمز عبور جدید *" placeholder="رمز جدید را دوباره وارد کنید" autoComplete="new-password" {...field} value={field.value || ''} error={errors.confirmedPassword?.message} />
+              )} />
+              <ul aria-live="polite" className="-mt-3 grid gap-1">
+                <ValidationRule valid={!!confirmedPassword && confirmedPassword === newPassword}>تکرار رمز با رمز جدید یکسان است</ValidationRule>
+              </ul>
+            </div>
+            <div className="mt-8 flex flex-wrap items-center justify-end gap-3 border-t border-gray-100 pt-5 dark:border-gray-700">
+              <Button type="button" variant="outline" disabled={isSubmitting} onClick={() => reset()}>پاک کردن فرم</Button>
+              <Button type="submit" isLoading={isSubmitting} disabled={isSubmitting} className="gap-2"><PiLockKey className="h-5 w-5" /> ذخیره رمز جدید</Button>
+            </div>
+          </form>
         </div>
       </div>
-    </div>
+      <Modal isOpen={successOpen} onClose={continueToLogin} className="flex items-center justify-center p-4" backdropClassName="bg-gray-900/55 backdrop-blur-sm">
+        <div dir="rtl" className="w-full max-w-sm rounded-2xl bg-white p-7 text-center shadow-2xl dark:bg-gray-900">
+          <PiCheckCircleFill className="mx-auto mb-4 h-14 w-14 text-green" />
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white">رمز عبور تغییر کرد</h3>
+          <p className="mt-3 text-sm leading-7 text-gray-500">برای ادامه، لطفاً با رمز جدید دوباره وارد حساب خود شوید.</p>
+          <Button type="button" className="mt-6 w-full" onClick={continueToLogin}>ورود دوباره</Button>
+        </div>
+      </Modal>
+    </>
   );
 }

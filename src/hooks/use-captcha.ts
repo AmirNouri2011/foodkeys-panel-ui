@@ -20,23 +20,29 @@ export function useCaptcha(options: UseCaptchaOptions = {}) {
   const [answer, setAnswer] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | undefined>();
+  const [loadError, setLoadError] = useState<string | undefined>();
   const tokenRef = useRef('');
 
   const refresh = useCallback(async () => {
     setLoading(true);
     setError(undefined);
+    setLoadError(undefined);
     setAnswer('');
     try {
       const challenge: CaptchaChallenge = await fetchCaptchaChallenge();
       tokenRef.current = challenge.token;
       setToken(challenge.token);
       setImageSrc(toCaptchaImageSrc(challenge.image));
+      return true;
     } catch (err) {
       console.error('Failed to fetch captcha:', err);
-      setError('خطا در دریافت کپچا');
+      setLoadError(
+        'در دریافت تصویر کپچا مشکلی پیش آمد. اتصال اینترنت یا وضعیت سرور را بررسی و دوباره تلاش کنید.'
+      );
       tokenRef.current = '';
       setToken('');
       setImageSrc('');
+      return false;
     } finally {
       setLoading(false);
     }
@@ -66,6 +72,7 @@ export function useCaptcha(options: UseCaptchaOptions = {}) {
     setAnswer,
     loading,
     error,
+    loadError,
     setError,
     refresh,
     clearAnswer,

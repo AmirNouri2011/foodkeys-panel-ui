@@ -47,7 +47,7 @@ export default async function RootLayout({
             <ThemeProvider>
                     <NextProgress/>
                     {children}
-                    <Toaster position="top-center" reverseOrder={true}/>
+                    <Toaster position="top-center" reverseOrder={true} toastOptions={{duration: 4000}}/>
                     <GlobalDrawer/>
                     <GlobalModal/>
             </ThemeProvider>

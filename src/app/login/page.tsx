@@ -5,16 +5,29 @@ import Image from 'next/image';
 import UnderlineShape from '@/components/shape/underline';
 import loginImage from 'public/foodkeysLogin.png';
 import { useState } from 'react';
-import SignUpForm from '../sign-up/sign-up-form';
-import ForgetPasswordForm from '../forgot-password/forget-password-form';
 import AuthWrapperTwo from '../shared/auth-layout/auth-wrapper-two';
 import OtpForm from '../otp/otp-form';
+import OtpRegistrationForm from './otp-registration-form';
 
 export default function Login() {
   const [step, setStep] = useState<'INITIAL' | 'PASSWORD' | 'SIGNUP'>(
-    'INITIAL'
+    'PASSWORD'
   );
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [registrationToken, setRegistrationToken] = useState('');
+  const [registrationExpiresAt, setRegistrationExpiresAt] = useState(0);
+  const [passwordCaptchaVisible, setPasswordCaptchaVisible] = useState(false);
+
+  const handleRegistrationToken = (token: string) => {
+    setRegistrationToken(token);
+    setRegistrationExpiresAt(Date.now() + 12 * 60 * 1000);
+  };
+
+  const handleRegistrationExpired = () => {
+    setRegistrationToken('');
+    setRegistrationExpiresAt(0);
+    setStep('INITIAL');
+  };
 
   return (
     <>
@@ -34,16 +47,22 @@ export default function Login() {
           bannerDescription="لورم ایپسوم متن ساختگی با تولید سادگی نامفهوم از صنعت چاپ است."
           isSocialLoginActive={true}
           pageImage={
-            <div className="absolute right-0 top-1/2 aspect-[3/1.484] w-[320px] -translate-y-1/2 translate-x-1/2 xl:w-[420px] 2xl:w-[520px]">
+            <div className="relative mx-auto w-full max-w-[320px]">
               <Image
                 src={loginImage}
                 alt="پنل مرجع صنایع غذایی و کشاورزی ایران"
-                className="object-cover object-center"
+                className="h-auto w-full object-contain drop-shadow-xl"
+                priority
               />
             </div>
           }
         >
-          <OtpForm setStep={setStep} setPhoneNumber={setPhoneNumber}/>
+          <OtpForm
+            setStep={setStep}
+            setPhoneNumber={setPhoneNumber}
+            setRegistrationToken={handleRegistrationToken}
+            initialPhoneNumber={phoneNumber}
+          />
         </AuthWrapperOne>
       )}
       {step === 'SIGNUP' && (
@@ -52,31 +71,39 @@ export default function Login() {
           title={
             <>
               <span className="relative inline-block">
-                ساخت حساب کاربری!
+                تکمیل ثبت‌نام
                 <UnderlineShape className="absolute -bottom-2 start-0 h-2.5 w-28 text-[#129974] xl:-bottom-1.5 xl:w-36" />
               </span>
             </>
           }
-          description="بازدید کننده گرامی از حسن نظر حضرتعالی سپاسگزاریم، خواهشمند است جهت استفاده از امکانات سایت و معرفی کسب و کار خود در حوضه صنایع غذایی و کشاورزی، فرم زیر را تکمیل نمایید."
+          description="شماره موبایل شما تأیید شد. اطلاعات زیر را برای ساخت حساب کاربری تکمیل کنید."
+          eyebrow="ساخت حساب کاربری"
           bannerTitle="ساده‌ترین روش برای مدیریت فضای کاری خود."
           bannerDescription="لورم ایپسوم متن ساختگی با تولید سادگی نامفهوم از صنعت چاپ، و با استفاده از طراحان گرافیک است، چاپگرها و "
-          isSocialLoginActive={true}
+          isSocialLoginActive={false}
           pageImage={
-            <div className="absolute right-0 top-1/2 aspect-[3/1.484] w-[320px] -translate-y-1/2 translate-x-1/2 xl:w-[420px] 2xl:w-[520px]">
+            <div className="relative mx-auto w-full max-w-[320px]">
               <Image
                 src={loginImage}
                 alt="پنل مرجع صنایع غذایی و کشاورزی ایران"
-                className="object-cover object-center"
+                className="h-auto w-full object-contain drop-shadow-xl"
+                priority
               />
             </div>
           }
         >
-          <SignUpForm initialPhoneNumber={phoneNumber} />
+          <OtpRegistrationForm
+            phoneNumber={phoneNumber}
+            registrationToken={registrationToken}
+            expiresAt={registrationExpiresAt}
+            onRegistrationExpired={handleRegistrationExpired}
+          />
         </AuthWrapperOne>
       )}
       {step === 'PASSWORD' && (
         <AuthWrapperTwo
           setStep={setStep}
+          isCaptchaVisible={passwordCaptchaVisible}
           title={
             <>
               <span className="relative inline-block">
@@ -88,18 +115,21 @@ export default function Login() {
           description="با حضور موثر کسب و کارتان در سایت مرجع صنایع غذایی و کشاورزی، یک قدم از رقبایتان جلوتر باشید."
           bannerTitle="ساده‌ترین روش برای مدیریت فضای کاری خود."
           bannerDescription="لورم ایپسوم متن ساختگی با تولید سادگی نامفهوم از صنعت چاپ است."
-          isSocialLoginActive={true}
           pageImage={
-            <div className="absolute right-0 top-1/2 aspect-[3/1.484] w-[320px] -translate-y-1/2 translate-x-1/2 xl:w-[420px] 2xl:w-[520px]">
+            <div className="relative mx-auto w-full max-w-[320px]">
               <Image
                 src={loginImage}
                 alt="پنل مرجع صنایع غذایی و کشاورزی ایران"
-                className="object-cover object-center"
+                className="h-auto w-full object-contain drop-shadow-xl"
+                priority
               />
             </div>
           }
         >
-          <SignInForm step={'PASSWORD'} />
+          <SignInForm
+            step={'PASSWORD'}
+            onCaptchaVisibilityChange={setPasswordCaptchaVisible}
+          />
         </AuthWrapperTwo>
       )}
     </>

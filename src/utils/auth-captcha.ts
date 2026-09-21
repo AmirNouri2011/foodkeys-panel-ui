@@ -35,10 +35,14 @@ export function toCaptchaImageSrc(image: string) {
 export async function fetchCaptchaChallenge(): Promise<CaptchaChallenge> {
   const response = await axiosInstance.get('/auth/captcha');
   const data = response.data?.data ?? response.data;
-  return {
-    token: data?.token ?? '',
-    image: data?.image ?? '',
-  };
+  const token = data?.token ?? '';
+  const image = data?.image ?? '';
+
+  if (!token || !image) {
+    throw new Error('Captcha response is missing its token or image');
+  }
+
+  return { token, image };
 }
 
 export async function checkCaptchaRequired(

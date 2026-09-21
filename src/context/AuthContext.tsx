@@ -320,42 +320,172 @@ export const AuthProvider = ({children}) => {
         }
     }, []);
 
-    const loginOtp = useCallback(async (phoneNumber: any, otp: any) => {
+    const loginOtp = useCallback(async (phoneNumber: string, otp: string) => {
         try {
             const response = await axiosInstance.post('/auth/verify-otp', {
                 phoneNumber,
                 otp,
             });
-            const {data} = response;
-            if (data.statusCode === 200) {
-                // Cookies.set('token', data.data?.token, { secure: true, httpOnly: false });
-                dispatch({type: CONTEXT_ACTION.SET_USER, payload: data.data.user});
+            const responseBody = response.data;
+            const payload = responseBody?.data ?? responseBody;
+
+            if (payload?.mustRegister) {
+                if (!payload.registrationToken) {
+                    toast.error('توکن ثبت‌نام از سرور دریافت نشد');
+                    return { success: false };
+                }
+
+                toast.success('شماره موبایل با موفقیت تأیید شد');
+                return {
+                    success: true,
+                    mustRegister: true,
+                    registrationToken: payload.registrationToken as string,
+                };
+            }
+
+            if (response.status >= 200 && response.status < 300 && payload?.token) {
+                dispatch({type: CONTEXT_ACTION.SET_USER, payload: payload.user});
                 dispatch({
                     type: CONTEXT_ACTION.SET_ACCESS_TOKEN,
-                    payload: data.data.token,
+                    payload: payload.token,
                 });
-                toast.success(data.message || 'با موفقیت وارد شدید');
-            } else {
-                toast.error(data.message || 'خطا در ورود');
+                toast.success(responseBody?.message || 'با موفقیت وارد شدید');
+                router.push('/');
+                return {
+                    success: true,
+                    mustRegister: false,
+                    token: payload.token,
+                    user: payload.user,
+                };
             }
-            // toast.success('OTP login successful');
-            router.push('/');
-        } catch (error) {
+
+            toast.error(responseBody?.message || 'پاسخ ورود نامعتبر است');
+            return { success: false };
+        } catch (error: any) {
             console.error('OTP login error:', error);
-            // handleFormikError(error, formik);
             toast.error(
-                // @ts-ignore
-                (error?.response?.data?.message &&
-                    // @ts-ignore
-                    error?.response?.data?.message === 'Unauthorized' &&
+                (error?.response?.data?.message === 'Unauthorized' &&
                     'رمز یکبارمصرف اشتباه است') ||
-                // @ts-ignore
                 error?.response?.data?.message ||
                 'خطا در تایید رمز یکبارمصرف'
             );
-            // throw error;
+            return { success: false };
         }
-    }, []);
+    }, [router]);
+
+    const registerAfterOtp = useCallback(async ({
+        registrationToken,
+        phoneNumber,
+        email,
+        firstName,
+        lastName,
+        password,
+    }: {
+        registrationToken: string;
+        phoneNumber: string;
+        email: string;
+        firstName: string;
+        lastName: string;
+        password: string;
+    }) => {
+        try {
+            const response = await axiosInstance.post('/auth/register', {
+                registrationToken,
+                username: phoneNumber,
+                phone: phoneNumber,
+                phoneNumber,
+                email,
+                firstName,
+                lastName,
+                password,
+            });
+            const responseBody = response.data;
+            const payload = responseBody?.data ?? responseBody;
+
+            if (!payload?.token) {
+                toast.error(responseBody?.message || 'پاسخ ثبت‌نام نامعتبر است');
+                return { success: false };
+            }
+
+            dispatch({type: CONTEXT_ACTION.SET_USER, payload: payload.user});
+            dispatch({
+                type: CONTEXT_ACTION.SET_ACCESS_TOKEN,
+                payload: payload.token,
+            });
+            toast.success(responseBody?.message || 'ثبت‌نام با موفقیت انجام شد');
+            router.push('/');
+            return {
+                success: true,
+                token: payload.token,
+                user: payload.user,
+            };
+        } catch (error: any) {
+            console.error('OTP registration failed:', error);
+            const meta = extractAuthErrorMeta(error);
+            const responseData = error?.response?.data;
+            const validationErrors = Array.isArray(error?.response?.data?.error)
+                ? error.response.data.error.filter(
+                    (item: any) => item?.message
+                )
+                : [];
+            const errorSignature = [
+                responseData?.message,
+                responseData?.type,
+                ...validationErrors.flatMap((item: any) => [
+                    item?.type,
+                    item?.field,
+                    item?.message,
+                ]),
+            ]
+                .filter(Boolean)
+                .join(' ')
+                .toUpperCase();
+            const registrationExpired =
+                error?.response?.status === 410 ||
+                /REGISTRATION.*TOKEN.*(EXPIRED|INVALID)/.test(errorSignature) ||
+                /(EXPIRED|INVALID).*(REGISTRATION.*TOKEN)/.test(errorSignature) ||
+                /(OTP|TOKEN).*(EXPIRED|منقضی|انقضا)/i.test(errorSignature) ||
+                /(منقضی|انقضا).*(OTP|توکن|ثبت.?نام)/i.test(errorSignature);
+
+            if (registrationExpired) {
+                return {
+                    success: false,
+                    registrationExpired: true,
+                    ...meta,
+                };
+            }
+
+            if (validationErrors.length > 0) {
+                toast.error(
+                    <div dir="rtl" className="min-w-[260px] text-right">
+                        <p className="mb-2 font-bold text-gray-900">
+                            {error?.response?.data?.message || 'اطلاعات واردشده معتبر نیست'}
+                        </p>
+                        <ul className="space-y-1 text-xs leading-5 text-gray-600">
+                            {validationErrors.map((item: any, index: number) => (
+                                <li key={`${item.formikField || item.field}-${index}`}>
+                                    • {item.message}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>,
+                    { duration: 8000 }
+                );
+                return {
+                    success: false,
+                    validationErrors,
+                    ...meta,
+                };
+            }
+
+            toast.error(
+                meta.message ||
+                error?.response?.data?.message ||
+                'خطا در تکمیل ثبت‌نام'
+            );
+            return { success: false, ...meta };
+        }
+    }, [router]);
 
     const requestOtp = useCallback(async (phoneNumber: any, captcha?: CaptchaPayload | null) => {
         try {
@@ -422,7 +552,7 @@ export const AuthProvider = ({children}) => {
     );
 
     const forgotPassword = useCallback(
-        async (password: any, username: any, formHook: any) => {
+        async (password: any, username: any, formHook?: { setFieldError?: (field: string, message: string) => void }) => {
             try {
                 const response = await axiosInstance.post('/auth/forgot-password', {
                     password,
@@ -447,7 +577,7 @@ export const AuthProvider = ({children}) => {
                     error.response.data.error.forEach(
                         (err: { formikField: string; message: any }) => {
                             if (err.formikField !== 'GENERAL')
-                                formHook.setFieldError(err.formikField, err.message);
+                                formHook?.setFieldError?.(err.formikField, err.message);
                         }
                     );
                 } else {
@@ -546,6 +676,7 @@ export const AuthProvider = ({children}) => {
                 state,
                 login,
                 loginOtp,
+                registerAfterOtp,
                 requestOtp,
                 changePassword,
                 logout,

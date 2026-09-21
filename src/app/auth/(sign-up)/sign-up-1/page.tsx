@@ -20,11 +20,12 @@ export default function SignUp() {
       bannerDescription="لورم ایپسوم متن ساختگی با تولید سادگی نامفهوم از صنعت چاپ، و با استفاده از طراحان گرافیک است، چاپگرها و "
       isSocialLoginActive={true}
       pageImage={
-        <div className="absolute right-0 top-1/2 aspect-[3/1.484] w-[320px] -translate-y-1/2 translate-x-1/2 xl:w-[420px] 2xl:w-[520px]">
+        <div className="relative mx-auto w-full max-w-[320px]">
           <Image
             src={loginImage}
             alt="پنل مرجع صنایع غذایی و کشاورزی ایران"
-            className="object-cover object-center"
+            className="h-auto w-full object-contain drop-shadow-xl"
+            priority
           />
         </div>
       }
