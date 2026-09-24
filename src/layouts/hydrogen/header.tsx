@@ -17,26 +17,63 @@ import HamburgerButton from '@/layouts/hydrogen/hamburger-button';
 import cn from '@/utils/class-names';
 import Logo from '@/components/logo';
 import { Button, Modal } from 'rizzui';
-import React, { RefObject, useState } from 'react';
-import { PiWalletFill } from 'react-icons/pi';
+import React, { RefObject, useEffect, useState } from 'react';
+import { PiPlusBold, PiWalletFill } from 'react-icons/pi';
 import { HiXMark } from 'react-icons/hi2';
 import toast from 'react-hot-toast';
 import useAxiosPrivate from '@/hooks/use-axios-private';
 import addCreditImg2 from 'public/addCreditLogo.webp';
 import { useNotifications } from '@/context/NotificationContext';
+import { useDispatch, useSelector } from 'react-redux';
+import { RootState } from '@/store/store';
+import { setCredit } from '@/store/walletSlice';
+
+const formatCredit = (value: number) =>
+  new Intl.NumberFormat('fa-IR').format(Number.isFinite(value) ? value : 0);
+
+const normalizeAmount = (value: string) =>
+  value
+    .replace(/[۰-۹]/g, (digit) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)))
+    .replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)))
+    .replace(/\D/g, '')
+    .slice(0, 14);
 
 function HeaderMenuRight() {
   const [isOpen, setIsOpen] = useState(false);
   const { unreadCount } = useNotifications();
+  const _axios = useAxiosPrivate();
+  const dispatch = useDispatch();
+  const credit = useSelector((state: RootState) => state.wallet.credit);
+
+  useEffect(() => {
+    let active = true;
+
+    const fetchCredit = async () => {
+      try {
+        const response = await _axios.get('/user/credit');
+        if (active && response.data.status === 'SUCCESS') {
+          const nextCredit = Number(response.data.data);
+          if (Number.isFinite(nextCredit)) dispatch(setCredit(nextCredit));
+        }
+      } catch (error) {
+        console.error('Error fetching wallet credit:', error);
+      }
+    };
+
+    fetchCredit();
+    return () => {
+      active = false;
+    };
+  }, [_axios, dispatch]);
 
   return (
-    <div className="ms-auto grid shrink-0 grid-cols-4 items-center gap-2 text-gray-700 print:hidden xs:gap-3 xl:gap-4">
+    <div className="ms-auto flex h-14 shrink-0 items-center gap-1 rounded-2xl border border-gray-200/80 bg-white/90 p-1.5 text-gray-700 shadow-sm ring-1 ring-black/[0.02] backdrop-blur-xl dark:border-gray-700 dark:bg-gray-900/90 print:hidden">
       {/* Notification Bell with unread badge (polling-driven) */}
       <NotificationDropdown>
         <ActionIcon
-          aria-label="Notification"
+          aria-label="اعلان‌ها"
           variant="text"
-          className="relative h-[34px] w-[34px] shadow backdrop-blur-md dark:bg-gray-100 md:h-9 md:w-9"
+          className="relative h-10 w-10 rounded-xl bg-transparent shadow-none transition-colors hover:bg-gray-100 dark:bg-transparent dark:hover:bg-gray-800"
         >
           <RingBellSolidIcon className="h-[18px] w-auto" />
           {unreadCount > 0 ? (
@@ -52,20 +89,47 @@ function HeaderMenuRight() {
         </ActionIcon>
       </NotificationDropdown>
 
-      {/* Wallet */}
+      {/* Prominent wallet credit and top-up action */}
       <WalletDropdown setIsOpen={setIsOpen} isOpen={isOpen}>
-        <ActionIcon
-          aria-label="Wallet"
-          onClick={() => setIsOpen(true)}
-          variant="text"
-          className="relative h-[34px] w-[34px] shadow backdrop-blur-md dark:bg-gray-100 md:h-9 md:w-9"
-        >
-          <PiWalletFill className="h-[18px] w-auto" />
-        </ActionIcon>
+        <div className="flex h-11 items-center gap-2 rounded-xl border border-primary/20 bg-gradient-to-l from-primary-lighter/70 to-primary-lighter/25 px-1.5 dark:from-primary/20 dark:to-primary/5 sm:px-2">
+          <div className="hidden min-w-0 items-center gap-2 lg:flex">
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-black text-white shadow-sm">
+              <PiWalletFill className="h-[18px] w-[18px]" />
+            </span>
+            <div className="flex items-baseline gap-1 whitespace-nowrap leading-none">
+              <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                اعتبار شما:
+              </span>
+              <strong className="text-sm font-extrabold text-gray-900 dark:text-white xl:text-base">
+                {formatCredit(credit)}
+              </strong>
+              <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                تومان
+              </span>
+            </div>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => setIsOpen(true)}
+            className="h-8 gap-1.5 whitespace-nowrap rounded-lg px-2.5 text-xs font-bold shadow-sm sm:px-3"
+            aria-label={`افزایش اعتبار؛ اعتبار فعلی ${formatCredit(
+              credit
+            )} تومان`}
+          >
+            <PiPlusBold className="h-4 w-4" />
+            <span className="hidden xs:inline">افزایش اعتبار</span>
+            <span className="xs:hidden">افزایش</span>
+          </Button>
+        </div>
       </WalletDropdown>
 
-      <SettingsButton />
-      <ProfileMenu />
+      <div className="mx-0.5 hidden h-6 w-px bg-gray-200 dark:bg-gray-700 sm:block" />
+      <SettingsButton className="h-10 w-10 rounded-xl bg-transparent shadow-none hover:bg-gray-100 dark:bg-transparent dark:hover:bg-gray-800" />
+      <ProfileMenu
+        buttonClassName="grid h-10 w-10 place-items-center rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800"
+        avatarClassName="!h-8 !w-8 border-0 shadow-none sm:!h-8 sm:!w-8"
+      />
     </div>
   );
 }
@@ -76,11 +140,11 @@ export default function Header() {
   return (
     <header
       className={cn(
-        'sticky top-0 z-50 flex items-center bg-gray-0/80 px-4 py-4 backdrop-blur-xl dark:bg-gray-50/50 print:hidden md:px-5 lg:px-6 2xl:py-5 3xl:px-8 4xl:px-10',
+        'sticky top-0 z-50 flex items-center gap-3 border-b border-gray-100/80 bg-gray-0/90 px-4 py-3 backdrop-blur-xl dark:border-gray-700/60 dark:bg-gray-50/80 print:hidden md:px-5 lg:px-6 3xl:px-8 4xl:px-10',
         ((isMounted && windowScroll.y) as number) > 2 ? 'card-shadow' : ''
       )}
     >
-      <div className="flex w-full max-w-2xl items-center">
+      <div className="flex min-w-0 flex-1 items-center xl:max-w-2xl">
         <HamburgerButton />
         <Link href={'/'} className="me-4 w-9 shrink-0 lg:me-5 xl:hidden">
           <Logo iconOnly={true} />
@@ -104,23 +168,25 @@ function WalletDropdown({
 }) {
   const _axios = useAxiosPrivate();
   const [loading, setLoading] = useState(false);
-
-  const [amount, setAmount] = useState<number>(1_000_000);
+  const [amount, setAmount] = useState('1000000');
+  const [amountError, setAmountError] = useState('');
+  const numericAmount = Number(amount || 0);
 
   const handleDefaultAmountClick = (value: number) => {
-    setAmount(value * 1_000_000);
+    setAmount(String(value * 1_000_000));
+    setAmountError('');
   };
 
   const handleSubmit = async () => {
-    if (amount <= 0) {
-      alert('لطفا مبلغ معتبری وارد کنید');
+    if (!Number.isSafeInteger(numericAmount) || numericAmount <= 0) {
+      setAmountError('لطفاً یک مبلغ معتبر و بزرگ‌تر از صفر وارد کنید');
       return;
     }
     const startPayment = async () => {
       const API_URL = '/payment/start/3';
       try {
         const response = await _axios.post(API_URL, {
-          amount: amount * 10,
+          amount: numericAmount * 10,
           redirectUrl: '/api/v1/client/panel/payment/callback',
           description: 'افزایش شارژ کیف پول',
           mobile: '09352388350',
@@ -149,11 +215,19 @@ function WalletDropdown({
 
   return (
     <>
-      <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} customSize="1080px">
+      <Modal
+        isOpen={isOpen}
+        onClose={() => setIsOpen(false)}
+        customSize="1080px"
+      >
         <div className="m-auto rounded-xl bg-gray-50 px-7 pt-8 dark:bg-gray-100 dark:text-white">
           <div className="flex items-center justify-between">
             <h3>افزایش اعتبار کیف پول</h3>
-            <ActionIcon size="sm" variant="text" onClick={() => setIsOpen(false)}>
+            <ActionIcon
+              size="sm"
+              variant="text"
+              onClick={() => setIsOpen(false)}
+            >
               <HiXMark className="h-auto w-6" strokeWidth={1.8} />
             </ActionIcon>
           </div>
@@ -164,15 +238,24 @@ function WalletDropdown({
                 suffix="تومان"
                 placeholder="10,000,000"
                 inputClassName="text-center"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                autoComplete="off"
                 dir="ltr"
                 className="w-full  dark:text-white"
-                value={amount !== 0 ? amount : amount}
-                onChange={(e) => setAmount(Number(e.target.value))}
+                value={amount}
+                error={amountError}
+                onChange={(e) => {
+                  setAmount(normalizeAmount(e.target.value));
+                  setAmountError('');
+                }}
               />
               <div className="flex w-full items-center justify-center gap-1">
                 {defaultAmounts.map((value) => (
                   <button
                     key={value}
+                    type="button"
                     className="mt-7 w-full rounded-md border border-black px-[2px] py-2 text-xs shadow-lg transition-all duration-100 ease-in-out hover:bg-gray-200 active:scale-95 dark:bg-[#fff1] dark:text-white dark:hover:bg-[#ffffff34] sm:px-2 sm:text-base lg:px-5"
                     onClick={() => handleDefaultAmountClick(value)}
                   >
@@ -186,13 +269,16 @@ function WalletDropdown({
                   به حروف
                 </Badge>
                 <p className="font-bold dark:text-white">
-                  {String(numberToWords(Number(amount)))} تومان
+                  {numericAmount > 0
+                    ? `${String(numberToWords(numericAmount))} تومان`
+                    : 'مبلغی وارد نشده است'}
                 </p>
               </div>
               <Button
                 className="mt-7 w-full  rounded-md  bg-gradient-to-r from-[#a8ff78] to-[#78ffd6] px-5 py-2 text-xl text-black transition-all duration-200 ease-in-out hover:scale-105 active:scale-100"
                 onClick={handleSubmit}
                 isLoading={loading}
+                type="button"
               >
                 پرداخت
               </Button>

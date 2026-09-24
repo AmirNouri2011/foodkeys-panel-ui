@@ -34,6 +34,7 @@ const menuItems = [
 ];
 
 import { STATIC_FILES_URL } from '@/config/api.config';
+import cn from '@/utils/class-names';
 
 function DropdownMenu() {
   const user = useSelector((state: RootState) => state.user);
@@ -60,12 +61,7 @@ function DropdownMenu() {
       <div className="flex items-center border-b border-gray-300 px-6 pb-5 pt-6">
         <Avatar
           // @ts-ignore
-          src={
-            (user.avatar &&
-              STATIC_FILES_URL +
-                user.avatar) ||
-            ''
-          }
+          src={(user.avatar && STATIC_FILES_URL + user.avatar) || ''}
           name={user.firstName || 'کاربر'}
           color="DEFAULT"
         />
@@ -108,8 +104,13 @@ function DropdownMenu() {
   );
 }
 
-export default function ProfileMenu() {
-  const wallet = useSelector((state: RootState) => state.wallet);
+export default function ProfileMenu({
+  buttonClassName,
+  avatarClassName,
+}: {
+  buttonClassName?: string;
+  avatarClassName?: string;
+} = {}) {
   const user = useSelector((state: RootState) => state.user);
 
   return (
@@ -119,17 +120,21 @@ export default function ProfileMenu() {
       placement="bottom-end"
       className="z-50 p-0 dark:bg-gray-100 [&>svg]:dark:fill-gray-100"
     >
-      <button className="w-9 shrink-0 rounded-full outline-none focus-visible:ring-[1.5px] focus-visible:ring-gray-400 focus-visible:ring-offset-2 active:translate-y-px sm:w-10">
+      <button
+        aria-label="حساب کاربری"
+        className={cn(
+          'w-9 shrink-0 rounded-full outline-none transition-colors focus-visible:ring-[1.5px] focus-visible:ring-gray-400 focus-visible:ring-offset-2 active:translate-y-px sm:w-10',
+          buttonClassName
+        )}
+      >
         <Avatar
-          src={
-            (user.avatar &&
-              STATIC_FILES_URL +
-                user.avatar) ||
-            ''
-          }
+          src={(user.avatar && STATIC_FILES_URL + user.avatar) || ''}
           name={user.firstName || 'کاربر'}
           color="DEFAULT"
-          className="!h-9 w-9 border-2 bg-white shadow-md dark:bg-white sm:!h-10 sm:w-10"
+          className={cn(
+            '!h-9 w-9 border-2 bg-white shadow-md dark:bg-white sm:!h-10 sm:w-10',
+            avatarClassName
+          )}
         />
       </button>
     </Popover>

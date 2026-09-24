@@ -534,29 +534,35 @@ export const AuthProvider = ({children}) => {
     const forgotPasswordVerify = useCallback(
         async (otp: any, phoneNumber: any) => {
             try {
-                await axiosInstance.post('/auth/forgot-password/verify', {
+                const response = await axiosInstance.post('/auth/forgot-password/verify', {
                     otp,
                     phoneNumber,
                 });
-                return true;
+                const resetToken = response.data?.data?.resetToken;
+                if (!resetToken) {
+                    toast.error('توکن بازنشانی رمز عبور از سرور دریافت نشد');
+                    return null;
+                }
+                return resetToken as string;
             } catch (error) {
                 console.log(error);
                 // @ts-ignore
                 toast.error(
                     error?.response?.data?.message || 'خطا در بررسی رمز یکبارمصرف'
                 );
-                return false;
+                return null;
             }
         },
         []
     );
 
     const forgotPassword = useCallback(
-        async (password: any, username: any, formHook?: { setFieldError?: (field: string, message: string) => void }) => {
+        async (password: any, username: any, resetToken: string, formHook?: { setFieldError?: (field: string, message: string) => void }) => {
             try {
                 const response = await axiosInstance.post('/auth/forgot-password', {
                     password,
                     username,
+                    resetToken,
                 });
                 if (response?.data?.status === 'SUCCESS') {
                     toast.success(response.data.message);

@@ -716,7 +716,7 @@ import HorizontalFormBlockWrapper from './horiozontal-block';
 import Spinner from '@/components/ui/spinner';
 import toast from 'react-hot-toast';
 import { Textarea } from 'rizzui';
-import { DatePicker } from '@/components/ui/datepicker';
+import BirthDatePicker from '@/components/ui/birth-date-picker';
 import useAxiosPrivate from '@/hooks/use-axios-private';
 import { z } from 'zod';
 import { useDispatch } from 'react-redux';
@@ -1107,19 +1107,13 @@ export default function PersonalInfoView({ user }) {
                           name="birthDate"
                           control={control}
                           render={({field: {onChange, value, onBlur}}) => (
-                              <DatePicker
-                                  selected={value}
+                              <BirthDatePicker
+                                  value={value}
                                   onChange={onChange}
                                   onBlur={onBlur}
-                                  dateFormat="yyyy/MM/dd"
                                   maxDate={new Date()}
-                                  helperText="تاریخ تولد"
-                                  placeholderText="تاریخ تولد"
-                                  inputProps={{
-                                    variant: 'outline',
-                                    inputClassName: 'p-4 border border-gray-300 rounded-md',
-                                  }}
-                                  popperPlacement="bottom-end"
+                                  placeholder="تاریخ تولد"
+                                  error={errors.birthDate?.message}
                                   className="flex-grow"
                               />
                           )}

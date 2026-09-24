@@ -1,0 +1,74 @@
+.birth-date-picker-container {
+  width: 100%;
+}
+
+.birth-date-calendar.rmdp-wrapper {
+  direction: rtl;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  box-shadow: 0 12px 30px rgb(15 23 42 / 16%);
+  font-family: inherit;
+}
+
+.birth-date-calendar .rmdp-calendar {
+  padding: 0.75rem;
+}
+
+.birth-date-calendar .rmdp-header-values,
+.birth-date-calendar .rmdp-week-day,
+.birth-date-calendar .rmdp-day {
+  font-family: inherit;
+}
+
+.birth-date-calendar .rmdp-header-values {
+  color: #111827;
+  font-weight: 600;
+}
+
+.birth-date-calendar .rmdp-week-day {
+  color: #6b7280;
+}
+
+.birth-date-calendar .rmdp-day span {
+  border-radius: 0.5rem;
+}
+
+.birth-date-calendar .rmdp-day.rmdp-today span {
+  background-color: #e0f2fe;
+  color: #0369a1;
+}
+
+.birth-date-calendar .rmdp-day.rmdp-selected span:not(.highlight) {
+  background-color: #0284c7;
+  box-shadow: none;
+  color: #fff;
+}
+
+.birth-date-calendar
+  .rmdp-day:not(.rmdp-disabled):not(.rmdp-day-hidden)
+  span:hover {
+  background-color: #e0f2fe;
+  color: #075985;
+}
+
+.birth-date-calendar .rmdp-arrow {
+  border-color: #475569;
+}
+
+.birth-date-calendar .rmdp-arrow-container:hover {
+  background-color: #e0f2fe;
+  box-shadow: none;
+}
+
+.dark .birth-date-calendar.rmdp-wrapper,
+[data-theme='dark'] .birth-date-calendar.rmdp-wrapper {
+  background-color: #111827;
+  border-color: #374151;
+}
+
+.dark .birth-date-calendar .rmdp-header-values,
+.dark .birth-date-calendar .rmdp-day:not(.rmdp-deactive) span,
+[data-theme='dark'] .birth-date-calendar .rmdp-header-values,
+[data-theme='dark'] .birth-date-calendar .rmdp-day:not(.rmdp-deactive) span {
+  color: #f9fafb;
+}

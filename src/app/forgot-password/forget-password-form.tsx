@@ -13,6 +13,7 @@ import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import { SubmitHandler } from 'react-hook-form';
 import { Modal } from 'rizzui';
+import toast from 'react-hot-toast';
 import {
   PiArrowLeftBold,
   PiArrowRightBold,
@@ -60,6 +61,7 @@ const formatTime = (seconds: number) =>
 export default function ForgetPasswordForm() {
   const [loading, setLoading] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [resetToken, setResetToken] = useState('');
   const [step, setStep] = useState<'INITIAL' | 'OTP' | 'UPDATE'>('INITIAL');
   const [otpExpiresAt, setOtpExpiresAt] = useState(0);
   const [otpSecondsRemaining, setOtpSecondsRemaining] = useState(0);
@@ -144,6 +146,7 @@ export default function ForgetPasswordForm() {
       const result = await forgotPasswordOtp(phone, captcha.getPayload());
       if (result?.success) {
         setPhoneNumber(phone);
+        setResetToken('');
         startOtpTimer();
         captcha.clearAnswer();
         setStep('OTP');
@@ -162,7 +165,11 @@ export default function ForgetPasswordForm() {
     }
     setLoading(true);
     try {
-      if (await forgotPasswordVerify(otp, phoneNumber)) setStep('UPDATE');
+      const token = await forgotPasswordVerify(otp, phoneNumber);
+      if (token) {
+        setResetToken(token);
+        setStep('UPDATE');
+      }
     } finally {
       setLoading(false);
     }
@@ -190,6 +197,7 @@ export default function ForgetPasswordForm() {
     try {
       const result = await forgotPasswordOtp(phoneNumber, captcha.getPayload());
       if (result?.success) {
+        setResetToken('');
         captcha.clearAnswer();
         startOtpTimer();
       } else {
@@ -203,6 +211,7 @@ export default function ForgetPasswordForm() {
   const returnToStart = () => {
     setExpirationModalOpen(false);
     setStep('INITIAL');
+    setResetToken('');
     setOtpExpiresAt(0);
     setOtpSecondsRemaining(0);
     setResendSeconds(120);
@@ -211,9 +220,13 @@ export default function ForgetPasswordForm() {
   };
 
   const onSubmit: SubmitHandler<FormValues> = async ({ password }) => {
+    if (!resetToken) {
+      toast.error('توکن بازنشانی رمز عبور موجود نیست؛ لطفاً دوباره کد بگیرید');
+      return;
+    }
     setLoading(true);
     try {
-      await forgotPassword(password, phoneNumber);
+      await forgotPassword(password, phoneNumber, resetToken);
     } finally {
       setLoading(false);
     }
