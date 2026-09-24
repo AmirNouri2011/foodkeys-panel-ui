@@ -309,295 +309,328 @@ import { ChevronLeft } from 'lucide-react';
 import { useServiceSchema } from '@/hooks/use-service-subcategories';
 import { useServiceApi, ServiceDTO } from '@/app/api/services';
 import DynamicForm, {
-    DynamicFormValidateRef,
+  DynamicFormValidateRef,
 } from '@/components/ui/dynamic-form';
 import { routes } from '@/config/routes';
 import Spinner from '@/components/ui/spinner';
 import { Card, Title } from '@/components/ui/compatible-components';
 import ServiceDisplaySettings, {
-    ServiceDisplaySettingsValues,
+  ServiceDisplaySettingsValues,
 } from '@/app/shared/info/service/service-display-settings';
 import { getServiceDisplaySettingsErrors } from '@/app/shared/info/service/form-utils';
 import useAxiosPrivate from '@/hooks/use-axios-private';
 
 // Custom alert component to avoid the rizzui Alert issue
-const CustomAlert = ({ children, variant = "default", className = "" }) => {
-    const baseStyles = "p-4 rounded-md mb-4 text-sm";
-    const variantStyles = {
-        default: "bg-gray-100 text-gray-800",
-        info: "bg-blue-50 text-blue-800",
-        success: "bg-green-50 text-green-800",
-        warning: "bg-yellow-50 text-yellow-800",
-        danger: "bg-red-50 text-red-800"
-    };
+const CustomAlert = ({ children, variant = 'default', className = '' }) => {
+  const baseStyles = 'p-4 rounded-md mb-4 text-sm';
+  const variantStyles = {
+    default: 'bg-gray-100 text-gray-800',
+    info: 'bg-blue-50 text-blue-800',
+    success: 'bg-green-50 text-green-800',
+    warning: 'bg-yellow-50 text-yellow-800',
+    danger: 'bg-red-50 text-red-800',
+  };
 
-    return (
-        <div className={`${baseStyles} ${variantStyles[variant]} ${className}`}>
-            {children}
-        </div>
-    );
+  return (
+    <div className={`${baseStyles} ${variantStyles[variant]} ${className}`}>
+      {children}
+    </div>
+  );
 };
 
 export default function ServiceCreatePage() {
-    const { subcategory } = useParams();
-    const router = useRouter();
-    const serviceApi = useServiceApi();
-    const axiosPrivate = useAxiosPrivate();
+  const { subcategory } = useParams();
+  const router = useRouter();
+  const serviceApi = useServiceApi();
+  const axiosPrivate = useAxiosPrivate();
 
-    // States
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [serviceData, setServiceData] = useState<Partial<ServiceDTO>>({
-        name: '',
-        nameEn: '',
-        description: '',
-        subCategoryId: 0,
-        logo: '',
-        backgroundImage: '',
-        keywords: [],
-        tags: [],
-        data: {}
-    });
-    const [subCategoryId, setSubCategoryId] = useState<number | null>(null);
-    const [dynamicFormData, setDynamicFormData] = useState({});
-    const [displaySettingsErrors, setDisplaySettingsErrors] = useState<
-        Partial<Record<keyof ServiceDisplaySettingsValues, string>>
-    >({});
-    const dynamicFormValidateRef = useRef<DynamicFormValidateRef | null>(null);
+  // States
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [serviceData, setServiceData] = useState<Partial<ServiceDTO>>({
+    name: '',
+    nameEn: '',
+    description: '',
+    subCategoryId: 0,
+    logo: '',
+    backgroundImage: '',
+    keywords: [],
+    tags: [],
+    data: {},
+  });
+  const [subCategoryId, setSubCategoryId] = useState<number | null>(null);
+  const [dynamicFormData, setDynamicFormData] = useState({});
+  const [displaySettingsErrors, setDisplaySettingsErrors] = useState<
+    Partial<Record<keyof ServiceDisplaySettingsValues, string>>
+  >({});
+  const dynamicFormValidateRef = useRef<DynamicFormValidateRef | null>(null);
 
-    // Get schema for the subcategory
-    const { schema, loading: schemaLoading, error: schemaError } = useServiceSchema(subCategoryId);
+  // Get schema for the subcategory
+  const {
+    schema,
+    loading: schemaLoading,
+    error: schemaError,
+  } = useServiceSchema(subCategoryId);
 
-    // Find subcategory ID from name
-    useEffect(() => {
-        const fetchSubCategoryId = async () => {
-            try {
-                // Using axiosPrivate instead of fetch
-                const response = await axiosPrivate.get(`/subcategory/by-name/${subcategory}`);
+  // Find subcategory ID from name
+  useEffect(() => {
+    const fetchSubCategoryId = async () => {
+      try {
+        // Using axiosPrivate instead of fetch
+        const response = await axiosPrivate.get(
+          `/subcategory/by-name/${subcategory}`
+        );
 
-                if (response.data && response.data.status === "SUCCESS" && response.data.data) {
-                    setSubCategoryId(response.data.data.subCategoryId);
-                    setServiceData(prev => ({
-                        ...prev,
-                        subCategoryId: response.data.data.subCategoryId
-                    }));
-                } else {
-                    console.warn('Using mock subcategory ID. Should implement proper lookup.');
-                    const mockId = subcategory === 'exhibitions' ? 1 :
-                        subcategory === 'conferences' ? 2 :
-                            subcategory === 'employment' ? 3 : 4;
+        if (
+          response.data &&
+          response.data.status === 'SUCCESS' &&
+          response.data.data
+        ) {
+          setSubCategoryId(response.data.data.subCategoryId);
+          setServiceData((prev) => ({
+            ...prev,
+            subCategoryId: response.data.data.subCategoryId,
+          }));
+        } else {
+          console.warn(
+            'Using mock subcategory ID. Should implement proper lookup.'
+          );
+          const mockId =
+            subcategory === 'exhibitions'
+              ? 1
+              : subcategory === 'conferences'
+              ? 2
+              : subcategory === 'employment'
+              ? 3
+              : 4;
 
-                    setSubCategoryId(mockId);
-                    setServiceData(prev => ({
-                        ...prev,
-                        subCategoryId: mockId
-                    }));
-                }
-            } catch (err) {
-                console.error('Error fetching subcategory ID:', err);
-                setError('خطا در یافتن زیرشاخه');
-
-                // Fallback to a mock ID
-                const mockId = subcategory === 'exhibitions' ? 1 :
-                    subcategory === 'conferences' ? 2 :
-                        subcategory === 'employment' ? 3 : 4;
-
-                setSubCategoryId(mockId);
-                setServiceData(prev => ({
-                    ...prev,
-                    subCategoryId: mockId
-                }));
-            }
-        };
-
-        if (subcategory) {
-            fetchSubCategoryId();
+          setSubCategoryId(mockId);
+          setServiceData((prev) => ({
+            ...prev,
+            subCategoryId: mockId,
+          }));
         }
-    }, [subcategory, axiosPrivate]);
+      } catch (err) {
+        console.error('Error fetching subcategory ID:', err);
+        setError('خطا در یافتن زیرشاخه');
 
-    const handleDisplaySettingsChange = (
-        field: keyof ServiceDisplaySettingsValues,
-        value: any
-    ) => {
+        // Fallback to a mock ID
+        const mockId =
+          subcategory === 'exhibitions'
+            ? 1
+            : subcategory === 'conferences'
+            ? 2
+            : subcategory === 'employment'
+            ? 3
+            : 4;
+
+        setSubCategoryId(mockId);
         setServiceData((prev) => ({
-            ...prev,
-            [field]: value,
+          ...prev,
+          subCategoryId: mockId,
         }));
+      }
     };
 
-    // Handle dynamic form data change - this gets called when DynamicForm values change
-    const handleDynamicDataChange = useCallback((data: any) => {
-        setDynamicFormData(data);
-        // Also update serviceData.data to reflect the current form data
-        setServiceData(prev => ({
-            ...prev,
-            data
-        }));
-    }, []);
+    if (subcategory) {
+      fetchSubCategoryId();
+    }
+  }, [subcategory, axiosPrivate]);
 
-    // This will be called when the DynamicForm is submitted (but we hide submit button)
-    const handleDynamicFormSubmit = async (data: any) => {
-        // We use this just to get the final formatted data
-        setDynamicFormData(data);
-        setServiceData(prev => ({
-            ...prev,
-            data
-        }));
-    };
+  const handleDisplaySettingsChange = (
+    field: keyof ServiceDisplaySettingsValues,
+    value: any
+  ) => {
+    setServiceData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
 
-    // Handle form submission
-    const handleSubmit = async () => {
-        try {
-            setIsLoading(true);
-            setError(null);
+  // Handle dynamic form data change - this gets called when DynamicForm values change
+  const handleDynamicDataChange = useCallback((data: any) => {
+    setDynamicFormData(data);
+    // Also update serviceData.data to reflect the current form data
+    setServiceData((prev) => ({
+      ...prev,
+      data,
+    }));
+  }, []);
 
-            const displayErrors = getServiceDisplaySettingsErrors({
-                name: serviceData.name || '',
-                nameEn: serviceData.nameEn || '',
-                description: serviceData.description || '',
-                logo: serviceData.logo,
-                backgroundImage: serviceData.backgroundImage,
-                keywords: serviceData.keywords || [],
-                tags: serviceData.tags || [],
-            });
-            setDisplaySettingsErrors(displayErrors);
+  // This will be called when the DynamicForm is submitted (but we hide submit button)
+  const handleDynamicFormSubmit = async (data: any) => {
+    // We use this just to get the final formatted data
+    setDynamicFormData(data);
+    setServiceData((prev) => ({
+      ...prev,
+      data,
+    }));
+  };
 
-            const isDynamicFormValid =
-                (await dynamicFormValidateRef.current?.validate()) ?? true;
+  // Handle form submission
+  const handleSubmit = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
 
-            if (Object.keys(displayErrors).length > 0 || !isDynamicFormValid) {
-                setError('لطفاً خطاهای فرم را برطرف کنید');
-                setIsLoading(false);
-                return;
-            }
+      const displayErrors = getServiceDisplaySettingsErrors({
+        name: serviceData.name || '',
+        nameEn: serviceData.nameEn || '',
+        description: serviceData.description || '',
+        logo: serviceData.logo,
+        backgroundImage: serviceData.backgroundImage,
+        keywords: serviceData.keywords || [],
+        tags: serviceData.tags || [],
+      });
+      setDisplaySettingsErrors(displayErrors);
 
-            if (!serviceData.subCategoryId) {
-                setError('زیرشاخه تعیین نشده است');
-                setIsLoading(false);
-                return;
-            }
+      const isDynamicFormValid =
+        (await dynamicFormValidateRef.current?.validate()) ?? true;
 
-            // Create service with simplified data structure - removing admin fields
-            const serviceToCreate: ServiceDTO = {
-                name: serviceData.name || '',
-                nameEn: serviceData.nameEn || '',
-                description: serviceData.description || '',
-                subCategoryId: serviceData.subCategoryId || 0,
-                logo: serviceData.logo || '',
-                backgroundImage: serviceData.backgroundImage || '',
-                keywords: serviceData.keywords || [],
-                tags: serviceData.tags || [],
-                data: dynamicFormData,
-                ranking: 0,
-                rankingAll: 0,
-                elasticFields: [],
-                additionalData: null
-            };
+      if (Object.keys(displayErrors).length > 0 || !isDynamicFormValid) {
+        setError('لطفاً خطاهای فرم را برطرف کنید');
+        setIsLoading(false);
+        return;
+      }
 
-            console.log('Submitting service:', serviceToCreate);
+      if (!serviceData.subCategoryId) {
+        setError('زیرشاخه تعیین نشده است');
+        setIsLoading(false);
+        return;
+      }
 
-            const response = await serviceApi.createService(serviceToCreate);
+      // Read directly from DynamicForm at submit time. Its onChange callback is
+      // debounced, so relying on state here can otherwise omit the latest edit.
+      const formattedDynamicFormData =
+        dynamicFormValidateRef.current?.getFormattedData() ?? dynamicFormData;
 
-            if (response && response.status === 'SUCCESS') {
-                // Navigate to the service list
-                router.replace(routes.info.serviceIndustrySubCategoryList(subcategory as string));
-            } else {
-                setError('خطا در ایجاد سرویس');
-            }
-        } catch (err) {
-            console.error('Error creating service:', err);
-            setError('خطا در ایجاد سرویس');
-        } finally {
-            setIsLoading(false);
-        }
-    };
+      const galleryFiles = [serviceData.logo, serviceData.backgroundImage]
+        .filter((id): id is string => Boolean(id))
+        .map((id) => ({ id }));
 
-    return (
-        <div className="mx-auto max-w-6xl p-4 md:p-6 lg:p-8">
-            <div className="mb-6 flex items-center justify-between">
-                <div className="flex items-center">
-                    <Button
-                        variant="text"
-                        className="mr-2"
-                        onClick={() => router.back()}
-                    >
-                        <ChevronLeft className="h-5 w-5" />
-                    </Button>
-                    <Title className="text-xl md:text-2xl">ایجاد {subcategory} جدید</Title>
-                </div>
-            </div>
+      // Uploaded images are temporary file IDs. The service endpoint attaches
+      // them through galleryFiles; logo/backgroundImage are not file fields in
+      // the create contract.
+      const serviceToCreate: ServiceDTO = {
+        name: serviceData.name || '',
+        nameEn: serviceData.nameEn || '',
+        description: serviceData.description || '',
+        subCategoryId: serviceData.subCategoryId || 0,
+        galleryFiles,
+        keyWords: serviceData.keywords || [],
+        tags: serviceData.tags || [],
+        data: formattedDynamicFormData,
+        ranking: 0,
+        rankingAll: 0,
+        elasticFields: [],
+        additionalData: {},
+      };
 
-            {error && (
-                <CustomAlert variant="danger">
-                    {error}
-                </CustomAlert>
-            )}
+      console.log('Submitting service:', serviceToCreate);
 
-            {schemaError && (
-                <CustomAlert variant="danger">
-                    خطا در بارگذاری ساختار فرم: {schemaError}
-                </CustomAlert>
-            )}
+      const response = await serviceApi.createService(serviceToCreate);
 
-            <Card className="mb-8">
-                <div className="p-6">
-                    <Title className="mb-4 text-lg">تنظیمات نمایش</Title>
-                    <ServiceDisplaySettings
-                        values={{
-                            name: serviceData.name || '',
-                            nameEn: serviceData.nameEn || '',
-                            description: serviceData.description || '',
-                            logo: serviceData.logo,
-                            backgroundImage: serviceData.backgroundImage,
-                            keywords: serviceData.keywords || [],
-                            tags: serviceData.tags || [],
-                            currentLogo: (serviceData as any).currentLogo,
-                            currentBackgroundImage: (serviceData as any).currentBackgroundImage,
-                        }}
-                        onChange={handleDisplaySettingsChange}
-                        fieldErrors={displaySettingsErrors}
-                    />
-                </div>
-            </Card>
+      if (response && response.status === 'SUCCESS') {
+        // Navigate to the service list
+        router.replace(
+          routes.info.serviceIndustrySubCategoryList(subcategory as string)
+        );
+      } else {
+        setError('خطا در ایجاد سرویس');
+      }
+    } catch (err: any) {
+      console.error('Error creating service:', err);
+      setError(
+        err?.response?.data?.message ||
+          err?.response?.data?.error?.[0]?.message ||
+          'خطا در ایجاد سرویس'
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-            {schemaLoading ? (
-                <div className="flex items-center justify-center py-10">
-                    <Spinner size="xl" />
-                    <p className="ms-3">در حال بارگذاری فرم...</p>
-                </div>
-            ) : schema ? (
-                <DynamicForm
-                    schema={schema}
-                    initialData={serviceData.data || {}}
-                    onSubmit={handleDynamicFormSubmit}
-                    onChange={handleDynamicDataChange}
-                    loading={isLoading}
-                    hideSubmit={true}
-                    clientPanel={true}
-                    hideFormHeader={true}
-                    className="max-w-none"
-                    validateRef={dynamicFormValidateRef}
-                />
-            ) : null}
-
-            <div className="mt-6 flex justify-end">
-                <Button
-                    variant="outline"
-                    className="ml-3"
-                    onClick={() => router.back()}
-                    disabled={isLoading}
-                >
-                    انصراف
-                </Button>
-
-                <Button
-                    onClick={handleSubmit}
-                    isLoading={isLoading}
-                    disabled={!serviceData.name || !subCategoryId || schemaLoading}
-                >
-                    {isLoading ? 'در حال ذخیره...' : 'ذخیره اطلاعات'}
-                </Button>
-            </div>
+  return (
+    <div className="mx-auto max-w-6xl p-4 md:p-6 lg:p-8">
+      <div className="mb-6 flex items-center justify-between">
+        <div className="flex items-center">
+          <Button variant="text" className="mr-2" onClick={() => router.back()}>
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
+          <Title className="text-xl md:text-2xl">
+            ایجاد {subcategory} جدید
+          </Title>
         </div>
-    );
+      </div>
+
+      {error && <CustomAlert variant="danger">{error}</CustomAlert>}
+
+      {schemaError && (
+        <CustomAlert variant="danger">
+          خطا در بارگذاری ساختار فرم: {schemaError}
+        </CustomAlert>
+      )}
+
+      <Card className="mb-8">
+        <div className="p-6">
+          <Title className="mb-4 text-lg">تنظیمات نمایش</Title>
+          <ServiceDisplaySettings
+            values={{
+              name: serviceData.name || '',
+              nameEn: serviceData.nameEn || '',
+              description: serviceData.description || '',
+              logo: serviceData.logo,
+              backgroundImage: serviceData.backgroundImage,
+              keywords: serviceData.keywords || [],
+              tags: serviceData.tags || [],
+              currentLogo: (serviceData as any).currentLogo,
+              currentBackgroundImage: (serviceData as any)
+                .currentBackgroundImage,
+            }}
+            onChange={handleDisplaySettingsChange}
+            fieldErrors={displaySettingsErrors}
+          />
+        </div>
+      </Card>
+
+      {schemaLoading ? (
+        <div className="flex items-center justify-center py-10">
+          <Spinner size="xl" />
+          <p className="ms-3">در حال بارگذاری فرم...</p>
+        </div>
+      ) : schema ? (
+        <DynamicForm
+          schema={schema}
+          initialData={serviceData.data || {}}
+          onSubmit={handleDynamicFormSubmit}
+          onChange={handleDynamicDataChange}
+          loading={isLoading}
+          hideSubmit={true}
+          clientPanel={true}
+          hideFormHeader={true}
+          className="max-w-none"
+          validateRef={dynamicFormValidateRef}
+        />
+      ) : null}
+
+      <div className="mt-6 flex justify-end">
+        <Button
+          variant="outline"
+          className="ml-3"
+          onClick={() => router.back()}
+          disabled={isLoading}
+        >
+          انصراف
+        </Button>
+
+        <Button
+          onClick={handleSubmit}
+          isLoading={isLoading}
+          disabled={!serviceData.name || !subCategoryId || schemaLoading}
+        >
+          {isLoading ? 'در حال ذخیره...' : 'ذخیره اطلاعات'}
+        </Button>
+      </div>
+    </div>
+  );
 }

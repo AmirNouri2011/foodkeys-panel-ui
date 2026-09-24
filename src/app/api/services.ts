@@ -99,8 +99,12 @@ export interface ServiceDTO {
     elasticFields: string[];
     data: any;
     additionalData?: any;
+    galleryFiles?: Array<{ id: string }>;
     logo?: string;
     backgroundImage?: string;
+    currentLogo?: string;
+    currentBackgroundImage?: string;
+    keyWords?: string[];
     keywords?: string[];
     tags?: string[];
     serviceSchemaDTO?: {
@@ -108,6 +112,13 @@ export interface ServiceDTO {
         formTitle: string;
         formDescription: string;
     };
+}
+
+export interface ServiceFileDTO {
+    id: string;
+    fileName?: string;
+    filePath?: string;
+    fileServiceType: string;
 }
 
 export interface ServiceResponse {
@@ -147,6 +158,18 @@ export const useServiceApi = () => {
         async (id: number): Promise<ServiceResponse> => {
             const response = await axios.get<ServiceResponse>(`/service/${id}`);
             return response.data;
+        },
+        [axios],
+    );
+
+    const getServiceFiles = useCallback(
+        async (id: number): Promise<ServiceFileDTO[]> => {
+            const response = await axios.get<{
+                status: string;
+                data: ServiceFileDTO[];
+            }>(`/service/${id}/files`);
+
+            return response.data?.data || [];
         },
         [axios],
     );
@@ -203,6 +226,7 @@ export const useServiceApi = () => {
         () => ({
             getServices,
             getServiceById,
+            getServiceFiles,
             getServicesBySubcategory,
             createService,
             updateService,
@@ -211,6 +235,7 @@ export const useServiceApi = () => {
         [
             getServices,
             getServiceById,
+            getServiceFiles,
             getServicesBySubcategory,
             createService,
             updateService,

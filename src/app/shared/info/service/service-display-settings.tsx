@@ -2,14 +2,10 @@
 
 import React, { useEffect, useState } from 'react';
 import { Input, Textarea } from 'rizzui';
-import {PiTagBold, PiTrashBold, PiXBold} from 'react-icons/pi';
+import { PiTagBold, PiXBold } from 'react-icons/pi';
 import { Button } from '@/components/ui/button';
 import LogoUpload from '@/components/ui/logo-upload';
 import { STATIC_FILES_URL } from '@/config/api.config';
-import Image from "next/image";
-import {ActionIcon} from "@/components/ui/action-icon";
-import Upload from "@/components/ui/upload";
-import HorizontalFormBlockWrapper from "@/app/shared/account-settings/horiozontal-block";
 
 export interface ServiceDisplaySettingsValues {
   name: string;
@@ -107,12 +103,12 @@ export default function ServiceDisplaySettings({
         rows={4}
       />
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-1">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <LogoUpload
-          label="تصویر"
+          label="لوگوی خدمت"
           accept="image/*"
           logoPreview={logoPreview}
-          fileServiceType="SERVICE_FILE"
+          fileServiceType="SERVICE_LOGO"
           onUploadSuccess={(fileData) => {
             onChange('logo', fileData.id);
             onChange('currentLogo', fileData.filePath);
@@ -123,30 +119,21 @@ export default function ServiceDisplaySettings({
           }}
           wrapperClassName="flex-grow"
         />
-          <Upload
-              label={'عکس پس زمینه صفحه اختصاصی'}
-              // ref={backgroundImageRef}
-              multiple={false}
-              accept="img"
-              iconClassName="w-28 h-auto"
-              // onChange={handleBackgroundImageUpload}
-              className="mb-5 min-h-[200px] justify-center border-dashed bg-gray-50"
-          />
-        {/*<LogoUpload*/}
-        {/*  label="تصویر پس‌زمینه"*/}
-        {/*  accept="image/*"*/}
-        {/*  logoPreview={backgroundPreview}*/}
-        {/*  fileServiceType="SERVICE_FILE"*/}
-        {/*  onUploadSuccess={(fileData) => {*/}
-        {/*    onChange('backgroundImage', fileData.id);*/}
-        {/*    onChange('currentBackgroundImage', fileData.filePath);*/}
-        {/*  }}*/}
-        {/*  onRemove={() => {*/}
-        {/*    onChange('backgroundImage', '');*/}
-        {/*    onChange('currentBackgroundImage', '');*/}
-        {/*  }}*/}
-        {/*  wrapperClassName="flex-grow"*/}
-        {/*/>*/}
+        <LogoUpload
+          label="تصویر پس‌زمینه صفحه اختصاصی"
+          accept="image/*"
+          logoPreview={backgroundPreview}
+          fileServiceType="SERVICE_BACKGROUND_IMAGE"
+          onUploadSuccess={(fileData) => {
+            onChange('backgroundImage', fileData.id);
+            onChange('currentBackgroundImage', fileData.filePath);
+          }}
+          onRemove={() => {
+            onChange('backgroundImage', '');
+            onChange('currentBackgroundImage', '');
+          }}
+          wrapperClassName="flex-grow"
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">

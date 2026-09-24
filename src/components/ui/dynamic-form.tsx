@@ -1269,7 +1269,7 @@ import { STATIC_FILES_URL } from '@/config/api.config';
 // }
 
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import {
     Button,
@@ -1302,6 +1302,7 @@ import {
 
 export type DynamicFormValidateRef = {
     validate: () => Promise<boolean>;
+    getFormattedData: () => any;
 };
 
 // Custom alert component to avoid the rizzui Alert issue
@@ -1472,15 +1473,29 @@ export default function DynamicForm({
     const isFirstRenderRef = useRef(true);
     const lastFormDataRef = useRef({});
 
-    const effectiveSchemaDefinition = schema?.schemaDefinition
-        ? clientPanel
-            ? filterSchemaDefinitionForUserPanel(schema.schemaDefinition)
-            : schema.schemaDefinition
-        : null;
+    // Filtering returns new objects. Memoizing them is important because they are
+    // effect dependencies below; recreating them on every render caused a
+    // setFields/reset render loop that could starve Next.js client navigation.
+    const effectiveSchemaDefinition = useMemo(
+        () =>
+            schema?.schemaDefinition
+                ? clientPanel
+                    ? filterSchemaDefinitionForUserPanel(schema.schemaDefinition)
+                    : schema.schemaDefinition
+                : null,
+        [clientPanel, schema?.schemaDefinition]
+    );
 
-    const filteredInitialData = effectiveSchemaDefinition
-        ? filterFormDataByUserPanelSchema(initialData, effectiveSchemaDefinition)
-        : initialData;
+    const filteredInitialData = useMemo(
+        () =>
+            effectiveSchemaDefinition
+                ? filterFormDataByUserPanelSchema(
+                      initialData,
+                      effectiveSchemaDefinition
+                  )
+                : initialData,
+        [effectiveSchemaDefinition, initialData]
+    );
 
     const {
         control,
@@ -1498,9 +1513,20 @@ export default function DynamicForm({
         if (validateRef) {
             validateRef.current = {
                 validate: () => trigger(),
+                getFormattedData: () => {
+                    const values = getValues();
+                    const schemaDefinition = effectiveSchemaDefinition || schema?.schemaDefinition;
+                    const scopedData = schemaDefinition
+                        ? filterFormDataByUserPanelSchema(values, schemaDefinition)
+                        : values;
+
+                    return schemaDefinition
+                        ? formatFormDataForApi(scopedData, schemaDefinition)
+                        : scopedData;
+                },
             };
         }
-    }, [trigger, validateRef]);
+    }, [effectiveSchemaDefinition, getValues, schema, trigger, validateRef]);
 
     // Watch all form values for changes, but debounce updates
     const formValues = watch();
@@ -1561,10 +1587,18 @@ export default function DynamicForm({
 
     useEffect(() => {
         if (filteredInitialData && Object.keys(filteredInitialData).length > 0) {
-            reset(filteredInitialData);
+            // onChange mirrors the form data into the parent. Do not reset the form
+            // when that same data comes back as initialData, otherwise every field
+            // edit can start a parent/child update loop.
+            if (
+                JSON.stringify(getValues()) !==
+                JSON.stringify(filteredInitialData)
+            ) {
+                reset(filteredInitialData);
+            }
             lastFormDataRef.current = filteredInitialData;
         }
-    }, [filteredInitialData, reset]);
+    }, [filteredInitialData, getValues, reset]);
 
     const getValidationRules = (field: FieldType) => {
         const rules: any = {};

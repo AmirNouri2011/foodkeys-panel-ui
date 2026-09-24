@@ -342,7 +342,11 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Text, Button } from 'rizzui';
 import {ChevronRight, Trash2} from 'lucide-react';
-import { useServiceApi, ServiceDTO } from '@/app/api/services';
+import {
+    useServiceApi,
+    ServiceDTO,
+    ServiceFileDTO,
+} from '@/app/api/services';
 import DynamicForm, {
     DynamicFormValidateRef,
 } from '@/components/ui/dynamic-form';
@@ -380,7 +384,32 @@ export default function ServiceEditPage() {
                 const response = await serviceApi.getServiceById(Number(id));
 
                 if (response && response.status === 'SUCCESS' && response.data) {
-                    setServiceData(response.data);
+                    let serviceFiles: ServiceFileDTO[] = [];
+                    try {
+                        serviceFiles = await serviceApi.getServiceFiles(Number(id));
+                    } catch (fileError) {
+                        // The core service can still be edited when its optional
+                        // gallery request fails; newly uploaded files will work.
+                        console.error('Error fetching service files:', fileError);
+                    }
+
+                    const logoFile = serviceFiles.find(
+                        (file) => file.fileServiceType === 'SERVICE_LOGO'
+                    );
+                    const backgroundFile = serviceFiles.find(
+                        (file) => file.fileServiceType === 'SERVICE_BACKGROUND_IMAGE'
+                    );
+
+                    setServiceData({
+                        ...response.data,
+                        logo: logoFile?.id || '',
+                        backgroundImage: backgroundFile?.id || '',
+                        currentLogo: logoFile?.filePath || response.data.logo,
+                        currentBackgroundImage:
+                            backgroundFile?.filePath || response.data.backgroundImage,
+                        keywords: response.data.keywords || response.data.keyWords || [],
+                        galleryFiles: serviceFiles.map((file) => ({ id: file.id })),
+                    });
                 } else {
                     setError('خطا در دریافت اطلاعات سرویس');
                 }
@@ -454,6 +483,18 @@ export default function ServiceEditPage() {
                 return;
             }
 
+            const formattedDynamicFormData =
+                dynamicFormValidateRef.current?.getFormattedData() ?? serviceData.data ?? {};
+
+            const galleryFiles = [
+                ...(serviceData.galleryFiles || []).map((file) => file.id),
+                serviceData.logo,
+                serviceData.backgroundImage,
+            ]
+                .filter((fileId): fileId is string => Boolean(fileId))
+                .filter((fileId, index, allIds) => allIds.indexOf(fileId) === index)
+                .map((fileId) => ({ id: fileId }));
+
             // Prepare elastic fields (comma-separated tags to array)
             let elasticFieldsArray: string[] = [];
             if (typeof serviceData.elasticFields === 'string') {
@@ -474,13 +515,12 @@ export default function ServiceEditPage() {
                 rankingAll: serviceData.rankingAll || 0,
                 description: serviceData.description || '',
                 subCategoryId: serviceData.subCategoryId || 0,
-                logo: serviceData.logo || '',
-                backgroundImage: serviceData.backgroundImage || '',
-                keywords: serviceData.keywords || [],
+                galleryFiles,
+                keyWords: serviceData.keywords || serviceData.keyWords || [],
                 tags: serviceData.tags || [],
                 elasticFields: elasticFieldsArray,
-                data: serviceData.data || {},
-                additionalData: serviceData.additionalData || null
+                data: formattedDynamicFormData,
+                additionalData: serviceData.additionalData || {}
             };
 
             const response = await serviceApi.updateService(Number(id), serviceToUpdate);
@@ -491,9 +531,13 @@ export default function ServiceEditPage() {
             } else {
                 setError('خطا در بروزرسانی سرویس');
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error('Error updating service:', err);
-            setError('خطا در بروزرسانی سرویس');
+            setError(
+                err?.response?.data?.message ||
+                err?.response?.data?.error?.[0]?.message ||
+                'خطا در بروزرسانی سرویس'
+            );
         } finally {
             setIsSubmitting(false);
         }
@@ -592,10 +636,9 @@ export default function ServiceEditPage() {
                             backgroundImage: serviceData.backgroundImage,
                             keywords: serviceData.keywords || [],
                             tags: serviceData.tags || [],
-                            currentLogo: (serviceData as any).currentLogo || serviceData.logo,
+                            currentLogo: serviceData.currentLogo,
                             currentBackgroundImage:
-                                (serviceData as any).currentBackgroundImage ||
-                                serviceData.backgroundImage,
+                                serviceData.currentBackgroundImage,
                         }}
                         onChange={handleDisplaySettingsChange}
                         fieldErrors={displaySettingsErrors}

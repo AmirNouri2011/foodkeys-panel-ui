@@ -4,97 +4,50 @@ import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Popover } from '@/components/ui/popover';
 import { Text } from '@/components/ui/text';
-import { routes } from '@/config/routes';
-import { signOut } from 'next-auth/react';
-import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { RootState } from '@/store/store';
-import { useDispatch, useSelector } from 'react-redux';
-import { useEffect, useState } from 'react';
-import useAxiosPrivate from '@/hooks/use-axios-private';
-import { IoMdRefreshCircle } from 'react-icons/io';
-import WalletSection from '../layouts/wallet-section';
-const menuItems = [
-  {
-    name: 'تنطیمات حساب کاربری',
-    href: routes.profile,
-  },
-  // {
-  //   name: 'تنطیمات حساب کاربری',
-  //   href: routes.forms.profileSettings,
-  // },
-  {
-    name: 'پیام‌ها و اعلانات',
-    href: routes.notifications,
-  },
-  {
-    name: 'تاریخچه فعالیت',
-    href: routes.activities,
-  },
-];
+import { useSelector } from 'react-redux';
 
 import { STATIC_FILES_URL } from '@/config/api.config';
 import cn from '@/utils/class-names';
 
 function DropdownMenu() {
   const user = useSelector((state: RootState) => state.user);
-  // const [actualCredit, setActualCredit] = useState(0);
-  // const _axios = useAxiosPrivate();
-
-  // useEffect(() => {
-  //   const fetchWalletCredit = async () => {
-  //     try {
-  //       const response = await _axios.get('/user/credit');
-  //       if (response.data.status === 'SUCCESS') {
-  //         setActualCredit(response.data.data);
-  //       }
-  //     } catch (error) {
-  //       console.error('Error fetching wallet credit:', error);
-  //     }
-  //   };
-  //   fetchWalletCredit();
-  // }, []);
+  const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ');
+  const phone = user.phone || user.phoneNumbers?.[0] || user.phones?.[0];
   // @ts-ignore
   const { logout } = useAuth();
+
   return (
-    <div className="w-64 text-left rtl:text-right">
-      <div className="flex items-center border-b border-gray-300 px-6 pb-5 pt-6">
+    <div className="w-[320px] text-left rtl:text-right">
+      <div className="flex items-center gap-4 px-7 py-7">
         <Avatar
           // @ts-ignore
           src={(user.avatar && STATIC_FILES_URL + user.avatar) || ''}
           name={user.firstName || 'کاربر'}
           color="DEFAULT"
+          className="!h-16 !w-16 shrink-0 border-2 border-white shadow-md"
         />
-        <div className="ms-3">
-          <Text tag="h6" className="font-semibold">
-            {user.firstName} {user.lastName}
+        <div className="min-w-0">
+          <Text
+            tag="h5"
+            className="truncate text-xl font-extrabold text-gray-900 dark:text-white"
+          >
+            {fullName || 'کاربر فودکیز'}
           </Text>
-          <Text className="text-gray-600">{user.username}</Text>
+          <div dir="ltr" className="mt-2 text-right">
+            <Text className="text-base font-medium text-gray-600 dark:text-gray-400">
+              {phone || 'شماره موبایل ثبت نشده'}
+            </Text>
+          </div>
         </div>
       </div>
-      <div className="grid px-3.5 py-3.5 font-medium text-gray-700">
-        <WalletSection />
-        {/* <div className="flex flex-row items-center justify-between border-b border-gray-300 px-2.5 pb-5 pt-1">
-          <div>کیف پول: {wallet.credit} تومان</div>
-          <div>
-            <IoMdRefreshCircle size="30" />
-          </div>
-        </div> */}
-
-        {menuItems.map((item) => (
-          <Link
-            key={item.name}
-            href={item.href}
-            className="group my-0.5 flex items-center rounded-md px-2.5 py-2 hover:bg-gray-100 focus:outline-none hover:dark:bg-gray-50/50"
-          >
-            {item.name}
-          </Link>
-        ))}
-      </div>
-      <div className="border-t border-gray-300 px-6 pb-6 pt-5">
+      <div className="border-t border-gray-200 px-6 py-5 dark:border-gray-700">
         <Button
-          className="h-auto w-full justify-start p-0 font-medium text-gray-700 outline-none focus-within:text-gray-600 hover:text-gray-600 focus-visible:ring-0"
-          variant="text"
+          type="button"
+          className="h-12 w-full justify-center rounded-xl text-base font-bold"
+          variant="outline"
+          color="danger"
           onClick={logout}
         >
           خروج
