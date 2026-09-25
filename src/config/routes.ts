@@ -404,7 +404,7 @@ export const routes = {
         buy: (id: string) => `/offer/buy/${id}`,
     },
     support: {
-        dashboard: '/support',
+        dashboard: '/support/ticket',
         inbox: '/support/inbox',
         supportCategory: (category: string) => `/support/inbox/${category}`,
         messageDetails: (id: string) => `/support/inbox/${id}`,

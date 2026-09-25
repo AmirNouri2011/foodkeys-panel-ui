@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Input, Textarea } from 'rizzui';
 import { PiTagBold, PiXBold } from 'react-icons/pi';
+import { ImageIcon, Search, Type as TypeIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import LogoUpload from '@/components/ui/logo-upload';
 import { STATIC_FILES_URL } from '@/config/api.config';
@@ -74,85 +75,135 @@ export default function ServiceDisplaySettings({
   );
 
   return (
-    <div className="grid grid-cols-1 gap-6">
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <Input
-          label="نام خدمت"
-          placeholder="نام خدمت را وارد کنید"
-          value={values.name}
-          onChange={(e) => onChange('name', e.target.value)}
-          error={fieldErrors?.name || nameError}
-          required
+    <div className="space-y-5">
+      <div className="rounded-2xl border border-gray-100 bg-gray-50/70 p-4 md:p-5">
+        <SubsectionTitle
+          icon={<TypeIcon className="h-4 w-4" />}
+          title="مشخصات اصلی"
+          description="نام و توضیح کوتاهی که در صفحه خدمت نمایش داده می‌شود."
         />
+        <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-2">
+          <Input
+            id="service-display-name"
+            label="نام خدمت"
+            placeholder="مثلاً آگهی استخدام کارشناس فروش"
+            value={values.name}
+            onChange={(e) => onChange('name', e.target.value)}
+            error={fieldErrors?.name || nameError}
+            required
+          />
 
-        <Input
-          label="نام انگلیسی خدمت"
-          placeholder="نام انگلیسی خدمت را وارد کنید"
-          value={values.nameEn}
-          onChange={(e) => onChange('nameEn', e.target.value)}
-          error={fieldErrors?.nameEn}
-        />
+          <Input
+            label="نام انگلیسی خدمت"
+            placeholder="نام انگلیسی (اختیاری)"
+            value={values.nameEn}
+            onChange={(e) => onChange('nameEn', e.target.value)}
+            error={fieldErrors?.nameEn}
+          />
+
+          <Textarea
+            label="توضیحات"
+            placeholder="در چند جمله، این خدمت و مزیت اصلی آن را معرفی کنید..."
+            value={values.description}
+            onChange={(e) => onChange('description', e.target.value)}
+            error={fieldErrors?.description}
+            rows={4}
+            className="md:col-span-2"
+          />
+        </div>
       </div>
 
-      <Textarea
-        label="توضیحات"
-        placeholder="توضیحات خدمت را وارد کنید"
-        value={values.description}
-        onChange={(e) => onChange('description', e.target.value)}
-        error={fieldErrors?.description}
-        rows={4}
-      />
-
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-        <LogoUpload
-          label="لوگوی خدمت"
-          accept="image/*"
-          logoPreview={logoPreview}
-          fileServiceType="SERVICE_LOGO"
-          onUploadSuccess={(fileData) => {
-            onChange('logo', fileData.id);
-            onChange('currentLogo', fileData.filePath);
-          }}
-          onRemove={() => {
-            onChange('logo', '');
-            onChange('currentLogo', '');
-          }}
-          wrapperClassName="flex-grow"
+      <div className="rounded-2xl border border-gray-100 bg-gray-50/70 p-4 md:p-5">
+        <SubsectionTitle
+          icon={<ImageIcon className="h-4 w-4" />}
+          title="هویت بصری"
+          description="تصاویر باکیفیت اعتماد کاربران را بیشتر می‌کنند. فرمت JPG یا PNG تا ۸ مگابایت."
         />
-        <LogoUpload
-          label="تصویر پس‌زمینه صفحه اختصاصی"
-          accept="image/*"
-          logoPreview={backgroundPreview}
-          fileServiceType="SERVICE_BACKGROUND_IMAGE"
-          onUploadSuccess={(fileData) => {
-            onChange('backgroundImage', fileData.id);
-            onChange('currentBackgroundImage', fileData.filePath);
-          }}
-          onRemove={() => {
-            onChange('backgroundImage', '');
-            onChange('currentBackgroundImage', '');
-          }}
-          wrapperClassName="flex-grow"
-        />
+        <div className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-2">
+          <div className="rounded-2xl border border-gray-200 bg-white p-4">
+            <LogoUpload
+              label="لوگوی خدمت"
+              accept="image/*"
+              logoPreview={logoPreview}
+              fileServiceType="SERVICE_LOGO"
+              onUploadSuccess={(fileData) => {
+                onChange('logo', fileData.id);
+                onChange('currentLogo', fileData.filePath);
+              }}
+              onRemove={() => {
+                onChange('logo', '');
+                onChange('currentLogo', '');
+              }}
+              wrapperClassName="flex-grow"
+            />
+          </div>
+          <div className="rounded-2xl border border-gray-200 bg-white p-4">
+            <LogoUpload
+              label="تصویر پس‌زمینه صفحه اختصاصی"
+              accept="image/*"
+              shape="landscape"
+              logoPreview={backgroundPreview}
+              fileServiceType="SERVICE_BACKGROUND_IMAGE"
+              onUploadSuccess={(fileData) => {
+                onChange('backgroundImage', fileData.id);
+                onChange('currentBackgroundImage', fileData.filePath);
+              }}
+              onRemove={() => {
+                onChange('backgroundImage', '');
+                onChange('currentBackgroundImage', '');
+              }}
+              wrapperClassName="flex-grow"
+            />
+          </div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <StringListInput
-          name="تگ"
-          items={tags}
-          onChange={(next) => {
-            setTags(next);
-            onChange('tags', next);
-          }}
+      <div className="rounded-2xl border border-gray-100 bg-gray-50/70 p-4 md:p-5">
+        <SubsectionTitle
+          icon={<Search className="h-4 w-4" />}
+          title="دسته‌بندی و جست‌وجو"
+          description="با افزودن تگ و کلمات کلیدی، پیدا کردن این خدمت ساده‌تر می‌شود."
         />
-        <StringListInput
-          name="کلمه کلیدی"
-          items={keywords}
-          onChange={(next) => {
-            setKeywords(next);
-            onChange('keywords', next);
-          }}
-        />
+        <div className="mt-5 grid grid-cols-1 gap-5 xl:grid-cols-2">
+          <StringListInput
+            name="تگ"
+            items={tags}
+            onChange={(next) => {
+              setTags(next);
+              onChange('tags', next);
+            }}
+          />
+          <StringListInput
+            name="کلمه کلیدی"
+            items={keywords}
+            onChange={(next) => {
+              setKeywords(next);
+              onChange('keywords', next);
+            }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SubsectionTitle({
+  icon,
+  title,
+  description,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="flex items-start gap-3">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-primary-lighter text-primary-dark">
+        {icon}
+      </span>
+      <div>
+        <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
+        <p className="mt-0.5 text-xs leading-5 text-gray-500">{description}</p>
       </div>
     </div>
   );
@@ -185,7 +236,7 @@ function StringListInput({
       <label className="mb-2 block text-sm font-medium text-gray-700">
         {name}
       </label>
-      <div className="flex items-center">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <Input
           value={itemText}
           placeholder={`${name} جدید وارد کنید`}
@@ -197,12 +248,12 @@ function StringListInput({
             }
           }}
           prefix={<PiTagBold className="h-4 w-4" />}
-          className="w-full"
+          className="w-full flex-1"
         />
         <Button
           type="button"
           onClick={handleAdd}
-          className="ms-4 shrink-0 text-sm dark:bg-gray-100 dark:text-white dark:active:bg-gray-100"
+          className="shrink-0 text-sm dark:bg-gray-100 dark:text-white dark:active:bg-gray-100"
         >
           افزودن {name}
         </Button>

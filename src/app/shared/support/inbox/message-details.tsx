@@ -628,7 +628,11 @@ import { LuReply, LuTicket } from 'react-icons/lu';
 import { useState, useEffect, useRef } from 'react';
 import {
   PiCaretDownBold,
+  PiChatCircleDots,
   PiCheck,
+  PiHash,
+  PiInfo,
+  PiPaperPlaneRightFill,
   PiPaperclipLight,
   PiXCircle,
 } from 'react-icons/pi';
@@ -640,6 +644,7 @@ import { Input } from '@/components/ui/input';
 import {
   dataAtom,
   messageIdAtom,
+  ticketInfoAtom,
   ticketStatsAtom,
 } from '@/app/shared/support/inbox/message-list';
 import { SubmitHandler, Controller } from 'react-hook-form';
@@ -650,17 +655,12 @@ import Select from '@/components/ui/select';
 import MessageBody from '@/app/shared/support/inbox/message-body';
 import cn from '@/utils/class-names';
 import SimpleBar from '@/components/ui/simplebar';
-import { useElementSize } from '@/hooks/use-element-size';
-import { useMedia } from '@/hooks/use-media';
 import dynamic from 'next/dynamic';
 import { SupportType, supportTypes } from '@/data/support-inbox';
 import Spinner from '@/components/ui/spinner';
 import { toast } from 'react-hot-toast';
 import useAxiosPrivate from '@/hooks/use-axios-private';
-import ticketSelectionImg from '@public/ticketSelection.jpg';
-import Image from 'next/image';
 import { isUUID } from '@/utils/is-uuid';
-import { MdAttachFile } from 'react-icons/md';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 import { HiOutlineClipboardDocument } from 'react-icons/hi2';
@@ -789,16 +789,47 @@ const supportOptionTypes = [
   },
 ];
 
+const departmentNames: Record<string, string> = {
+  MANAGEMENT: 'مدیریت',
+  SUPPORT: 'پشتیبانی فنی',
+  FINANCE: 'مالی و اعتباری',
+};
+
+const categoryNames: Record<string, string> = {
+  GENERAL: 'عمومی',
+  TECHNICAL: 'فنی',
+  FINANCIAL: 'مالی و اعتباری',
+  FINANCE: 'مالی و اعتباری',
+};
+
+const priorityNames: Record<string, string> = {
+  LOW: 'اولویت کم',
+  Low: 'اولویت کم',
+  MEDIUM: 'اولویت متوسط',
+  Medium: 'اولویت متوسط',
+  HIGH: 'اولویت بالا',
+  High: 'اولویت بالا',
+};
+
+function ticketStatusStyle(status?: string) {
+  if (status === 'CLOSED') return 'border-gray-200 bg-gray-100 text-gray-600';
+  if (status === 'ANSWERED') return 'border-green-200 bg-green-50 text-green-700';
+  return 'border-orange-200 bg-orange-50 text-orange-700';
+}
+
 export default function MessageDetails({ className }: { className?: string }) {
   const data = useAtomValue(dataAtom);
   const setData = useSetAtom(dataAtom);
   const [priority, setPriority] = useState('');
   const messageId = useAtomValue(messageIdAtom);
+  const storedTicket = useAtomValue(ticketInfoAtom);
   const setTicketStats = useSetAtom(ticketStatsAtom);
   const router = useRouter();
   const scrollOnMessagesUpdateRef = useRef(false);
 
-  const selectedTicket = data?.find((t: any) => t.id === messageId);
+  const selectedTicket =
+    data?.find((t: any) => t.id === messageId) ||
+    (storedTicket?.id === messageId ? storedTicket : undefined);
   const [agent, setAgent] = useState(
       (selectedTicket &&
           selectedTicket.department &&
@@ -828,8 +859,6 @@ export default function MessageDetails({ className }: { className?: string }) {
   const [supportType, setSupportType] = useState<SupportType | string>(
       supportTypes.Chat.value
   );
-  const [ref, { width }] = useElementSize();
-  const isWide = useMedia('(min-width: 1280px) and (max-width: 1440px)', false);
 
   // Function to refresh ticket stats after closing a ticket
   const refreshTicketStats = async () => {
@@ -887,12 +916,9 @@ export default function MessageDetails({ className }: { className?: string }) {
     scrollOnMessagesUpdateRef.current = false;
 
     requestAnimationFrame(() => {
-      const lastMessage = messages[messages.length - 1];
-      const lastMessageEl = lastMessage
-        ? document.getElementById(`ticket-message-${lastMessage.id}`)
-        : null;
-
-      lastMessageEl?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      document
+        .getElementById('ticket-messages-end')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'end' });
     });
   }, [messages, showMessages]);
 
@@ -938,15 +964,9 @@ export default function MessageDetails({ className }: { className?: string }) {
     setAttachments((prev) => prev.filter((_, i) => i !== index));
   };
 
-  function formWidth() {
-    if (isWide) return width - 64;
-    return width - 44;
-  }
-
   // set default selected message when render complete
   useEffect(() => {
     // setFormWidth(width);
-    console.log('data = ' + JSON.stringify(data));
     const timer = setTimeout(() => {
       setIsLoading(false);
     }, 500); // 500 milliseconds
@@ -1037,48 +1057,36 @@ export default function MessageDetails({ className }: { className?: string }) {
   return (
       <div
           className={cn(
-              'relative pt-6 lg:rounded-lg lg:border lg:border-gray-200 lg:px-4 lg:py-7 xl:px-5 xl:py-5 2xl:pb-7 2xl:pt-6',
+              'relative overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:bg-gray-50',
               className
           )}
       >
         <div>
-          <header className="flex flex-col justify-between gap-4 border-b border-gray-200 pb-5 3xl:flex-row 3xl:items-center">
-            <div className="flex flex-col items-start justify-between gap-3 xs:flex-row xs:items-center xs:gap-6 lg:justify-normal">
+          <header className="flex flex-col justify-between gap-3 border-b border-gray-100 bg-gray-50/60 px-4 py-4 sm:px-6 2xl:flex-row 2xl:items-center">
+            <div className="flex min-w-0 items-start gap-3">
+              <span className="grid h-11 w-11 flex-none place-items-center rounded-xl bg-primary text-white shadow-sm">
+                <PiChatCircleDots className="h-5 w-5" />
+              </span>
               {selectedTicket && (
-                  <div className="flex flex-col gap-2">
-                    <div className="flex flex-col gap-2 sm:flex-row">
-                      <Text tag="h4" className="font-semibold">
-                        {/*@ts-ignore*/}
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Text tag="h4" className="font-bold text-gray-900">
                         {selectedTicket.subject}
                       </Text>
                       <Badge
                           variant="outline"
-                          // color="success"
                           size="sm"
-                          className={`animate-pulse ${
-                              selectedTicket?.statusStr === 'در انتظار پاسخ'
-                                  ? 'bg-orange-light'
-                                  : selectedTicket?.statusStr === 'پاسخ داده شده'
-                                      ? 'bg-green-light'
-                                      : selectedTicket?.statusStr === 'بسته'
-                                          ? 'bg-red-light'
-                                          : 'bg-gray-light'
-                          } ${
-                              selectedTicket?.statusStr === 'در انتظار پاسخ'
-                                  ? 'border-orange-light'
-                                  : selectedTicket?.statusStr === 'پاسخ داده شده'
-                                      ? 'border-green-light'
-                                      : selectedTicket?.statusStr === 'بسته'
-                                          ? 'border-red-light'
-                                          : 'border-gray-light'
-                          } w-auto min-w-min px-5 text-white`}
+                          className={cn(
+                            'w-auto min-w-min rounded-full px-2.5 py-1 text-[11px]',
+                            ticketStatusStyle(selectedTicket.status)
+                          )}
                       >
-                        {selectedTicket?.statusStr || 'مشکل نرم افزار'}
+                        {selectedTicket?.statusStr || 'در انتظار پاسخ'}
                       </Badge>
                     </div>
-                    <span className="mt-1.5 flex items-center text-gray-500 lg:mt-0">
-                  <p>شماره تیکت: </p>
-                      {selectedTicket?.ticketRefId}{' '}
+                    <span className="mt-1.5 flex items-center gap-1 text-xs text-gray-500">
+                      <PiHash className="h-3.5 w-3.5" />
+                      <span>{selectedTicket?.ticketRefId}</span>
                       <Tooltip
                           size="sm"
                           rounded="sm"
@@ -1087,14 +1095,16 @@ export default function MessageDetails({ className }: { className?: string }) {
                       >
                     <button
                         type="button"
+                        aria-label="کپی شماره تیکت"
                         onClick={() =>
                             handleCopyToClipboard(selectedTicket?.ticketRefId)
                         }
+                        className="rounded-md p-1 transition-colors hover:bg-gray-200"
                     >
                       {isCopied ? (
-                          <PiCheck className="mr-1 h-4 w-4" />
+                          <PiCheck className="h-4 w-4 text-green-dark" />
                       ) : (
-                          <HiOutlineClipboardDocument className="mr-1 h-4 w-4" />
+                          <HiOutlineClipboardDocument className="h-4 w-4" />
                       )}
                     </button>
                   </Tooltip>
@@ -1104,25 +1114,31 @@ export default function MessageDetails({ className }: { className?: string }) {
             </div>
 
             {selectedTicket && (
-                <div className="flex flex-wrap items-center gap-2.5 sm:justify-end">
-                  <div className="flex gap-4">
-                <span className="rounded-md border px-4 py-2 shadow-md">
-                  {agents[0].label}
-                </span>
-                    <span className="rounded-md border px-4 py-2 shadow-md">
-                  {contactStatuses[0].value}
-                </span>
-                    <span className="rounded-md border px-4 py-2 shadow-md">
-                  {priorityOptions[0].label}
-                </span>
+                <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                  <div className="flex flex-wrap gap-2 text-xs text-gray-600">
+                    <span className="rounded-lg border border-gray-200 bg-white px-3 py-2">
+                      {departmentNames[selectedTicket.department] ||
+                        selectedTicket.departmentStr ||
+                        'پشتیبانی'}
+                    </span>
+                    <span className="rounded-lg border border-gray-200 bg-white px-3 py-2">
+                      {categoryNames[selectedTicket.category] ||
+                        selectedTicket.categoryStr ||
+                        'عمومی'}
+                    </span>
+                    <span className="rounded-lg border border-gray-200 bg-white px-3 py-2">
+                      {priorityNames[selectedTicket.priority] ||
+                        selectedTicket.priorityStr ||
+                        'اولویت معمولی'}
+                    </span>
                   </div>
                   {selectedTicket.status !== "CLOSED" && (
                       <Button
                           variant="outline"
                           color="danger"
                           type="button"
-                          size="DEFAULT"
-                          className="group col-span-2 flex items-center gap-1"
+                          size="sm"
+                          className="group flex items-center gap-1 rounded-lg"
                           isLoading={closeTicketLoading}
                           onClick={handleCloseTicket}
                       >
@@ -1140,9 +1156,9 @@ export default function MessageDetails({ className }: { className?: string }) {
           </header>
           {showMessages ? (
               <>
-                <div className="[&_.simplebar-content]:grid [&_.simplebar-content]:gap-8 [&_.simplebar-content]:py-5 [&_.simplebar-content]:px-2">
+                <div className="bg-gray-50/30 [&_.simplebar-content]:py-4">
                   <SimpleBar 
-                    className="@3xl:max-h-[calc(100dvh-20rem)] @4xl:max-h-[calc(100dvh-18rem)] @7xl:max-h-[calc(100dvh-17rem)]"
+                    className="min-h-[300px] max-h-[50vh] xl:h-[calc(100dvh-32rem)] xl:min-h-[360px] xl:max-h-[600px] [&_.simplebar-track.simplebar-vertical]:bottom-3 [&_.simplebar-track.simplebar-vertical]:top-3"
                     style={{
                       '--scrollbar-width': '8px',
                       '--scrollbar-thumb-bg': '#cbd5e1',
@@ -1155,113 +1171,140 @@ export default function MessageDetails({ className }: { className?: string }) {
                 </div>
 
                 {selectedTicket && selectedTicket.status !== "CLOSED" && (
-                    <div
-                        ref={ref}
-                        className="grid grid-cols-[32px_1fr] items-start gap-3 rounded-b-lg border-t border-gray-200 bg-white pt-4 @3xl:pt-4 dark:bg-transparent lg:gap-4 lg:pl-0 dark:lg:pt-4 xl:grid-cols-[48px_1fr]"
-                    >
-                      <figure className="dark:mt-0">
-                        <Avatar
-                            name="صادق"
-                            src="https://s3.amazonaws.com/redqteam.com/isomorphic-furyroad/public/avatars-blur/avatar-14.webp"
-                            className="!h-8 !w-8 bg-[#70C5E0] font-medium text-white xl:!h-10 xl:!w-10"
-                        />
-                      </figure>
-                      <div
-                          className="relative rounded-lg border border-gray-200 bg-gray-50 p-3 2xl:p-4"
-                          style={{
-                            maxWidth: formWidth(),
-                          }}
-                      >
-                        <Form<FormValues>
-                            onSubmit={onSubmit}
-                            validationSchema={FormSchema}
-                            resetValues={formResetValues}
-                        >
-                          {({ control, watch, formState: { errors } }) => {
-                            return (
-                                <>
-                                  <Controller
-                                      control={control}
-                                      name="message"
-                                      render={({ field: { onChange, value } }) => (
-                                          <QuillEditor
-                                              value={value}
-                                              onChange={onChange}
-                                              className="rounded-md bg-gray-0 dark:bg-gray-50 [&>.ql-container_.ql-editor]:min-h-[60px] [&>.ql-container_.ql-editor]:max-h-[120px] [&>.ql-toolbar]:3xl:overflow-x-auto"
-                                          />
-                                      )}
-                                  />
-                                  <div className="mt-3 flex items-center gap-2">
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="gap-2"
-                                        onClick={() =>
-                                            document
-                                                .getElementById('attachment-upload')
-                                                ?.click()
-                                        }
-                                    >
-                                      <MdAttachFile className="h-4 w-4" />
-                                      انتخاب فایل
-                                    </Button>
-                                    <input
-                                        type="file"
-                                        multiple
-                                        accept=".png,.jpg,.jpeg,.pdf,.docx,.xlsx,.txt,.zip,.rar"
-                                        onChange={handleFileUpload}
-                                        className="hidden"
-                                        id="attachment-upload"
-                                    />
-                                    <Button
-                                        isLoading={sendBtnLoading}
-                                        type="submit"
-                                        size="sm"
-                                        disabled={
-                                            !watch('message')?.trim() || sendBtnLoading
-                                        }
-                                        className="dark:bg-gray-200 dark:text-white"
-                                    >
-                                      ارسال
-                                    </Button>
-                                  </div>
-                                  {attachments.length > 0 && (
-                                    <div className="mt-3 grid grid-cols-1 gap-2">
-                                      {attachments.map((file, index) => (
-                                          <div
-                                              key={index}
-                                              className="flex items-center justify-between gap-2 rounded border border-gray-200 bg-white p-2"
-                                          >
-                                            <span className="truncate text-xs">{file.name}</span>
-                                            <button
-                                                type="button"
-                                                onClick={() => removeAttachment(index)}
-                                                className="text-red-500"
-                                            >
-                                              <PiXCircle className="h-4 w-4" />
-                                            </button>
-                                          </div>
-                                      ))}
-                                    </div>
-                                  )}
-                                </>
-                            );
-                          }}
-                        </Form>
+                  <section className="border-t border-gray-100 bg-gray-50/70 px-4 py-4 sm:px-6 sm:py-5">
+                    <div className="mb-3">
+                      <div>
+                        <Text tag="h4" className="font-bold text-gray-900">
+                          پاسخ به تیکت
+                        </Text>
+                        <p className="mt-1 text-xs text-gray-500">
+                          پاسخ شما در ادامه همین گفت‌وگو ثبت می‌شود.
+                        </p>
                       </div>
                     </div>
+
+                    <Form<FormValues>
+                      onSubmit={onSubmit}
+                      validationSchema={FormSchema}
+                      resetValues={formResetValues}
+                    >
+                      {({ control, watch, formState: { errors } }) => (
+                        <>
+                          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/10">
+                            <Controller
+                              control={control}
+                              name="message"
+                              render={({ field: { onChange, value } }) => (
+                                <QuillEditor
+                                  value={value}
+                                  onChange={onChange}
+                                  className="border-0 bg-white [&>.ql-container]:border-0 [&>.ql-container_.ql-editor]:min-h-[90px] [&>.ql-container_.ql-editor]:max-h-[160px] [&>.ql-toolbar]:overflow-x-auto [&>.ql-toolbar]:border-0 [&>.ql-toolbar]:border-b [&>.ql-toolbar]:border-gray-100 [&>.ql-toolbar]:whitespace-nowrap"
+                                />
+                              )}
+                            />
+                          </div>
+                          {errors.message?.message && (
+                            <p className="mt-1.5 text-xs text-red-light">
+                              {errors.message.message}
+                            </p>
+                          )}
+
+                          {attachments.length > 0 && (
+                            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                              {attachments.map((file, index) => (
+                                <div
+                                  key={`${file.name}-${index}`}
+                                  className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white p-2.5"
+                                >
+                                  <span className="grid h-8 w-8 flex-none place-items-center rounded-lg bg-primary-lighter text-primary">
+                                    <PiPaperclipLight className="h-4 w-4" />
+                                  </span>
+                                  <span className="min-w-0 flex-1">
+                                    <span className="block truncate text-xs font-medium text-gray-700">
+                                      {file.name}
+                                    </span>
+                                    <span className="mt-0.5 block text-[10px] text-gray-400">
+                                      {(file.size / (1024 * 1024)).toLocaleString('fa-IR', {
+                                        maximumFractionDigits: 1,
+                                      })}{' '}
+                                      مگابایت
+                                    </span>
+                                  </span>
+                                  <button
+                                    type="button"
+                                    aria-label={`حذف ${file.name}`}
+                                    onClick={() => removeAttachment(index)}
+                                    className="grid h-7 w-7 flex-none place-items-center rounded-lg text-gray-400 transition-colors hover:bg-red-lighter hover:text-red"
+                                  >
+                                    <PiXCircle className="h-4 w-4" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          <div className="mt-3 flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex items-center gap-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="gap-2 rounded-lg"
+                                onClick={() =>
+                                  document
+                                    .getElementById('ticket-reply-attachment-upload')
+                                    ?.click()
+                                }
+                              >
+                                <PiPaperclipLight className="h-4 w-4" />
+                                افزودن فایل
+                              </Button>
+                              <input
+                                type="file"
+                                multiple
+                                accept=".png,.jpg,.jpeg,.pdf,.docx,.xlsx,.txt,.zip,.rar"
+                                onChange={handleFileUpload}
+                                className="hidden"
+                                id="ticket-reply-attachment-upload"
+                              />
+                              <span className="inline-flex items-center gap-1 text-[10px] text-gray-400">
+                                <PiInfo className="h-3 w-3" />
+                                {attachments.length.toLocaleString('fa-IR')} از ۳ فایل؛ هر فایل تا ۸ مگابایت
+                              </span>
+                            </div>
+                            <Button
+                              isLoading={sendBtnLoading}
+                              type="submit"
+                              size="sm"
+                              color="success"
+                              disabled={!watch('message')?.trim() || sendBtnLoading}
+                              className="gap-2 rounded-lg px-5"
+                            >
+                              {!sendBtnLoading && (
+                                <PiPaperPlaneRightFill className="h-4 w-4 rotate-180" />
+                              )}
+                              ارسال پاسخ
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </Form>
+                  </section>
                 )}
               </>
           ) : (
-              <div className="h-100 mt-2 flex flex-col items-center justify-center">
-                <Image
-                    src={ticketSelectionImg}
-                    alt="ticket selection image"
-                    className="mb-4 h-64 w-auto"
-                />
-                <p className="text-center text-lg">
-                  لطفا یکی از تیکت‌های خود را برای نمایش انتخاب کنید
-                </p>
+              <div className="grid min-h-[430px] place-items-center p-8 text-center">
+                <div>
+                  <span className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-primary-lighter text-primary">
+                    <PiChatCircleDots className="h-8 w-8" />
+                  </span>
+                  <Text tag="h4" className="mt-4 font-bold text-gray-800">
+                    یک تیکت را انتخاب کنید
+                  </Text>
+                  <p className="mt-2 text-sm leading-6 text-gray-500">
+                    گفتگو و جزئیات درخواست انتخاب‌شده اینجا نمایش داده می‌شود.
+                  </p>
+                </div>
               </div>
           )}
         </div>

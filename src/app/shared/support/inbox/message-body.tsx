@@ -1,628 +1,266 @@
-// 'use client';
-//
-// import Image from 'next/image';
-// // @ts-ignore
-// import {
-//   JSXElementConstructor,
-//   Key,
-//   PromiseLikeOfReactNode,
-//   ReactElement,
-//   ReactNode,
-//   ReactPortal,
-//   useEffect,
-//   useState,
-// } from 'react';
-// import isEmpty from 'lodash/isEmpty';
-// import { useAtomValue } from 'jotai';
-// import { FiExternalLink } from 'react-icons/fi';
-// import { HiOutlineClipboardDocument } from 'react-icons/hi2';
-// import { PiEye, PiDownloadSimpleBold, PiCheck } from 'react-icons/pi';
-// import { Avatar } from '@/components/ui/avatar';
-// import { Tooltip } from '@/components/ui/tooltip';
-// import { Text } from '@/components/ui/text';
-// import { getRelativeTime } from '@/utils/get-relative-time';
-// import { PhotoProvider, PhotoView } from 'react-photo-view';
-// import {
-//   dataAtom,
-//   messageIdAtom,
-// } from '@/app/shared/support/inbox/message-list';
-// import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
-// import { DotSeparator } from '@/app/shared/support/inbox/message-details';
-// import pdfIcon from '@public/pdf-icon.svg';
-// import imageIcon from '@public/image-icon.svg';
-// import useAxiosPrivate from '@/hooks/use-axios-private';
-// import toast from 'react-hot-toast';
-// import DOMPurify from 'dompurify';
-// import PhotoPreview from './photo-preview';
-// import { TbClockHour8 } from 'react-icons/tb';
-//
-// // @ts-ignore
-// export default function MessageBody({ messages }) {
-//   const STATIC_FILES_URL = 'http://localhost:8080';
-//   const _axios = useAxiosPrivate();
-//   // const data = useAtomValue(dataAtom);
-//   const messageId = useAtomValue(messageIdAtom);
-//   // const [messages, setMessages] = useState([])
-//   const [isCopied, setIsCopied] = useState(false);
-//   const [state, copyToClipboard] = useCopyToClipboard();
-//
-//   // const message = data.find((m) => m.id === messageId);
-//   // const initials = `${message?.firstName.charAt(0)}${message?.lastName.charAt(
-//   //   0
-//   // )}`;
-//
-//   const handleCopyToClipboard = (id: string) => {
-//     copyToClipboard(id as string);
-//     if (!state.error && state.value) {
-//       setIsCopied(() => true);
-//       setTimeout(() => {
-//         setIsCopied(false);
-//       }, 3000); // 3 seconds
-//     }
-//   };
-//
-//   return messages && messages.length > 0 ? (
-//     messages.map(
-//       (message: {
-//         fromEmployee: any;
-//         id:
-//           | boolean
-//           | ReactElement<any, string | JSXElementConstructor<any>>
-//           | Iterable<ReactNode>
-//           | PromiseLikeOfReactNode
-//           | Key
-//           | null
-//           | undefined;
-//         senderAvatar: string;
-//         senderName:
-//           | string
-//           | number
-//           | boolean
-//           | ReactElement<any, string | JSXElementConstructor<any>>
-//           | Iterable<ReactNode>
-//           | ReactPortal
-//           | PromiseLikeOfReactNode
-//           | null
-//           | undefined;
-//         senderUsername:
-//           | string
-//           | number
-//           | boolean
-//           | ReactElement<any, string | JSXElementConstructor<any>>
-//           | Iterable<ReactNode>
-//           | ReactPortal
-//           | PromiseLikeOfReactNode
-//           | null
-//           | undefined;
-//         createdAtStr:
-//           | string
-//           | number
-//           | boolean
-//           | ReactElement<any, string | JSXElementConstructor<any>>
-//           | Iterable<ReactNode>
-//           | ReactPortal
-//           | PromiseLikeOfReactNode
-//           | null
-//           | undefined;
-//         messageContent:
-//           | string
-//           | number
-//           | boolean
-//           | ReactElement<any, string | JSXElementConstructor<any>>
-//           | Iterable<ReactNode>
-//           | ReactPortal
-//           | PromiseLikeOfReactNode
-//           | null
-//           | undefined;
-//         ticketId:
-//           | string
-//           | number
-//           | boolean
-//           | ReactElement<any, string | JSXElementConstructor<any>>
-//           | Iterable<ReactNode>
-//           | ReactPortal
-//           | PromiseLikeOfReactNode
-//           | null
-//           | undefined;
-//         attachments: any[];
-//       }) => {
-//         const avatarAlignmentClass = !message.fromEmployee
-//           ? 'lg:grid-cols-[48px_1fr] grid-cols-[32px_1fr] text-right'
-//           : 'lg:grid-cols-[1fr_48px] grid-cols-[1fr_32px] text-left';
-//
-//         const sanitizedContent = DOMPurify.sanitize(message.messageContent);
-//         const downloadFile = async () => {
-//           const fileUrl =
-//             // 'http://192.168.43.57:8080/files/TICKET_ATTACHMENT/6c5f09e1-37a1-49cc-b5dc-f2d775a930a0.jpg';
-//             'http://localhost:8080/files/RESELLER_SERVICE_FILE/1733819338012d7948648-8426-4f1f-901e-591f90172b08.pdf';
-//           const fileName = 'attachment.pdf';
-//
-//           try {
-//             const response = await fetch(fileUrl);
-//             if (!response.ok) {
-//               throw new Error('Failed to download file');
-//             }
-//             const blob = await response.blob();
-//             const link = document.createElement('a');
-//             link.href = window.URL.createObjectURL(blob);
-//             link.download = fileName;
-//             document.body.appendChild(link);
-//             link.click();
-//             document.body.removeChild(link);
-//             window.URL.revokeObjectURL(link.href);
-//           } catch (error) {
-//             console.error('Error downloading the file:', error);
-//           }
-//         };
-//         // @ts-ignore
-//         // @ts-ignore
-//         return (
-//           // @ts-ignore
-//           <div key={message.id}>
-//             <div
-//               className={`grid items-start gap-3 lg:gap-4 ${avatarAlignmentClass}`}
-//             >
-//               {!message.fromEmployee && (
-//                 <Avatar
-//                   name="John Doe"
-//                   src={STATIC_FILES_URL + message?.senderAvatar}
-//                   className="!h-8 !w-8 bg-[#70C5E0] font-medium text-white xl:!h-11 xl:!w-11"
-//                 />
-//               )}
-//               {/*<Avatar*/}
-//               {/*    name="John Doe"*/}
-//               {/*    src={STATIC_FILES_URL + message?.senderAvatar}*/}
-//               {/*    // initials={initials}*/}
-//               {/*    className="!h-8 !w-8 bg-[#70C5E0] font-medium text-white xl:!h-11 xl:!w-11"*/}
-//               {/*/>*/}
-//               <div
-//                 className={`-mt-1.5 lg:mt-0 ${
-//                   message.fromEmployee ? '' : 'order-2'
-//                 }`}
-//               >
-//                 <div className="flex items-center justify-between">
-//                   <Text tag="h3" className="text-sm font-medium">
-//                     {message?.senderName}
-//                   </Text>
-//                 </div>
-//                 <div className="mt-1.5 items-center gap-2 text-xs text-gray-500 lg:flex">
-//                   <span className="flex items-center lowercase">
-//                     {message?.senderUsername}{' '}
-//                     <FiExternalLink className="mr-1 h-2.5 w-2.5" />
-//                   </span>
-//                   {/* <DotSeparator className="hidden lg:block" /> */}
-//                   {/* @ts-ignore */}
-//
-//                   {/* <span className="mt-1.5 flex items-center lg:mt-0">
-//                     {message?.ticketRefId}{' '}
-//                     <Tooltip
-//                       size="sm"
-//                       rounded="sm"
-//                       placement="top"
-//                       content={() => (isCopied ? 'کپی شده' : 'کپی شود')}
-//                     >
-//                       <button
-//                         type="button"
-//                         onClick={() =>
-//                           handleCopyToClipboard(message?.ticketRefId)
-//                         }
-//                       >
-//                         {isCopied ? (
-//                           <PiCheck className="mr-1 h-3 w-3" />
-//                         ) : (
-//                           <HiOutlineClipboardDocument className="mr-1 h-3 w-3" />
-//                         )}
-//                       </button>
-//                     </Tooltip>
-//                   </span> */}
-//
-//                   <DotSeparator className="hidden lg:block" />
-//                   <span>ارسال شده در {message?.createdAtStr}</span>
-//                   <DotSeparator className="hidden lg:block" />
-//                   <span className="flex items-center gap-1">
-//                     {message?.createdAtTimeStr}
-//                     <TbClockHour8 />
-//                   </span>
-//                 </div>
-//               </div>
-//               {message.fromEmployee && (
-//                 <Avatar
-//                   name="John Doe"
-//                   src={
-//                     STATIC_FILES_URL +
-//                     message?.senderAvatar
-//                   }
-//                   className="order-1 !h-8 !w-8 bg-[#70C5E0] font-medium text-white lg:order-2 xl:!h-11 xl:!w-11"
-//                 />
-//               )}
-//             </div>
-//
-//             <div className="ml-10 mt-3 grid gap-2 leading-relaxed xl:ml-16 2xl:mt-4">
-//               <div dangerouslySetInnerHTML={{ __html: sanitizedContent }} />
-//               {/* {{message?.messageContent}} */}
-//               {/* <Text></Text> */}
-//               {/* <Text>
-//                 شماره تیکت: <br />
-//                 {message?.ticketId}
-//               </Text> */}
-//
-//               {/*<Text>*/}
-//               {/*    با احترام, <br/>*/}
-//               {/*    {message?.senderName}, <br/>*/}
-//               {/*    {message?.ticketId}*/}
-//               {/*</Text>*/}
-//
-//               {!isEmpty(message?.attachments) && (
-//                 <div className="mt-2 grid gap-2 md:grid-cols-2 lg:grid-cols-1 2xl:grid-cols-3">
-//                   {/* @ts-ignore */}
-//                   {message?.attachments.map((attachment: any) => (
-//                     <div
-//                       // @ts-ignore
-//                       key={attachment.id}
-//                       className="grid grid-cols-[40px_1fr] gap-2.5"
-//                     >
-//                       <figure className="relative h-10 w-10 overflow-hidden rounded">
-//                         {/*// @ts-ignore*/}
-//                         {attachment.contentType === 'image/jpeg' ? (
-//                           // <Image
-//                           //   fill
-//                           //   // @ts-ignore
-//                           //   alt={attachment.fileName}
-//                           //   // @ts-ignore
-//                           //   src={
-//                           //     STATIC_FILES_URL +
-//                           //     attachment.filePath
-//                           //   }
-//                           //   className="object-contain"
-//                           //   unoptimized
-//                           // />
-//                           <Image
-//                             src={imageIcon}
-//                             alt="image icon"
-//                             className="h-full w-full"
-//                             quality={100}
-//                           />
-//                         ) : (
-//                           <Image
-//                             src={pdfIcon}
-//                             alt="pdf icon"
-//                             className="h-full w-full"
-//                             quality={100}
-//                           />
-//                         )}
-//                       </figure>
-//
-//                       <div className="text-xs">
-//                         <span className="font-iransans flex items-center gap-2 font-medium text-gray-700">
-//                           {/*// @ts-ignore*/}
-//                           {attachment.fileName}
-//                           {/*// @ts-ignore*/}
-//                           <span className="text-gray-500">
-//                             (
-//                             {Math.ceil((attachment.fileSize / 1024) * 100) / // TODO: Return fileSizeStr from backend
-//                               100}{' '}
-//                             + {' کیلوبایت'})
-//                           </span>
-//                         </span>
-//                         <div className="mt-2 flex items-center gap-2">
-//                           <span className="flex items-center gap-2 text-gray-500 transition duration-300 hover:text-gray-900">
-//                             <PiEye className="h-3.5 w-3.5" />{' '}
-//                             {/* <button>مشاهده</button> */}
-//                             <PhotoPreview />
-//                           </span>
-//                           <DotSeparator />
-//                           <div className="flex items-center gap-2 text-gray-500 transition duration-300 hover:text-gray-900">
-//                             <PiDownloadSimpleBold className="h-3.5 w-3.5" />{' '}
-//                             <button onClick={downloadFile}>دانلود</button>
-//                           </div>
-//                         </div>
-//                       </div>
-//                     </div>
-//                   ))}
-//                 </div>
-//               )}
-//             </div>
-//           </div>
-//         );
-//       }
-//     )
-//   ) : (
-//     <center>
-//       <Text>پیامی وجود ندارد</Text>
-//     </center>
-//   );
-// }
-
 'use client';
 
 import Image from 'next/image';
-// @ts-ignore
-import {
-    Key,
-    useState,
-} from 'react';
+import type { Key } from 'react';
 import isEmpty from 'lodash/isEmpty';
-import { useAtomValue } from 'jotai';
-import { FiExternalLink } from 'react-icons/fi';
-import { HiOutlineClipboardDocument } from 'react-icons/hi2';
-import { PiEye, PiDownloadSimpleBold, PiCheck } from 'react-icons/pi';
-import { Avatar } from '@/components/ui/avatar';
-import { Tooltip } from '@/components/ui/tooltip';
-import { Text } from '@/components/ui/text';
-import { getRelativeTime } from '@/utils/get-relative-time';
-import { PhotoProvider, PhotoView } from 'react-photo-view';
+import DOMPurify from 'dompurify';
 import {
-    dataAtom,
-    messageIdAtom,
-} from '@/app/shared/support/inbox/message-list';
-import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
-import { DotSeparator } from '@/app/shared/support/inbox/message-details';
+  PiDownloadSimpleBold,
+  PiEye,
+  PiHeadset,
+} from 'react-icons/pi';
+import { TbClockHour8 } from 'react-icons/tb';
+import { Avatar } from '@/components/ui/avatar';
+import { Text } from '@/components/ui/text';
+import cn from '@/utils/class-names';
 import pdfIcon from '@public/pdf-icon.svg';
 import imageIcon from '@public/image-icon.svg';
-import useAxiosPrivate from '@/hooks/use-axios-private';
-import toast from 'react-hot-toast';
-import DOMPurify from 'dompurify';
-import PhotoPreview from './photo-preview';
-import { TbClockHour8 } from 'react-icons/tb';
-
 import { STATIC_FILES_URL } from '@/config/api.config';
 
-// @ts-ignore
-export default function MessageBody({ messages }) {
-    const _axios = useAxiosPrivate();
-    const messageId = useAtomValue(messageIdAtom);
-    const [isCopied, setIsCopied] = useState(false);
-    const [state, copyToClipboard] = useCopyToClipboard();
+type TicketAttachment = {
+  id: Key;
+  contentType?: string;
+  fileName: string;
+  filePath: string;
+  fileSize?: number;
+};
 
-    const handleCopyToClipboard = (id: string) => {
-        copyToClipboard(id as string);
-        if (!state.error && state.value) {
-            setIsCopied(() => true);
-            setTimeout(() => {
-                setIsCopied(false);
-            }, 3000); // 3 seconds
-        }
-    };
+type TicketMessage = {
+  fromEmployee: boolean;
+  id: Key;
+  senderAvatar?: string;
+  senderName?: string;
+  createdAtStr?: string;
+  createdAtTimeStr?: string;
+  messageContent: string;
+  attachments?: TicketAttachment[];
+};
 
-    return messages && messages.length > 0 ? (
-        messages.map(
-            (message: {
-                fromEmployee: boolean;
-                id: Key;
-                senderAvatar: string;
-                senderName: string;
-                senderUsername: string;
-                createdAtStr: string;
-                createdAtTimeStr: string;
-                messageContent: string;
-                ticketId: string;
-                attachments: any[];
-            }) => {
-                const sanitizedContent = DOMPurify.sanitize(
-                    message.messageContent
-                );
+function formatFileSize(size = 0) {
+  if (!size) return 'حجم نامشخص';
+  if (size < 1024 * 1024) {
+    return `${Math.max(1, Math.round(size / 1024)).toLocaleString('fa-IR')} کیلوبایت`;
+  }
+  return `${(size / (1024 * 1024)).toLocaleString('fa-IR', {
+    maximumFractionDigits: 1,
+  })} مگابایت`;
+}
 
-                // decide flex direction based on sender, inverted
-                const rowClass = !message.fromEmployee
-                    ? 'flex-row'
-                    : 'flex-row-reverse';
+function getFileUrl(path: string) {
+  return `${STATIC_FILES_URL}${path}`;
+}
 
-                return (
-                    <div
-                        key={message.id}
-                        id={`ticket-message-${message.id}`}
-                        className="mb-6 ms-6"
-                    >
-                        <div
-                            className={`flex items-start gap-3 justify-start ${rowClass}`}
-                        >
-                            {/* single avatar always first */}
-                            <Avatar
-                                name={message.senderName}
-                                src={
-                                    (process.env
-                                            .NEXT_PUBLIC_STATIC_FILES_URL ||
-                                        STATIC_FILES_URL) +
-                                    message.senderAvatar
-                                }
-                                className="!h-8 !w-8 flex-shrink-0 bg-[#70C5E0] font-medium text-white xl:!h-10 xl:!w-10"
-                            />
+async function downloadAttachment(attachment: TicketAttachment) {
+  try {
+    const response = await fetch(getFileUrl(attachment.filePath));
+    const blob = await response.blob();
+    const objectUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = objectUrl;
+    link.download = attachment.fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(objectUrl);
+  } catch (error) {
+    console.error('Error downloading ticket attachment:', error);
+  }
+}
 
-                            {/* message bubble container */}
-                            <div
-                                className={`flex max-w-[85%] flex-col ${
-                                    !message.fromEmployee
-                                        ? 'items-start'
-                                        : 'items-end'
-                                }`}
-                            >
-                                {/* Sender info above bubble */}
-                                <div className="mb-1 px-2">
-                                    <Text tag="h3" className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-                                        {message.senderName}
-                                    </Text>
-                                </div>
-
-                                {/* Message bubble with background */}
-                                <div
-                                    className={`message-bubble rounded-2xl px-4 py-3 shadow-sm ${
-                                        !message.fromEmployee
-                                            ? 'rounded-tr-sm bg-gray-100 dark:bg-gray-800'
-                                            : 'rounded-tl-sm bg-[#EFF6FF] dark:bg-blue'
-                                    }`}
-                                >
-                                    {/* Message content */}
-                                    <div
-                                        className={`leading-relaxed ${
-                                            !message.fromEmployee
-                                                ? 'text-left text-gray-800 dark:text-gray-200'
-                                                : 'text-right text-gray-800 dark:text-gray-200'
-                                        } [&_p]:mb-2 [&_p:last-child]:mb-0`}
-                                    >
-                                        <div
-                                            dangerouslySetInnerHTML={{
-                                                __html: sanitizedContent,
-                                            }}
-                                        />
-                                    </div>
-
-                                    {/* Attachments inside bubble */}
-                                    {!isEmpty(message.attachments) && (
-                                        <div
-                                            className={`mt-3 grid gap-2 border-t pt-3 ${
-                                                !message.fromEmployee
-                                                    ? 'border-gray-200 dark:border-gray-700'
-                                                    : 'border-blue-100 dark:border-blue-800'
-                                            }`}
-                                        >
-                                            {message.attachments.map(
-                                                (attachment: any) => (
-                                                    <div
-                                                        key={attachment.id}
-                                                        className="grid grid-cols-[40px_1fr] gap-2.5"
-                                                    >
-                                                        <figure className="relative h-10 w-10 overflow-hidden rounded">
-                                                            {attachment.contentType ===
-                                                            'image/jpeg' ? (
-                                                                <Image
-                                                                    src={imageIcon}
-                                                                    alt="image icon"
-                                                                    className="h-full w-full"
-                                                                    quality={100}
-                                                                />
-                                                            ) : (
-                                                                <Image
-                                                                    src={pdfIcon}
-                                                                    alt="pdf icon"
-                                                                    className="h-full w-full"
-                                                                    quality={100}
-                                                                />
-                                                            )}
-                                                        </figure>
-
-                                                        <div className="text-xs">
-                                                            <span className="font-iransans flex flex-wrap items-center gap-2 font-medium text-gray-700 dark:text-gray-300">
-                                                                <span className="truncate max-w-[150px]">{
-                                                                    attachment.fileName
-                                                                }</span>
-                                                                <span className="text-gray-500 dark:text-gray-400">
-                                                                    (
-                                                                    {Math.ceil(
-                                                                            (attachment.fileSize /
-                                                                                1024) *
-                                                                            100
-                                                                        ) /
-                                                                        100}{' '}
-                                                                    کیلوبایت)
-                                                                </span>
-                                                            </span>
-                                                            <div className="mt-2 flex items-center gap-2">
-                                                                <span className="flex items-center gap-1 text-gray-500 transition duration-300 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200">
-                                                                    <PiEye className="h-3.5 w-3.5" />
-                                                                    <PhotoPreview />
-                                                                </span>
-                                                                <DotSeparator />
-                                                                <div className="flex items-center gap-1 text-gray-500 transition duration-300 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200">
-                                                                    <PiDownloadSimpleBold className="h-3.5 w-3.5" />
-                                                                    <button
-                                                                        onClick={() => {
-                                                                            const fileUrl =
-                                                                                attachment.filePath;
-                                                                            const fileName =
-                                                                                attachment.fileName;
-
-                                                                            fetch(
-                                                                                STATIC_FILES_URL +
-                                                                                fileUrl
-                                                                            )
-                                                                                .then(
-                                                                                    (
-                                                                                        response
-                                                                                    ) =>
-                                                                                        response.blob()
-                                                                                )
-                                                                                .then(
-                                                                                    (
-                                                                                        blob
-                                                                                    ) => {
-                                                                                        const link =
-                                                                                            document.createElement(
-                                                                                                'a'
-                                                                                            );
-                                                                                        link.href =
-                                                                                            window.URL.createObjectURL(
-                                                                                                blob
-                                                                                            );
-                                                                                        link.download =
-                                                                                            fileName;
-                                                                                        document.body.appendChild(
-                                                                                            link
-                                                                                        );
-                                                                                        link.click();
-                                                                                        document.body.removeChild(
-                                                                                            link
-                                                                                        );
-                                                                                        window.URL.revokeObjectURL(
-                                                                                            link.href
-                                                                                        );
-                                                                                    }
-                                                                                )
-                                                                                .catch(
-                                                                                    (
-                                                                                        error
-                                                                                    ) => {
-                                                                                        console.error(
-                                                                                            'Error downloading the file:',
-                                                                                            error
-                                                                                        );
-                                                                                    }
-                                                                                );
-                                                                        }}
-                                                                    >
-                                                                        دانلود
-                                                                    </button>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                )
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {/* Timestamp at bottom of bubble */}
-                                    <div className={`mt-2 flex items-center gap-2 text-[10px] ${
-                                        !message.fromEmployee
-                                            ? 'text-gray-500 dark:text-gray-400'
-                                            : 'text-gray-600 dark:text-gray-400'
-                                    }`}>
-                                        {!message.fromEmployee && (
-                                            <>
-                                                <span className="flex items-center lowercase">
-                                                    {message.senderUsername}
-                                                </span>
-                                                <DotSeparator />
-                                            </>
-                                        )}
-                                        <span>
-                                            {message.createdAtStr}
-                                        </span>
-                                        <DotSeparator />
-                                        <span className="flex items-center gap-1">
-                                            {message.createdAtTimeStr}
-                                            <TbClockHour8 className="h-2.5 w-2.5" />
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                );
-            }
-        )
-    ) : (
-        <center>
-            <Text>پیامی وجود ندارد</Text>
-        </center>
+export default function MessageBody({ messages }: { messages: TicketMessage[] }) {
+  if (!messages?.length) {
+    return (
+      <div className="grid min-h-[260px] place-items-center px-4 py-10 text-center">
+        <div>
+          <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-gray-100 text-gray-400">
+            <PiHeadset className="h-7 w-7" />
+          </span>
+          <Text tag="h4" className="mt-4 font-semibold text-gray-800">
+            هنوز پیامی ثبت نشده است
+          </Text>
+          <p className="mt-1 text-xs leading-6 text-gray-500">
+            اولین توضیح یا پاسخ خود را از بخش پایین ارسال کنید.
+          </p>
+        </div>
+      </div>
     );
+  }
+
+  return (
+    <div className="space-y-5 px-5 pb-8 pt-1 sm:px-8 sm:pb-10">
+      {messages.map((message) => {
+        const isSupport = message.fromEmployee;
+        const sanitizedContent = DOMPurify.sanitize(message.messageContent);
+        const avatarUrl = message.senderAvatar
+          ? `${process.env.NEXT_PUBLIC_STATIC_FILES_URL || STATIC_FILES_URL}${message.senderAvatar}`
+          : undefined;
+
+        return (
+          <article
+            key={message.id}
+            id={`ticket-message-${message.id}`}
+            dir="ltr"
+            className={cn(
+              'flex w-full items-start gap-2.5 sm:gap-3',
+              isSupport ? 'justify-start' : 'justify-end'
+            )}
+          >
+            <div
+              className={cn(
+                'flex max-w-[94%] items-start gap-2.5 sm:max-w-[680px] sm:gap-3',
+                isSupport ? 'flex-row' : 'flex-row-reverse'
+              )}
+            >
+              <span className="relative flex-none">
+                <Avatar
+                  name={message.senderName || (isSupport ? 'پشتیبانی' : 'کاربر')}
+                  src={avatarUrl}
+                  className={cn(
+                    '!h-9 !w-9 border-2 font-medium text-white shadow-sm sm:!h-10 sm:!w-10',
+                    isSupport
+                      ? 'border-primary-lighter bg-primary'
+                      : 'border-gray-100 bg-gray-500'
+                  )}
+                />
+                {isSupport && (
+                  <span className="absolute -bottom-0.5 -right-0.5 grid h-4 w-4 place-items-center rounded-full border-2 border-white bg-green text-white">
+                    <PiHeadset className="h-2.5 w-2.5" />
+                  </span>
+                )}
+              </span>
+
+              <div
+                dir="rtl"
+                className={cn(
+                  'min-w-0 flex-1',
+                  isSupport ? 'text-right' : 'text-right'
+                )}
+              >
+                <div
+                  className={cn(
+                    'mb-1.5 flex items-center gap-2 px-1',
+                    isSupport ? 'justify-start' : 'justify-end'
+                  )}
+                >
+                  <Text tag="h3" className="text-xs font-semibold text-gray-700">
+                    {isSupport ? message.senderName || 'کارشناس پشتیبانی' : 'شما'}
+                  </Text>
+                  {isSupport && (
+                    <span className="rounded-full bg-green-lighter px-2 py-0.5 text-[10px] font-medium text-green-dark">
+                      پشتیبانی
+                    </span>
+                  )}
+                </div>
+
+                <div
+                  className={cn(
+                    'overflow-hidden rounded-2xl border px-3.5 py-2.5 shadow-sm',
+                    isSupport
+                      ? 'rounded-tl-md border-gray-200 bg-white text-gray-800'
+                      : 'rounded-tr-md border-primary bg-primary text-white'
+                  )}
+                >
+                  <div
+                    className={cn(
+                      'break-words text-sm leading-7 [&_a]:underline [&_ol]:list-decimal [&_ol]:pr-5 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_ul]:list-disc [&_ul]:pr-5',
+                      isSupport ? '[&_a]:text-primary' : '[&_a]:text-white'
+                    )}
+                    dangerouslySetInnerHTML={{ __html: sanitizedContent }}
+                  />
+
+                  {!isEmpty(message.attachments) && (
+                    <div
+                      className={cn(
+                        'mt-2.5 grid gap-2 border-t pt-2.5',
+                        isSupport ? 'border-gray-100' : 'border-white/20'
+                      )}
+                    >
+                      {message.attachments?.map((attachment) => {
+                        const isImage = attachment.contentType?.startsWith('image/');
+
+                        return (
+                          <div
+                            key={attachment.id}
+                            className={cn(
+                              'flex items-center gap-2.5 rounded-xl border p-2',
+                              isSupport
+                                ? 'border-gray-200 bg-gray-50'
+                                : 'border-white/20 bg-white/10'
+                            )}
+                          >
+                            <figure className="grid h-10 w-10 flex-none place-items-center overflow-hidden rounded-lg bg-white/90">
+                              <Image
+                                src={isImage ? imageIcon : pdfIcon}
+                                alt="نوع فایل پیوست"
+                                className="block !h-7 !w-7 object-contain"
+                              />
+                            </figure>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-xs font-semibold">
+                                {attachment.fileName}
+                              </p>
+                              <p
+                                className={cn(
+                                  'mt-1 text-[10px]',
+                                  isSupport ? 'text-gray-500' : 'text-white/70'
+                                )}
+                              >
+                                {formatFileSize(attachment.fileSize)}
+                              </p>
+                            </div>
+                            <div className="flex flex-none items-center gap-1">
+                              <a
+                                href={getFileUrl(attachment.filePath)}
+                                target="_blank"
+                                rel="noreferrer"
+                                title="مشاهده فایل"
+                                className={cn(
+                                  'grid h-8 w-8 place-items-center rounded-lg transition-colors',
+                                  isSupport
+                                    ? 'bg-white text-gray-600 hover:text-primary'
+                                    : 'bg-white/10 text-white hover:bg-white/20'
+                                )}
+                              >
+                                <PiEye className="h-4 w-4" />
+                              </a>
+                              <button
+                                type="button"
+                                title="دانلود فایل"
+                                onClick={() => downloadAttachment(attachment)}
+                                className={cn(
+                                  'grid h-8 w-8 place-items-center rounded-lg transition-colors',
+                                  isSupport
+                                    ? 'bg-white text-gray-600 hover:text-primary'
+                                    : 'bg-white/10 text-white hover:bg-white/20'
+                                )}
+                              >
+                                <PiDownloadSimpleBold className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <div
+                  className={cn(
+                    'mt-1.5 flex items-center gap-1.5 px-1 text-[10px] text-gray-400',
+                    isSupport ? 'justify-start' : 'justify-end'
+                  )}
+                >
+                  <TbClockHour8 className="h-3 w-3" />
+                  <span>{message.createdAtTimeStr || '—'}</span>
+                  <span className="h-1 w-1 rounded-full bg-gray-300" />
+                  <span>{message.createdAtStr || '—'}</span>
+                </div>
+              </div>
+            </div>
+          </article>
+        );
+      })}
+      <div id="ticket-messages-end" className="h-5" aria-hidden="true" />
+    </div>
+  );
 }

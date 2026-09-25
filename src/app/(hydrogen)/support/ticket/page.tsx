@@ -1,584 +1,340 @@
 'use client';
 
+import dynamic from 'next/dynamic';
+import { useState } from 'react';
+import { Controller, FormProvider, useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import toast from 'react-hot-toast';
+import { Modal, Text } from 'rizzui';
+import {
+  PiCaretDownBold,
+  PiCheckCircle,
+  PiClockCountdown,
+  PiHeadset,
+  PiInfo,
+  PiPlusBold,
+  PiShieldCheck,
+  PiXBold,
+} from 'react-icons/pi';
 import { routes } from '@/config/routes';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { ActionIcon } from '@/components/ui/action-icon';
 import PageHeader from '@/app/shared/page-header';
 import { TabList } from '@/app/shared/support/inbox/inbox-tabs';
 import SupportInbox from '@/app/shared/support/inbox';
-import {
-  Controller,
-  FormProvider,
-  useFieldArray,
-  useForm,
-  useFormContext,
-} from 'react-hook-form';
-import { Input } from '@/components/ui/input';
-import FormGroup from '@/app/shared/form-group';
-import cn from '@/utils/class-names';
-import dynamic from 'next/dynamic';
 import SelectLoader from '@/components/loader/select-loader';
 import QuillLoader from '@/components/loader/quill-loader';
-import { PiCaretDownBold, PiPaperclipLight, PiPlusBold } from 'react-icons/pi';
-import { ActionIcon } from '@/components/ui/action-icon';
-import TrashIcon from '@/components/icons/trash';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Textarea } from '@/components/ui/textarea';
-import LogoUpload from '@/components/ui/logo-upload';
-import JalaliDatePicker from '@/components/ui/react-shamsi-date-picker';
-import { DatePicker } from '@/components/ui/datepicker';
 import useAxiosPrivate from '@/hooks/use-axios-private';
-import toast from 'react-hot-toast';
-import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet';
-import { FaHeading, FaPlus, FaXmark } from 'react-icons/fa6';
-import { Avatar, Badge, Checkbox, FileInput, Modal, Text } from 'rizzui';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { any, shape } from 'prop-types';
-import QuillEditor from '@/components/ui/quill-editor';
-import { MdAttachFile } from 'react-icons/md';
-
-const priorityOptions = [
-  {
-    value: 'LOW',
-    name: 'کم',
-    label: (
-      <div className="flex items-center gap-2 text-xs sm:text-sm">
-        <Badge renderAsDot color="success" />
-        <span>کم</span>
-      </div>
-    ),
-  },
-  {
-    value: 'MEDIUM',
-    name: 'متوسط',
-    label: (
-      <div className="flex items-center gap-2 text-xs sm:text-sm">
-        <Badge renderAsDot color="warning" />
-        <span>متوسط</span>
-      </div>
-    ),
-  },
-  {
-    value: 'HIGH',
-    name: 'بالا',
-    label: (
-      <div className="flex items-center gap-2 text-xs sm:text-sm">
-        <Badge renderAsDot color="danger" />
-        <span>بالا</span>
-      </div>
-    ),
-  },
-];
-
-const agents = [
-  {
-    value: 'MANAGEMENT',
-    name: 'مدیریت',
-    label: (
-      <div className="flex items-center gap-2">
-        <Avatar
-          src="https://s3.amazonaws.com/redqteam.com/isomorphic-furyroad/public/avatars-blur/avatar-10.webp"
-          name="John Doe"
-          className="!h-6 !w-6 rounded-full"
-        />
-        <span className="whitespace-nowrap text-xs sm:text-sm">مدیریت</span>
-      </div>
-    ),
-  },
-  // {
-  //   value: 2,
-  //   name: '',
-  //   label: (
-  //     <div className="flex items-center gap-2">
-  //       <Avatar
-  //         src="https://s3.amazonaws.com/redqteam.com/isomorphic-furyroad/public/avatars-blur/avatar-11.webp"
-  //         name="John Doe"
-  //         className="!h-6 !w-6 rounded-full"
-  //       />
-  //       <span className="whitespace-nowrap text-xs sm:text-sm">زهرا</span>
-  //     </div>
-  //   ),
-  // },
-  {
-    value: 'SUPPORT',
-    name: 'پشتیبانی فنی',
-    label: (
-      <div className="flex items-center gap-2">
-        <Avatar
-          src="https://s3.amazonaws.com/redqteam.com/isomorphic-furyroad/public/avatars-blur/avatar-13.webp"
-          name="John Doe"
-          className="!h-6 !w-6 rounded-full"
-        />
-        <span className="whitespace-nowrap text-xs sm:text-sm">
-          پشتیبانی فنی
-        </span>
-      </div>
-    ),
-  },
-  {
-    value: 'FINANCE',
-    name: 'مالی',
-    label: (
-      <div className="flex items-center gap-2">
-        <Avatar
-          src="https://s3.amazonaws.com/redqteam.com/isomorphic-furyroad/public/avatars-blur/avatar-04.webp"
-          name="John Doe"
-          className="!h-6 !w-6 rounded-full"
-        />
-        <span className="whitespace-nowrap text-xs sm:text-sm">مالی</span>
-      </div>
-    ),
-  },
-];
-
-const contactStatuses = [
-  {
-    value: 'GENERAL',
-    name: 'عمومی',
-  },
-  {
-    value: 'TECHNICAL',
-    name: 'فنی',
-  },
-  {
-    value: 'FINANCIAL',
-    name: 'مالی و اعتباری',
-  },
-];
-
-const categoryOptions = [
-  {
-    value: 'GENERAL',
-    name: 'عمومی',
-  },
-  {
-    value: 'TECHNICAL',
-    name: 'فنی',
-  },
-  {
-    value: 'FINANCIAL',
-    name: 'مالی و اعتباری',
-  },
-];
-const departmentOptions = [
-  {
-    value: 'MANAGEMENT',
-    name: 'مدیریت',
-  },
-  {
-    value: 'SUPPORT',
-    name: 'پشتیبانی',
-  },
-  {
-    value: 'FINANCE',
-    name: 'مالی',
-  },
-];
-// const priorityOptions = [
-//   {
-//     value: 'LOW',
-//     name: 'پایین',
-//   },
-//   {
-//     value: 'MEDIUM',
-//     name: 'متوسط',
-//   },
-//   {
-//     value: 'HIGH',
-//     name: 'بالا',
-//   },
-//   {
-//     value: 'URGENT',
-//     name: 'اضطراری',
-//   },
-// ];
-
-const categorySchema = z.object({
-  name: z
-    .string({ required_error: 'دسته‌بندی الزامی است' })
-    .min(1, 'دسته‌بندی الزامی است'),
-  value: z
-    .string({ required_error: 'دسته‌بندی الزامی است' })
-    .min(1, 'دسته‌بندی الزامی است'),
-});
-const prioritySchema = z.object({
-  name: z.string(),
-  value: z.string(),
-  label: z.any(),
-});
-const departmentSchema = z.object({
-  name: z
-    .string({ required_error: 'دپارتمان الزامی است' })
-    .min(1, 'دپارتمان الزامی است'),
-  value: z
-    .string({ required_error: 'دپارتمان الزامی است' })
-    .min(1, 'دپارتمان الزامی است'),
-  label: z.any(),
-});
-
-const ticketSchema = z.object({
-  category: categorySchema.required({ name: true, value: true }),
-  priority: prioritySchema,
-  subject: z.string().min(1, 'موضوع تیکت الزامی است'),
-  message: z.string().min(1, 'متن تیکت الزامی است'),
-  department: departmentSchema.required({ name: true, value: true }),
-});
 
 const Select = dynamic(() => import('@/components/ui/select'), {
   ssr: false,
   loading: () => <SelectLoader />,
 });
 
+const QuillEditor = dynamic(() => import('@/components/ui/quill-editor'), {
+  ssr: false,
+  loading: () => <QuillLoader />,
+});
+
+const categoryOptions = [
+  { value: 'GENERAL', name: 'عمومی' },
+  { value: 'TECHNICAL', name: 'فنی' },
+  { value: 'FINANCIAL', name: 'مالی و اعتباری' },
+];
+
+const departmentOptions = [
+  { value: 'MANAGEMENT', name: 'مدیریت' },
+  { value: 'SUPPORT', name: 'پشتیبانی فنی' },
+  { value: 'FINANCE', name: 'مالی و اعتباری' },
+];
+
+const priorityOptions = [
+  { value: 'LOW', name: 'کم' },
+  { value: 'MEDIUM', name: 'متوسط' },
+  { value: 'HIGH', name: 'بالا' },
+];
+
+const optionSchema = z.object({
+  name: z.string().min(1, 'انتخاب این گزینه الزامی است'),
+  value: z.string().min(1, 'انتخاب این گزینه الزامی است'),
+});
+
+const ticketSchema = z.object({
+  category: optionSchema,
+  priority: optionSchema,
+  subject: z
+    .string()
+    .trim()
+    .min(3, 'موضوع تیکت باید حداقل ۳ حرف باشد')
+    .max(150, 'موضوع تیکت نمی‌تواند بیشتر از ۱۵۰ حرف باشد'),
+  message: z.string().trim().min(1, 'شرح درخواست الزامی است'),
+  department: optionSchema,
+});
+
+type TicketFormValues = z.infer<typeof ticketSchema>;
+
 const pageHeader = {
-  title: 'تیکت‌های پشتیبانی',
+  title: 'مرکز پشتیبانی',
   breadcrumb: [
-    {
-      href: routes.eCommerce.dashboard,
-      name: 'خانه',
-    },
-    {
-      href: routes.support.dashboard,
-      name: 'پشتیبانی',
-    },
-    {
-      name: 'تیکت‌های پشتیبانی',
-    },
+    { href: routes.eCommerce.dashboard, name: 'خانه' },
+    { name: 'پشتیبانی' },
+    { name: 'تیکت‌ها' },
   ],
 };
 
 export default function SupportInboxPage() {
-  const [attachments, setAttachments] = useState<File[]>([]);
   const _axios = useAxiosPrivate();
   const [refetchTickets, setRefetchTickets] = useState(0);
-  const [modalState, setModalState] = useState({
-    isOpen: false,
-    size: 'lg',
-  });
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const methods = useForm({
+  const methods = useForm<TicketFormValues>({
     resolver: zodResolver(ticketSchema),
     defaultValues: {
-      category: {},
-      priority: {},
+      category: {} as TicketFormValues['category'],
+      priority: priorityOptions[1],
       subject: '',
       message: '',
-      department: {},
+      department: {} as TicketFormValues['department'],
     },
   });
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files) {
-      const newFiles = Array.from(event.target.files);
-      const totalFiles = [...attachments, ...newFiles];
-      if (totalFiles.length > 3) {
-        toast.error('شما فقط مجاز به ارسال ۳ فایل هستید!');
-        return;
-      }
-      for (const file of newFiles) {
-        if (file.size > 8 * 1024 * 1024) {
-          toast.error(`${file.name} دارای حجمی بیشتر از ۸ مگابایت است.`);
-          return;
-        }
-      }
-      setAttachments(totalFiles);
-    }
-  };
 
-  // useEffect(() => {
-  //   setRefetchTickets(false);
-  // }, []);
+  function closeModal() {
+    setIsModalOpen(false);
+    methods.clearErrors();
+  }
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: TicketFormValues) => {
     try {
-      let payload = {
-        category: data.category.value,
-        department: data.department.value,
-        priority: data.priority.value,
-        message: data.message,
-        subject: data.subject,
-      };
-      const response = await _axios.post('/ticket', payload, {
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await _axios.post(
+        '/ticket',
+        {
+          category: data.category.value,
+          department: data.department.value,
+          priority: data.priority.value,
+          message: data.message,
+          subject: data.subject,
         },
-      });
+        { headers: { 'Content-Type': 'application/json' } }
+      );
 
-      if (response.data.status === 'SUCCESS') {
-        toast.success('تیکت با موفقیت ایجاد شد');
-        setModalState({ ...modalState, isOpen: false });
-        setRefetchTickets(refetchTickets + 1);
-        methods.reset();
-      } else {
-        toast.error('خطا در ارسال تیکت');
+      if (response.data.status !== 'SUCCESS') {
+        throw new Error(response.data.message || 'Ticket creation failed');
       }
+
+      toast.success('تیکت با موفقیت ثبت شد');
+      setRefetchTickets((value) => value + 1);
+      methods.reset({
+        category: {} as TicketFormValues['category'],
+        priority: priorityOptions[1],
+        subject: '',
+        message: '',
+        department: {} as TicketFormValues['department'],
+      });
+      closeModal();
     } catch (error) {
-      toast.error('خطا در ارتباط با سرور');
+      console.error('Error creating ticket:', error);
+      toast.error('ثبت تیکت انجام نشد؛ دوباره تلاش کنید');
     }
   };
+
   return (
     <>
       <PageHeader title={pageHeader.title} breadcrumb={pageHeader.breadcrumb}>
         <Button
-          variant="solid"
+          type="button"
           color="success"
-          // size="lg"
-          onClick={() =>
-            setModalState((prevState) => ({
-              ...prevState,
-              isOpen: true,
-              size: 'lg',
-            }))
-          }
-          className="mt-4 w-full gap-2 @lg:mt-0 @lg:w-auto dark:bg-gray-100 dark:text-white dark:active:bg-gray-100"
+          onClick={() => setIsModalOpen(true)}
+          className="mt-2 w-full gap-2 shadow-sm @lg:mt-0 @lg:w-auto"
         >
-          تیکت جدید
-          <FaPlus size={15} />
-        </Button>
-        {/* <Button
-          onClick={() =>
-            setModalState((prevState) => ({
-              ...prevState,
-              isOpen: true,
-              size: 'lg',
-            }))
-          }
-          className="mt-4 w-full @lg:mt-0 @lg:w-auto dark:bg-gray-100 dark:text-white dark:active:bg-gray-100"
-        >
-          <PiPlusBold className="me-1.5 h-[17px] w-[17px]" />
+          <PiPlusBold className="h-4 w-4" />
           ثبت تیکت جدید
-        </Button> */}
+        </Button>
       </PageHeader>
 
-      <TabList />
+      <section className="relative mb-5 overflow-hidden rounded-2xl border border-primary/10 bg-gradient-to-l from-primary/10 via-white to-green-lighter/40 p-5 dark:via-gray-50 sm:p-6">
+        <span className="absolute -left-12 -top-16 h-40 w-40 rounded-full bg-primary/10 blur-3xl" />
+        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-start gap-4">
+            <span className="grid h-12 w-12 flex-none place-items-center rounded-2xl bg-primary text-white shadow-lg shadow-primary/20">
+              <PiHeadset className="h-6 w-6" />
+            </span>
+            <div>
+              <Text tag="h2" className="text-lg font-bold text-gray-900">
+                برای حل مسئله کنارتان هستیم
+              </Text>
+              <p className="mt-1 max-w-2xl text-sm leading-7 text-gray-600">
+                درخواست خود را با جزئیات ثبت کنید. پاسخ کارشناسان و تمام
+                گفتگوهای قبلی را می‌توانید همین‌جا دنبال کنید.
+              </p>
+            </div>
+          </div>
 
+          <div className="grid grid-cols-1 gap-2 text-xs text-gray-600 xs:grid-cols-3 lg:min-w-[430px]">
+            <span className="flex items-center gap-2 rounded-xl border border-white/80 bg-white/70 px-3 py-2.5 backdrop-blur dark:bg-gray-100/80">
+              <PiClockCountdown className="h-4 w-4 text-orange-dark" />
+              پیگیری یکپارچه
+            </span>
+            <span className="flex items-center gap-2 rounded-xl border border-white/80 bg-white/70 px-3 py-2.5 backdrop-blur dark:bg-gray-100/80">
+              <PiShieldCheck className="h-4 w-4 text-green-dark" />
+              گفتگوی امن
+            </span>
+            <span className="flex items-center gap-2 rounded-xl border border-white/80 bg-white/70 px-3 py-2.5 backdrop-blur dark:bg-gray-100/80">
+              <PiCheckCircle className="h-4 w-4 text-primary" />
+              تاریخچه کامل
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <TabList />
       <SupportInbox refetchTickets={refetchTickets} />
-      <Modal
-        isOpen={modalState.isOpen}
-        size={modalState.size}
-        onClose={() =>
-          setModalState((prevState) => ({ ...prevState, isOpen: false }))
-        }
-      >
+
+      <Modal isOpen={isModalOpen} size="lg" onClose={closeModal}>
         <FormProvider {...methods}>
-          <form onSubmit={methods.handleSubmit(onSubmit)} className="p-6">
-            <div className="m-auto px-7 pb-8 pt-6">
-              <div className="mb-7 flex items-center justify-between">
-                <Text tag="h3">ثبت تیکت جدید</Text>
+          <form onSubmit={methods.handleSubmit(onSubmit)}>
+            <div className="border-b border-gray-100 px-5 py-4 sm:px-7 sm:py-5">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <Text tag="h3" className="text-lg font-bold text-gray-900">
+                    ثبت تیکت جدید
+                  </Text>
+                  <p className="mt-1 text-xs leading-6 text-gray-500">
+                    هرچه توضیحات دقیق‌تر باشد، سریع‌تر می‌توانیم کمک کنیم.
+                  </p>
+                </div>
                 <ActionIcon
+                  type="button"
                   size="sm"
                   variant="text"
-                  onClick={() =>
-                    setModalState((prevState) => ({
-                      ...prevState,
-                      isOpen: false,
-                    }))
-                  }
+                  aria-label="بستن"
+                  onClick={closeModal}
                 >
-                  <FaXmark className="h-auto w-6" strokeWidth={1.8} />
+                  <PiXBold className="h-5 w-5" />
                 </ActionIcon>
               </div>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-6 [&_label>span]:font-medium">
-                <div className="col-span-full">
-                  {/* <label htmlFor="subject">موضوع *</label> */}
+            </div>
+
+            <div className="max-h-[70vh] overflow-y-auto px-5 py-5 sm:px-7">
+              <div className="mb-5 flex items-start gap-2 rounded-xl border border-blue-100 bg-blue-50/70 p-3 text-xs leading-6 text-blue-700">
+                <PiInfo className="mt-1 h-4 w-4 flex-none" />
+                <p>
+                  برای هر موضوع یک تیکت جدا ثبت کنید. فایل‌های مرتبط را پس از
+                  ثبت تیکت، داخل گفت‌وگو ارسال کنید.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                <div className="sm:col-span-2">
                   <Input
-                    label="موضوع *"
+                    label="موضوع تیکت"
+                    placeholder="مثلاً: مشکل در ویرایش اطلاعات شرکت"
                     {...methods.register('subject')}
-                    variant="outline"
-                    labelClassName="text-black font-extrabold"
-                    placeholder="موضوع تیکت خود را وارد کنید"
-                    inputClassName=""
-                    size="DEFAULT"
-                    multiple
-                    min={2}
-                    className="col-span-full mt-2 "
-                    prefix={<FaHeading />}
+                    error={methods.formState.errors.subject?.message}
+                    labelClassName="mb-1.5 font-medium text-gray-800"
                   />
-                  {methods.formState.errors.subject && (
-                    <Text className="text-sm text-red-light">
-                      {methods.formState.errors.subject.message}
-                    </Text>
-                  )}
                 </div>
+
                 <Controller
                   name="category"
                   control={methods.control}
                   render={({ field: { onChange, value } }) => (
                     <Select
-                      variant="outline"
-                      // value={contactStatus}
-                      // options={contactStatuses}
-                      options={contactStatuses.map((subcategory) => ({
-                        value: subcategory.value,
-                        name: subcategory.name,
-                      }))}
-                      onChange={onChange}
-                      value={value}
-                      error={
-                        methods.formState.errors?.category?.name
-                          ?.message as string
-                      }
-                      // onChange={setContactStatus}
+                      label="دسته‌بندی"
                       placeholder="انتخاب دسته‌بندی"
-                      placement="bottom-end"
-                      // useContainerWidth={false}
-                      className="col-span-full sm:col-span-1"
-                      selectClassName="text-xs sm:text-sm"
-                      optionClassName="text-xs sm:text-sm"
-                      // dropdownClassName="w-48 p-2 gap-1 grid"
-                      suffix={<PiCaretDownBold className="h-3 w-3" />}
+                      options={categoryOptions}
+                      value={value}
+                      onChange={onChange}
+                      getOptionValue={(option) => option.value}
+                      displayValue={(selected) => selected?.name}
+                      error={methods.formState.errors.category?.name?.message}
+                      suffix={<PiCaretDownBold className="h-3.5 w-3.5" />}
                     />
                   )}
                 />
-                {/* {methods.formState.errors.category?.name && (
-                    <Text className="text-sm text-red-light">
-                      {methods.formState.errors.category?.name?.message}
-                    </Text>
-                  )} */}
-                {/* <div className="mb-4 xs:col-span-full sm:col-span-full md:col-span-full lg:col-span-full xl:col-span-full"> */}
+
                 <Controller
                   name="department"
                   control={methods.control}
                   render={({ field: { onChange, value } }) => (
                     <Select
-                      className="col-span-full sm:col-span-1"
-                      {...methods.register('department')}
-                      // value={agent}
-                      variant="outline"
-                      options={agents}
-                      // onChange={setAgent}
-
-                      placeholder="انتخاب دپارتمان"
-                      placement="bottom-end"
-                      // options={agents.map((department) => ({
-                      //   value: department.value,
-                      //   name: department.name,
-                      // }))}
-                      onChange={onChange}
+                      label="واحد پاسخ‌گو"
+                      placeholder="انتخاب واحد"
+                      options={departmentOptions}
                       value={value}
-                      error={
-                        methods.formState.errors?.department?.name
-                          ?.message as string
-                      }
-                      // useContainerWidth={false}
-                      // dropdownClassName="w-60 p-2 gap-1 grid"
-                      suffix={<PiCaretDownBold className="h-3 w-3" />}
+                      onChange={onChange}
+                      getOptionValue={(option) => option.value}
+                      displayValue={(selected) => selected?.name}
+                      error={methods.formState.errors.department?.name?.message}
+                      suffix={<PiCaretDownBold className="h-3.5 w-3.5" />}
                     />
                   )}
                 />
-                {/* {methods.formState.errors.department && (
-                    <Text className="text-sm text-red-light">
-                      {methods.formState.errors.department.message}
-                    </Text>
-                  )} */}
-                {/* </div> */}
 
-                {/* <div className="mb-4"> */}
                 <Controller
                   name="priority"
                   control={methods.control}
                   render={({ field: { onChange, value } }) => (
                     <Select
-                      // size="sm"
-                      variant="outline"
-                      // value={priority}
-                      // onChange={setPriority}
+                      label="اولویت"
                       options={priorityOptions}
-                      // options={priorityOptions.map((priority) => ({
-                      //   value: priority.value,
-                      //   name: priority.name,
-                      // }))}
-                      onChange={onChange}
                       value={value}
-                      // error={
-                      //   methods.formState.errors?.priority?.name
-                      //     ?.message as string
-                      // }
-                      selectClassName="text-xs sm:text-sm"
-                      optionClassName="text-xs sm:text-sm"
-                      placeholder="تعریف اولویت"
-                      placement="bottom-end"
-                      className="col-span-full sm:col-span-1"
-                      useContainerWidth={false}
-                      dropdownClassName="w-30 p-2 gap-1 grid"
-                      suffix={<PiCaretDownBold className="h-3 w-3" />}
+                      onChange={onChange}
+                      getOptionValue={(option) => option.value}
+                      displayValue={(selected) => selected?.name}
+                      error={methods.formState.errors.priority?.name?.message}
+                      suffix={<PiCaretDownBold className="h-3.5 w-3.5" />}
                     />
                   )}
                 />
-                {/* {methods.formState.errors.priority && (
-                  <Text className="text-sm text-red-light">
-                    {methods.formState.errors.priority?.name?.message}
-                  </Text>
-                )} */}
-                {/* </div> */}
-                {/* <div className="mb-4"> */}
-                <div className="col-span-full mb-4">
+
+                <div className="hidden sm:block" />
+
+                <div className="sm:col-span-2">
                   <Controller
                     name="message"
                     control={methods.control}
-                    render={({
-                      field: { onChange, value },
-                      fieldState: { error },
-                    }) => (
+                    render={({ field: { onChange, value }, fieldState }) => (
                       <>
                         <QuillEditor
-                          label="متن تیکت *"
-                          labelClassName="text-black"
+                          label="شرح درخواست"
                           value={value}
                           onChange={onChange}
-                          className="rounded-md bg-gray-0 dark:bg-gray-50 [&>.ql-container_.ql-editor]:min-h-[100px] [&>.ql-toolbar]:3xl:overflow-x-auto"
+                          className="rounded-lg bg-gray-0 [&>.ql-container_.ql-editor]:min-h-[150px] [&>.ql-toolbar]:overflow-x-auto"
                         />
-                        {error && (
-                          <Text className="mt-1 text-sm text-red-light">
-                            {error.message}
-                          </Text>
+                        {fieldState.error && (
+                          <p className="mt-1 text-xs text-red-light">
+                            {fieldState.error.message}
+                          </p>
                         )}
                       </>
                     )}
                   />
                 </div>
-                <div className="col-span-full flex w-full flex-col items-start justify-center gap-1">
-                  <Button
-                    variant="solid"
-                    size="DEFAULT"
-                    className="gap-2"
-                    onClick={() =>
-                      document.getElementById('attachment-upload')?.click()
-                    }
-                  >
-                    انتخاب فایل
-                    <MdAttachFile className="h-4 w-4" />
-                  </Button>
-                  <input
-                    type="file"
-                    multiple
-                    accept=".png,.jpg,.jpeg,.pdf,.docx,.xlsx,.txt,.zip,.rar"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                    id="attachment-upload"
-                  />
-                  {attachments.length > 0 && (
-                    <span className="gap-2">
-                      نام فایل: {attachments.map((file) => file.name)}
-                    </span>
-                  )}
-                </div>
-                {/* {methods.formState.errors.message && (
-                    <Text className="text-sm text-red-light">
-                      {methods.formState.errors.message.message}
-                    </Text>
-                  )} */}
-                {/* </div> */}
-
-                {/* <div className="col-span-full"></div> */}
-                <Button
-                  variant="solid"
-                  type="submit"
-                  size="lg"
-                  color="success"
-                  className="col-span-2"
-                >
-                  ثبت تیکت جدید
-                </Button>
               </div>
+            </div>
+
+            <div className="flex flex-col-reverse gap-2 border-t border-gray-100 bg-gray-50/60 px-5 py-4 sm:flex-row sm:justify-end sm:px-7">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={closeModal}
+                className="sm:min-w-[110px]"
+              >
+                انصراف
+              </Button>
+              <Button
+                type="submit"
+                color="success"
+                isLoading={methods.formState.isSubmitting}
+                className="gap-2 sm:min-w-[150px]"
+              >
+                {!methods.formState.isSubmitting && (
+                  <PiPlusBold className="h-4 w-4" />
+                )}
+                ثبت تیکت
+              </Button>
             </div>
           </form>
         </FormProvider>

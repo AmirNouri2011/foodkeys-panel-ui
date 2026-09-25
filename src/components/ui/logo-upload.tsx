@@ -1,5 +1,4 @@
-import { API_BASE_URL } from '@/config/api.config';
-import { STATIC_FILES_URL } from '@/config/api.config';
+import { API_BASE_URL, STATIC_FILES_URL } from '@/config/api.config';
 import { ForwardedRef, forwardRef, useRef, useState } from 'react';
 import cn from '@/utils/class-names';
 import Image from 'next/image';
@@ -33,6 +32,7 @@ export interface LogoUploadProps
     onRemove?: () => void;
     onUploadSuccess?: (fileData: SimpleTempFileDTO) => void;
     fileServiceType?: string;
+    shape?: 'circle' | 'landscape';
 }
 
 function LogoUpload(
@@ -48,6 +48,7 @@ function LogoUpload(
         onRemove: externalOnRemove,
         onUploadSuccess,
         fileServiceType = 'COMPANY_LOGO',
+        shape = 'circle',
         ...props
     }: LogoUploadProps,
     ref: ForwardedRef<HTMLInputElement>
@@ -195,7 +196,14 @@ function LogoUpload(
                 />
 
                 {loading ? (
-                    <div className="flex h-40 w-40 flex-col items-center justify-center rounded-full border-2 border-dashed border-gray-200 bg-gray-50 p-4">
+                    <div
+                        className={cn(
+                            'flex h-40 flex-col items-center justify-center border-2 border-dashed border-gray-200 bg-gray-50 p-4',
+                            shape === 'landscape'
+                                ? 'w-full rounded-2xl'
+                                : 'w-40 rounded-full'
+                        )}
+                    >
                         <Progressbar
                             value={progress}
                             size="lg"
@@ -209,13 +217,23 @@ function LogoUpload(
                         className={cn(
                             'group relative overflow-hidden transition-all duration-200',
                             currentLogoPreview
-                                ? 'h-40 w-40 rounded-full border-2 border-solid'
-                                : 'h-40 w-40 cursor-pointer rounded-full border-2 border-dashed',
+                                ? cn(
+                                      'h-40 border-2 border-solid',
+                                      shape === 'landscape'
+                                          ? 'w-full rounded-2xl'
+                                          : 'w-40 rounded-full'
+                                  )
+                                : cn(
+                                      'h-40 cursor-pointer border-2 border-dashed',
+                                      shape === 'landscape'
+                                          ? 'w-full rounded-2xl'
+                                          : 'w-40 rounded-full'
+                                  ),
                             error
-                                ? 'border-red-300 bg-red-50'
+                                ? 'border-red-light bg-red-lighter'
                                 : (currentLogoPreview
-                                        ? 'border-blue-300'
-                                        : 'border-gray-300 bg-gray-50 hover:border-blue-300 hover:bg-blue-50'
+                                        ? 'border-blue-light'
+                                        : 'border-gray-300 bg-gray-50 hover:border-blue-light hover:bg-blue-lighter/30'
                                 )
                         )}
                         onClick={handleClick}
@@ -246,7 +264,7 @@ function LogoUpload(
                                     <div className="flex gap-2">
                                         <button
                                             type="button"
-                                            className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-0 text-gray-600 hover:bg-blue-100 hover:text-blue-700 dark:bg-gray-100 dark:text-gray-600 dark:hover:bg-blue-lighter/30 dark:hover:text-blue-light"
+                                            className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-0 text-gray-600 hover:bg-blue-lighter hover:text-blue-dark dark:bg-gray-100 dark:text-gray-600 dark:hover:bg-blue-lighter/30 dark:hover:text-blue-light"
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 handleClick();
@@ -256,7 +274,7 @@ function LogoUpload(
                                         </button>
                                         <button
                                             type="button"
-                                            className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-0 text-gray-600 hover:bg-red-100 hover:text-red-700 dark:bg-gray-100 dark:text-gray-600 dark:hover:bg-red-lighter/30 dark:hover:text-red-light"
+                                            className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-0 text-gray-600 hover:bg-red-lighter hover:text-red-dark dark:bg-gray-100 dark:text-gray-600 dark:hover:bg-red-lighter/30 dark:hover:text-red-light"
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 handleLogoRemove();
@@ -269,11 +287,11 @@ function LogoUpload(
                             </>
                         ) : (
                             <div className="flex h-full w-full flex-col items-center justify-center p-4">
-                                <div className="mb-3 rounded-full bg-blue-100 p-3 text-blue-600">
+                                <div className="mb-3 rounded-full bg-blue-lighter p-3 text-blue-dark">
                                     <PiUploadSimpleBold size={28} />
                                 </div>
-                                <span className="text-center text-sm font-medium text-gray-500 group-hover:text-blue-600">
-                                    کلیک کنید تا لوگو را آپلود کنید
+                                <span className="text-center text-sm font-medium text-gray-600 group-hover:text-blue-dark">
+                                    برای بارگذاری تصویر کلیک کنید
                                 </span>
                                 <span className="mt-2 text-center text-xs text-gray-400">
                                     JPG یا PNG (حداکثر ۸ مگابایت)
@@ -284,14 +302,14 @@ function LogoUpload(
                 )}
 
                 {error && (
-                    <p role="alert" className="mt-2 text-xs text-red-500">
+                    <p role="alert" className="mt-2 text-xs text-red-dark">
                         {error}
                     </p>
                 )}
 
                 {success && !error && (
-                    <p className="mt-2 text-xs text-green-500">
-                        لوگو با موفقیت آپلود شد
+                    <p className="mt-2 text-xs text-green-dark">
+                        تصویر با موفقیت آپلود شد
                     </p>
                 )}
             </div>

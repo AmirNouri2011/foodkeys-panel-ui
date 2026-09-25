@@ -111,17 +111,25 @@ export function convertSchemaToFields(schema: any): FieldType[] {
     const requiredFields = schema.required || [];
 
     Object.entries(schema.properties).forEach(([name, property]: [string, any]) => {
+        const component = property.uniforms?.component;
+        const isFileUpload =
+            component === 'FileUpload' || component === 'MultiFileUpload';
         const field: FieldType = {
             id: name,
             name,
-            type: mapJsonSchemaTypeToFieldType(property.type, property.format),
+            // Some backend schemas describe uploaded images as `format: uri`
+            // while rendering them with FileUpload. The component is the source
+            // of truth here; otherwise uploaded file IDs are validated as URLs.
+            type: isFileUpload
+                ? 'file'
+                : mapJsonSchemaTypeToFieldType(property.type, property.format),
             label: property.title || name,
             placeholder: property.example || '',
             description: property.description || '',
             required: requiredFields.includes(name),
             defaultValue: property.default,
             column: property['x-column'] || 12, // Default to full width
-            component: property.uniforms?.component,
+            component,
             enum: property.enum
         };
 
@@ -224,6 +232,15 @@ export function formatFormDataForApi(formData: any, schema: any): any {
     // Process form data based on schema
     Object.entries(schema.properties).forEach(([name, property]: [string, any]) => {
         if (formData[name] === undefined || formData[name] === null) {
+            delete result[name];
+            return;
+        }
+
+        const isFileField =
+            property.format === 'file' ||
+            property.uniforms?.component === 'FileUpload';
+        if (isFileField && formData[name] === '') {
+            delete result[name];
             return;
         }
 
@@ -239,10 +256,18 @@ export function formatFormDataForApi(formData: any, schema: any): any {
 
         // For arrays with primitive types, ensure they are the correct type
         if (property.type === 'array' && Array.isArray(formData[name])) {
+            const nonEmptyItems = formData[name].filter((item: any) =>
+                typeof item === 'string'
+                    ? item.trim().length > 0
+                    : item !== null && item !== undefined
+            );
+
             if (property.items && property.items.type === 'number') {
-                result[name] = formData[name].map((item: any) =>
+                result[name] = nonEmptyItems.map((item: any) =>
                     typeof item === 'string' ? Number(item) : item
                 );
+            } else {
+                result[name] = nonEmptyItems;
             }
         }
 
