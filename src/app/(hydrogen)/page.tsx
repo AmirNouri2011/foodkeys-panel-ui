@@ -1,9 +1,7 @@
-import FileDashboard from '@/app/shared/file/dashboard';
-import Dashboard from '@/app/shared/dashboard';
-import MainDashboard from '@/app/shared/dashboard2';
+import BusinessDashboard from '@/app/shared/dashboard2';
 
-export default function FileDashboardPage() {
-  // return <FileDashboard />;
+export const metadata = { title: 'داشبورد کسب‌وکار | فودکیز' };
 
-  return <MainDashboard/>;
+export default function DashboardPage() {
+  return <BusinessDashboard />;
 }

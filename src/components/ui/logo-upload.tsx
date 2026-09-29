@@ -16,6 +16,7 @@ const inputClasses = {
 interface SimpleTempFileDTO {
     id: string;
     fileName: string;
+    originalFileName?: string;
     filePath: string;
 }
 
@@ -33,6 +34,7 @@ export interface LogoUploadProps
     onUploadSuccess?: (fileData: SimpleTempFileDTO) => void;
     fileServiceType?: string;
     shape?: 'circle' | 'landscape';
+    dimensionsHint?: string;
 }
 
 function LogoUpload(
@@ -49,6 +51,7 @@ function LogoUpload(
         onUploadSuccess,
         fileServiceType = 'COMPANY_LOGO',
         shape = 'circle',
+        dimensionsHint,
         ...props
     }: LogoUploadProps,
     ref: ForwardedRef<HTMLInputElement>
@@ -81,7 +84,7 @@ function LogoUpload(
         // Check file size and type
         if (!checkFileSizeAndType(uploadedFile)) {
             setError(
-                'فرمت فایل اشتباه است. تنها فایل‌های با پسوند .JPG، .PNG مجاز هستند و حداکثر حجم مجاز ۸ مگابایت است'
+                'فرمت فایل اشتباه است. تنها فایل‌های با پسوند .JPG، .PNG و .WebP مجاز هستند و حداکثر حجم مجاز ۸ مگابایت است'
             );
             return;
         }
@@ -151,7 +154,7 @@ function LogoUpload(
 
     // File validation
     const checkFileSizeAndType = (file: File) => {
-        const validTypes = ['image/jpeg', 'image/png'];
+        const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
         const maxSize = 8 * 1024 * 1024; // 8MB
         return validTypes.includes(file.type) && file.size <= maxSize;
     };
@@ -166,6 +169,10 @@ function LogoUpload(
     };
 
     const currentLogoPreview = getPreviewUrl();
+    const currentFileName = fileData?.originalFileName || fileData?.fileName ||
+        (currentLogoPreview
+            ? decodeURIComponent(currentLogoPreview.split('/').pop()?.split('?')[0] || '')
+            : '');
 
     return (
         <div className={cn('flex flex-col', wrapperClassName)}>
@@ -190,7 +197,7 @@ function LogoUpload(
                     title=""
                     type="file"
                     accept="image/jpeg,image/png,image/webp"
-                    className="absolute top-0 h-full w-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
+                    className="sr-only"
                     onChange={handleLogoUpload}
                     {...props}
                 />
@@ -236,7 +243,7 @@ function LogoUpload(
                                         : 'border-gray-300 bg-gray-50 hover:border-blue-light hover:bg-blue-lighter/30'
                                 )
                         )}
-                        onClick={handleClick}
+                        onClick={currentLogoPreview ? undefined : handleClick}
                         onMouseEnter={() => setHover(true)}
                         onMouseLeave={() => setHover(false)}
                     >
@@ -249,6 +256,7 @@ function LogoUpload(
                                             alt="تصویر لوگو"
                                             layout="fill"
                                             objectFit="cover"
+                                            unoptimized
                                             className={cn(
                                                 'transition-opacity duration-300',
                                                 hover ? 'opacity-70' : 'opacity-100'
@@ -287,23 +295,50 @@ function LogoUpload(
                             </>
                         ) : (
                             <div className="flex h-full w-full flex-col items-center justify-center p-4">
-                                <div className="mb-3 rounded-full bg-blue-lighter p-3 text-blue-dark">
+                                <div className="mb-2 rounded-full bg-blue-lighter p-3 text-blue-dark">
                                     <PiUploadSimpleBold size={28} />
                                 </div>
-                                <span className="text-center text-sm font-medium text-gray-600 group-hover:text-blue-dark">
-                                    برای بارگذاری تصویر کلیک کنید
-                                </span>
-                                <span className="mt-2 text-center text-xs text-gray-400">
-                                    JPG یا PNG (حداکثر ۸ مگابایت)
+                                <span className="px-2 text-center text-sm font-medium text-gray-600 group-hover:text-blue-dark">
+                                    انتخاب لوگو
                                 </span>
                             </div>
                         )}
                     </div>
                 )}
 
+                {!loading && !currentLogoPreview && (
+                    <div className="mt-3 w-full max-w-sm rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-center">
+                        <p className="text-sm font-medium text-gray-700">
+                            برای بارگذاری لوگو روی کادر بالا کلیک کنید
+                        </p>
+                        <div className="mt-2 flex flex-wrap items-center justify-center gap-2 text-xs text-gray-500">
+                            <span className="rounded-full bg-white px-2.5 py-1 shadow-sm">
+                                فرمت: JPG، PNG، WebP
+                            </span>
+                            <span className="rounded-full bg-white px-2.5 py-1 shadow-sm">
+                                حداکثر حجم: ۸ مگابایت
+                            </span>
+                            {dimensionsHint && (
+                                <span className="rounded-full bg-white px-2.5 py-1 shadow-sm">
+                                    ابعاد مجاز: {dimensionsHint}
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                )}
+
                 {error && (
                     <p role="alert" className="mt-2 text-xs text-red-dark">
                         {error}
+                    </p>
+                )}
+
+                {currentLogoPreview && currentFileName && (
+                    <p
+                        className="mt-2 max-w-64 truncate text-center text-xs text-gray-500"
+                        title={currentFileName}
+                    >
+                        {currentFileName}
                     </p>
                 )}
 

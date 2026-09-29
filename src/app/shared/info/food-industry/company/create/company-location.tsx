@@ -259,13 +259,12 @@ export default function CompanyLocation({ className }: { className?: string }) {
             className={cn(className)}
         >
             <Tabs
-                value={activeTab}
-                onValueChange={setActiveTab}
+                selectedIndex={activeTab === "factory" ? 0 : 1}
+                onChange={(index) => setActiveTab(index === 0 ? "factory" : "office")}
                 className="col-span-full mb-8"
             >
                 <TabList className="gap-x-8 border-b border-gray-200 dark:border-gray-300">
                     <Tab
-                        value="factory"
                         className={({ selected }) => cn(
                             "capitalize py-2 px-4 -mb-px text-sm font-medium transition-colors relative",
                             "text-gray-500 hover:text-gray-900 dark:hover:text-gray-700",
@@ -278,7 +277,6 @@ export default function CompanyLocation({ className }: { className?: string }) {
                         )}
                     </Tab>
                     <Tab
-                        value="office"
                         className={({ selected }) => cn(
                             "capitalize py-2 px-4 -mb-px text-sm font-medium transition-colors relative",
                             "text-gray-500 hover:text-gray-900 dark:hover:text-gray-700",
@@ -293,14 +291,15 @@ export default function CompanyLocation({ className }: { className?: string }) {
                 </TabList>
                 <div className="h-5" />
 
-                <TabPanel value="factory">
-                    <div className="grid gap-6 md:grid-cols-2">
-                        <div className="space-y-6 md:col-span-1">
+                <TabPanel>
+                    <div className="grid gap-8 xl:grid-cols-2">
+                        <div className="space-y-6 xl:col-span-1">
                             <Input
                                 label="استان کارخانه*"
                                 placeholder="استان کارخانه"
                                 {...register("factoryState")}
                                 error={errors.factoryState?.message as string}
+                                helperText="ابتدا استان را وارد کنید تا نقشه روی همان استان قرار بگیرد."
                             />
                             <Input
                                 label="شهر کارخانه*"
@@ -316,10 +315,12 @@ export default function CompanyLocation({ className }: { className?: string }) {
                             />
                             <Input
                                 label="کد پستی کارخانه"
-                                type="number"
+                                inputMode="numeric"
+                                maxLength={10}
                                 placeholder="کد پستی کارخانه"
                                 {...register("factoryPoBox")}
                                 error={errors.factoryPoBox?.message as string}
+                                helperText="(مثال: 1234567890)"
                             />
                             <Textarea
                                 label="آدرس کارخانه*"
@@ -329,7 +330,7 @@ export default function CompanyLocation({ className }: { className?: string }) {
                                 rows={4}
                             />
                         </div>
-                        <div className="md:col-span-1">
+                        <div className="xl:col-span-1">
                             <div className="h-full flex flex-col justify-between">
                                 <div className="mb-4">
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-600 mb-1.5">
@@ -355,14 +356,15 @@ export default function CompanyLocation({ className }: { className?: string }) {
                     </div>
                 </TabPanel>
 
-                <TabPanel value="office">
-                    <div className="grid gap-6 md:grid-cols-2">
-                        <div className="space-y-6 md:col-span-1">
+                <TabPanel>
+                    <div className="grid gap-8 xl:grid-cols-2">
+                        <div className="space-y-6 xl:col-span-1">
                             <Input
                                 label="استان دفتر مرکزی"
                                 placeholder="استان دفتر مرکزی"
                                 {...register("officeState")}
                                 error={errors.officeState?.message as string}
+                                helperText="با وارد کردن استان، نقشه روی همان محدوده قرار می‌گیرد."
                             />
                             <Input
                                 label="شهر دفتر مرکزی"
@@ -372,20 +374,22 @@ export default function CompanyLocation({ className }: { className?: string }) {
                             />
                             <Input
                                 label="کد پستی دفتر مرکزی"
-                                type="number"
+                                inputMode="numeric"
+                                maxLength={10}
                                 placeholder="کد پستی دفتر مرکزی"
                                 {...register("officePoBox")}
                                 error={errors.officePoBox?.message as string}
+                                helperText="(مثال: 1234567890)"
                             />
                             <Textarea
-                                label="آدرس دفتر مرکزی*"
+                                label="آدرس دفتر مرکزی"
                                 placeholder="آدرس دفتر مرکزی"
                                 {...register("officeLocation")}
                                 error={errors.officeLocation?.message as string}
                                 rows={4}
                             />
                         </div>
-                        <div className="md:col-span-1">
+                        <div className="xl:col-span-1">
                             <div className="h-full flex flex-col justify-between">
                                 <div className="mb-4">
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-600 mb-1.5">

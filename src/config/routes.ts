@@ -256,7 +256,6 @@ export const routes = {
     activities: "/activities",
     notifications: "/profile/notifications",
     notificationCenter: '/notifications',
-    notificationDetails: (id: string | number) => `/notifications/${id}`,
     management: {
         dashboard: "/management",
         requestList: '/management/request-list',

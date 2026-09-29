@@ -1,11 +1,16 @@
 'use client';
 
 import { API_BASE_URL } from '@/config/api.config';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Element } from 'react-scroll';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm, FormProvider, SubmitHandler } from 'react-hook-form';
+import {
+  useForm,
+  FormProvider,
+  SubmitHandler,
+  FieldErrors,
+} from 'react-hook-form';
 import cn from '../../../../../../utils/class-names';
 import { Button, Text } from 'rizzui';
 import FormNav, {
@@ -49,6 +54,12 @@ import {
 import {ensureSeconds} from "@/utils/date-util";
 import Spinner from "@/components/ui/spinner";
 import {AiOutlineCheckCircle} from "react-icons/ai";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  X,
+  XCircle,
+} from 'lucide-react';
 
 const MAP_STEP_TO_COMPONENT = {
   [formParts.intro]: CompanySummary,
@@ -69,6 +80,196 @@ const MAP_STEP_TO_COMPONENT = {
   // [formParts.variantOptions]: ProductVariants,
   // [formParts.tagsAndCategory]: ProductTaxonomies,
 };
+
+type CompanyValidationItem = {
+  id: string;
+  label: string;
+  message: string;
+};
+
+const FIELD_LABELS: Record<string, string> = {
+  subcategory: 'دسته‌بندی شرکت',
+  companyName: 'نام شرکت',
+  companyNameEn: 'نام شرکت به انگلیسی',
+  primaryBrand: 'نام تجاری اصلی',
+  mainBrandEn: 'نام تجاری اصلی به انگلیسی',
+  companyType: 'نوع شرکت',
+  establishDate: 'تاریخ تاسیس',
+  employeesCount: 'تعداد کارکنان',
+  buildingArea: 'متراژ بنای کارخانه',
+  landArea: 'متراژ زمین کارخانه',
+  ceo: 'نام و نام خانوادگی مدیرعامل',
+  ceoPhoneNumber: 'تلفن همراه مدیرعامل',
+  factoryState: 'استان کارخانه',
+  factoryCity: 'شهر کارخانه',
+  industrialCity: 'نام شهرک صنعتی',
+  factoryPoBox: 'کد پستی کارخانه',
+  factoryLocation: 'آدرس کارخانه',
+  officePoBox: 'کد پستی دفتر مرکزی',
+  officeLocation: 'آدرس دفتر مرکزی',
+  telegramPhoneNo: 'شماره تلگرام',
+  whatsAppPhoneNo: 'شماره واتساپ',
+  smsNumber: 'سامانه پیام کوتاه',
+  hotlineNumber: 'شماره خط ویژه',
+  specialLineNumber: 'شماره خط ویژه',
+  eitaaPhoneNo: 'شماره ایتا',
+  rubikaPhoneNo: 'شماره روبیکا',
+  website: 'وب‌سایت',
+  emails: 'ایمیل شرکت',
+  contacts: 'مخاطبان شرکت',
+  factoryTels: 'تلفن کارخانه',
+  factoryFaxes: 'فکس کارخانه',
+  officeTels: 'تلفن دفتر مرکزی',
+  officeFaxes: 'فکس دفتر مرکزی',
+  products: 'محصولات و خدمات',
+  productTitles: 'عنوان محصولات (خدمات)',
+  productsDescription: 'توضیحات محصولات (خدمات)',
+  outSourcedProducts: 'محصولات برون‌سپاری‌شده',
+  brands: 'نام‌های تجاری اضافه',
+  gallery: 'گالری شرکت',
+};
+
+const FIELD_SECTIONS: Record<string, string> = {
+  subcategory: formParts.intro,
+  companyName: formParts.intro,
+  companyNameEn: formParts.intro,
+  primaryBrand: formParts.intro,
+  mainBrandEn: formParts.intro,
+  companyType: formParts.intro,
+  establishDate: formParts.intro,
+  ceo: formParts.intro,
+  ceoPhoneNumber: formParts.intro,
+  employeesCount: formParts.intro,
+  buildingArea: formParts.intro,
+  landArea: formParts.intro,
+  brands: formParts.intro,
+  factoryState: formParts.location,
+  factoryCity: formParts.location,
+  industrialCity: formParts.location,
+  factoryPoBox: formParts.location,
+  factoryLocation: formParts.location,
+  officePoBox: formParts.location,
+  officeLocation: formParts.location,
+  factoryTels: formParts.factory,
+  factoryFaxes: formParts.factory,
+  contacts: formParts.factory,
+  officeTels: formParts.office,
+  officeFaxes: formParts.office,
+  smsNumber: formParts.office,
+  hotlineNumber: formParts.office,
+  specialLineNumber: formParts.office,
+  telegramPhoneNo: formParts.social,
+  whatsAppPhoneNo: formParts.social,
+  eitaaPhoneNo: formParts.social,
+  rubikaPhoneNo: formParts.social,
+  website: formParts.social,
+  emails: formParts.social,
+  products: formParts.products,
+  productTitles: formParts.products,
+  productsDescription: formParts.products,
+  outSourcedProducts: formParts.products,
+  gallery: formParts.gallery,
+};
+
+const VALIDATION_FIELD_ORDER = [
+  'subcategory',
+  'companyName',
+  'companyNameEn',
+  'primaryBrand',
+  'mainBrandEn',
+  'companyType',
+  'establishDate',
+  'ceo',
+  'ceoPhoneNumber',
+  'employeesCount',
+  'buildingArea',
+  'landArea',
+  'brands',
+  'factoryState',
+  'factoryCity',
+  'industrialCity',
+  'factoryPoBox',
+  'factoryLocation',
+  'officePoBox',
+  'officeLocation',
+  'factoryTels',
+  'factoryFaxes',
+  'contacts',
+  'officeTels',
+  'officeFaxes',
+  'smsNumber',
+  'specialLineNumber',
+  'telegramPhoneNo',
+  'whatsAppPhoneNo',
+  'eitaaPhoneNo',
+  'rubikaPhoneNo',
+  'emails',
+  'website',
+  'productTitles',
+  'productsDescription',
+  'products',
+  'outSourcedProducts',
+  'gallery',
+];
+
+function getValidationLabel(path: string) {
+  const parts = path.split('.');
+  const root = parts[0];
+  const rowIndex = parts.find((part) => /^\d+$/.test(part));
+  const field = parts.at(-1);
+  const row = rowIndex ? ` ${Number(rowIndex) + 1}` : '';
+
+  const nestedLabels: Record<string, string> = {
+    name: root === 'contacts' ? 'نام مخاطب' : 'نام محصول',
+    lastName: 'نام خانوادگی مخاطب',
+    position: 'سمت مخاطب',
+    phone: 'شماره موبایل مخاطب',
+    email: 'ایمیل مخاطب',
+    categoryType: 'دسته‌بندی محصول',
+    telNumber: FIELD_LABELS[root] || 'شماره تماس',
+    nameEn: 'نام انگلیسی برند',
+    title: root === 'gallery' ? 'عنوان تصویر گالری' : 'عنوان',
+  };
+
+  return (
+    (field && nestedLabels[field] ? `${nestedLabels[field]}${row}` : undefined) ||
+    FIELD_LABELS[root] ||
+    path
+  );
+}
+
+function flattenValidationErrors(
+  errors: FieldErrors<CreateCompanyInput>
+): CompanyValidationItem[] {
+  const items: CompanyValidationItem[] = [];
+
+  const visit = (value: unknown, path: string[] = []) => {
+    if (!value || typeof value !== 'object') return;
+
+    const error = value as Record<string, unknown>;
+    if (typeof error.message === 'string' && path.length) {
+      const id = path.join('.');
+      items.push({ id, label: getValidationLabel(id), message: error.message });
+      return;
+    }
+
+    Object.entries(error).forEach(([key, child]) => {
+      if (key !== 'ref' && key !== 'type' && key !== 'types' && key !== 'message') {
+        visit(child, [...path, key]);
+      }
+    });
+  };
+
+  visit(errors);
+  return items.sort((first, second) => {
+    const firstIndex = VALIDATION_FIELD_ORDER.indexOf(first.id.split('.')[0]);
+    const secondIndex = VALIDATION_FIELD_ORDER.indexOf(second.id.split('.')[0]);
+    const normalizedFirst = firstIndex === -1 ? Number.MAX_SAFE_INTEGER : firstIndex;
+    const normalizedSecond = secondIndex === -1 ? Number.MAX_SAFE_INTEGER : secondIndex;
+
+    return normalizedFirst - normalizedSecond || first.id.localeCompare(second.id);
+  });
+}
 
 export interface TelDTO {
   /** e.g. 'FACTORY_PHONE' | 'FACTORY_FAX' | 'OFFICE_PHONE' | 'OFFICE_FAX' */
@@ -105,6 +306,8 @@ export interface SocialMediaDTO {
 export interface BrandDTO {
   id?: number
   name: string
+  nameEn?: string
+  brandImage?: string
   logoUrl?: string
 }
 
@@ -465,9 +668,16 @@ export default function CreateCompany({
   const _axios = useAxiosPrivate();
   const [companyData, setCompanyData] = useState<Company | null>(null); // Company data
   const [isFetching, setFetching] = useState(false);
-  const methods = useForm<Company>({
+  const [isValidationPopupOpen, setIsValidationPopupOpen] = useState(false);
+  const [validationItems, setValidationItems] = useState<
+    CompanyValidationItem[]
+  >([]);
+  const [isValidationComplete, setIsValidationComplete] = useState(false);
+  const methods = useForm<CreateCompanyInput>({
     defaultValues: defaultValues(companyData),
     resolver: zodResolver(companyFormSchema),
+    mode: 'onSubmit',
+    reValidateMode: 'onChange',
   });
   useEffect(() => {
     const fetchCompany = async () => {
@@ -491,6 +701,26 @@ export default function CreateCompany({
       fetchCompany();
     }
   }, [id, _axios]);
+
+  useEffect(() => {
+    if (!isValidationPopupOpen) return;
+
+    const items = flattenValidationErrors(methods.formState.errors);
+    setValidationItems(items);
+    setIsValidationComplete(items.length === 0);
+  }, [isValidationPopupOpen, methods.formState.errors]);
+
+  useEffect(() => {
+    if (!isValidationPopupOpen || !isValidationComplete) return;
+
+    const timer = window.setTimeout(() => {
+      setIsValidationPopupOpen(false);
+      setIsValidationComplete(false);
+      setValidationItems([]);
+    }, 2800);
+
+    return () => window.clearTimeout(timer);
+  }, [isValidationComplete, isValidationPopupOpen]);
 
   if (id && isFetching) {
     return (
@@ -645,6 +875,9 @@ export default function CreateCompany({
 
 
   const onSubmit: SubmitHandler<CreateCompanyInput> = async (data) => {
+    setIsValidationPopupOpen(false);
+    setValidationItems([]);
+    setIsValidationComplete(false);
     setLoading(true);
     const computeDataFileIds = (products) => {
       return products.reduce((acc: string[], product) => {
@@ -883,6 +1116,12 @@ export default function CreateCompany({
         pictures: mapPictures(p.pictures)
       }));
 
+      const brands: BrandDTO[] = (data.brands || []).map((brand) => ({
+        name: brand.name,
+        nameEn: brand.nameEn,
+        brandImage: brand.brandImage || undefined,
+      }));
+
       console.log(`products: ${JSON.stringify(products)}`)
 
       console.log(`data.gallery: ${JSON.stringify(data?.gallery?.contacts || {})}`)
@@ -918,7 +1157,7 @@ export default function CreateCompany({
         location,
         companyKeyWords:    data.companyKeyWords,
         companyTags:        data.companyTags,
-        brands:             data.brands,
+        brands,
         primaryBrand:       data.primaryBrand,
         mainBrandEn:        data.mainBrandEn,
         factoryTels,
@@ -1130,19 +1369,85 @@ export default function CreateCompany({
   //   }
   // };
 
+  const preventEnterSubmission = (
+    event: React.KeyboardEvent<HTMLFormElement>
+  ) => {
+    if (event.key !== 'Enter' || event.defaultPrevented) return;
+
+    const target = event.target as HTMLElement;
+
+    // Enter must keep its normal behavior in multiline editors. Inputs that
+    // intentionally use Enter (such as adding a tag) prevent it themselves.
+    if (target.tagName === 'TEXTAREA' || target.isContentEditable) return;
+
+    event.preventDefault();
+  };
+
+  const focusValidationField = (path: string) => {
+    const rootField = path.split('.')[0];
+    const namedControl = document.querySelector<HTMLElement>(
+      `[name="${CSS.escape(path)}"]`
+    );
+    const fieldContainer = document.getElementById(`field-${rootField}`);
+    const section = document.getElementById(
+      FIELD_SECTIONS[rootField] || formParts.intro
+    );
+    const target = namedControl || fieldContainer || section;
+
+    if (!target) return;
+
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    window.setTimeout(() => {
+      const focusable = target.matches(
+        'input, textarea, select, button, [tabindex]:not([tabindex="-1"])'
+      )
+        ? target
+        : target.querySelector<HTMLElement>(
+            'input:not([type="hidden"]), textarea, select, button, [role="combobox"], [tabindex]:not([tabindex="-1"])'
+          );
+      focusable?.focus({ preventScroll: true });
+    }, 400);
+  };
+
+  const handleInvalidSubmit = (errors: FieldErrors<CreateCompanyInput>) => {
+    const items = flattenValidationErrors(errors);
+    setValidationItems(items);
+    setIsValidationComplete(false);
+    setIsValidationPopupOpen(true);
+
+    if (items[0]) {
+      window.setTimeout(() => focusValidationField(items[0].id), 250);
+    }
+  };
+
+  const handleFormSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    const submitter = (event.nativeEvent as SubmitEvent)
+      .submitter as HTMLElement | null;
+
+    if (!submitter?.matches('[data-form-submit="true"]')) {
+      event.preventDefault();
+      return;
+    }
+
+    return methods.handleSubmit(onSubmit, handleInvalidSubmit)(event);
+  };
+
   return (
     <div className="@container">
       <FormNav />
       <FormProvider {...methods}>
         <form
-          onSubmit={methods.handleSubmit(onSubmit)}
+          onSubmit={handleFormSubmit}
+          onKeyDown={preventEnterSubmission}
           className={cn('[&_label.block>span]:font-medium', className)}
         >
           <div className="mb-10 grid gap-7 divide-y divide-dashed divide-gray-200 dark:divide-gray-300 @2xl:gap-9 @3xl:gap-11">
             {Object.entries(MAP_STEP_TO_COMPONENT).map(([key, Component]) => (
               <Element
                 key={key}
+                id={formParts[key as keyof typeof formParts]}
                 name={formParts[key as keyof typeof formParts]}
+                className="scroll-mt-[150px]"
               >
                 {
                   <Component
@@ -1156,10 +1461,136 @@ export default function CreateCompany({
 
           <FormFooter
             isLoading={isLoading}
+            draftBtnText="انصراف"
+            onDraftClick={() => router.push(routes.info.dashboard)}
+            draftButtonClassName="w-1/3 @xl:min-w-24"
+            submitButtonClassName="w-2/3 @xl:min-w-48"
             submitBtnText={id ? 'بروز رسانی شرکت' : 'ثبت شرکت'}
           />
         </form>
       </FormProvider>
+      {isValidationPopupOpen && (
+        <CompanyValidationPopup
+          items={validationItems}
+          isComplete={isValidationComplete}
+          onItemClick={focusValidationField}
+          onClose={() => {
+            setIsValidationPopupOpen(false);
+            setIsValidationComplete(false);
+            setValidationItems([]);
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+function CompanyValidationPopup({
+  items,
+  isComplete,
+  onItemClick,
+  onClose,
+}: {
+  items: CompanyValidationItem[];
+  isComplete: boolean;
+  onItemClick: (itemId: string) => void;
+  onClose: () => void;
+}) {
+  const popupRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!popupRef.current?.contains(event.target as Node)) {
+        onClose();
+      }
+    };
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [onClose]);
+
+  return (
+    <aside
+      ref={popupRef}
+      role="dialog"
+      aria-live="polite"
+      aria-label="وضعیت اعتبارسنجی فرم شرکت"
+      className="fixed bottom-24 left-4 right-4 z-[100] flex max-h-[26rem] flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-700 dark:bg-gray-900 sm:left-6 sm:right-auto sm:w-80"
+      dir="rtl"
+    >
+      <div
+        className={cn(
+          'flex shrink-0 items-start justify-between gap-3 border-b px-4 py-3',
+          isComplete
+            ? 'border-green-light bg-green-lighter dark:border-green-dark dark:bg-green-dark/20'
+            : 'border-red-light bg-red-lighter dark:border-red-dark dark:bg-red-dark/20'
+        )}
+      >
+        <div className="flex items-start gap-3">
+          {isComplete ? (
+            <CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0 text-green" />
+          ) : (
+            <AlertTriangle className="mt-0.5 h-6 w-6 shrink-0 text-red" />
+          )}
+          <div>
+            <p
+              className={cn(
+                'font-semibold',
+                isComplete ? 'text-green-dark' : 'text-red-dark'
+              )}
+            >
+              {isComplete
+                ? 'همه اطلاعات لازم تکمیل شده است'
+                : `${items.length} مورد نیاز به اصلاح دارد`}
+            </p>
+            <p className="mt-1 text-xs text-gray-600 dark:text-gray-300">
+              {isComplete
+                ? 'برای ثبت نهایی، دوباره روی دکمه ثبت شرکت کلیک کنید.'
+                : 'برای رفتن به هر فیلد، روی همان مورد کلیک کنید.'}
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-full p-1 text-gray-500 transition hover:bg-white/80 hover:text-gray-900"
+          aria-label="بستن"
+        >
+          <X className="h-5 w-5" />
+        </button>
+      </div>
+
+      {!isComplete && (
+        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-3 py-3">
+          {items.map((item) => (
+            <button
+              type="button"
+              key={item.id}
+              onClick={() => {
+                onItemClick(item.id);
+                onClose();
+              }}
+              className="flex w-full items-start gap-2.5 rounded-xl border border-red-light bg-red-lighter px-3 py-2 text-right text-red-dark transition hover:border-red hover:bg-red-light/20 focus:outline-none focus:ring-2 focus:ring-red dark:border-red-dark dark:bg-red-dark/20 dark:text-red-lighter"
+            >
+              <XCircle className="mt-0.5 h-5 w-5 shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-black dark:text-white">
+                  {item.label}
+                </p>
+                <p className="mt-0.5 text-xs opacity-80">{item.message}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </aside>
   );
 }

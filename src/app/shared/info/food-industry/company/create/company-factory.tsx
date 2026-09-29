@@ -42,7 +42,7 @@ export default function CompanyFactory({
   const [provinces, setProvinces] = useState<{ id: string; name: string }[]>([]);
   const [cities, setCities] = useState([]);
   const [selectedProvince, setSelectedProvince] = useState(null);
-  const [factoryTels, setFactoryTels] = useState<string[]>([]);
+  const [factoryTels, setFactoryTels] = useState<string[]>(['']);
   const [factoryFaxes, setFactoryFaxes] = useState<string[]>([]);
   const [contacts, setContacts] = useState<
       {
@@ -57,7 +57,7 @@ export default function CompanyFactory({
   const {
     register,
     control,
-    formState: { errors },
+    formState: { errors, isSubmitted },
     watch,
     setValue,
   } = useFormContext();
@@ -69,15 +69,25 @@ export default function CompanyFactory({
   // Initialize local state from form values if they exist
   useEffect(() => {
     if (watchedTels && watchedTels.length) {
-      setFactoryTels(watchedTels.map((tel: FactoryTel) => tel.telNumber));
+      const nextTels = watchedTels.map((tel: FactoryTel) => tel.telNumber);
+      setFactoryTels((current) =>
+          JSON.stringify(current) === JSON.stringify(nextTels) ? current : nextTels
+      );
     }
     if (watchedFaxes && watchedFaxes.length) {
-      setFactoryFaxes(watchedFaxes.map((fax: FactoryTel) => fax.telNumber));
+      const nextFaxes = watchedFaxes.map((fax: FactoryTel) => fax.telNumber);
+      setFactoryFaxes((current) =>
+          JSON.stringify(current) === JSON.stringify(nextFaxes) ? current : nextFaxes
+      );
     }
     if (watchedContacts && watchedContacts.length) {
-      setContacts(watchedContacts);
+      setContacts((current) =>
+          JSON.stringify(current) === JSON.stringify(watchedContacts)
+              ? current
+              : watchedContacts
+      );
     }
-  }, []);
+  }, [watchedContacts, watchedFaxes, watchedTels]);
 
   // Update form values when local state changes
   useEffect(() => {
@@ -88,8 +98,8 @@ export default function CompanyFactory({
       telNumber: tel,
       companyId: data?.id || 0,
     }));
-    setValue('factoryTels', formattedTels);
-  }, [factoryTels, setValue, data?.id]);
+    setValue('factoryTels', formattedTels, { shouldValidate: isSubmitted });
+  }, [factoryTels, setValue, data?.id, isSubmitted]);
 
   useEffect(() => {
     // Convert string array to required format for the form
@@ -99,12 +109,12 @@ export default function CompanyFactory({
       telNumber: fax,
       companyId: data?.id || 0,
     }));
-    setValue('factoryFaxes', formattedFaxes);
-  }, [factoryFaxes, setValue, data?.id]);
+    setValue('factoryFaxes', formattedFaxes, { shouldValidate: isSubmitted });
+  }, [factoryFaxes, setValue, data?.id, isSubmitted]);
 
   useEffect(() => {
-    setValue('contacts', contacts);
-  }, [contacts, setValue]);
+    setValue('contacts', contacts, { shouldValidate: isSubmitted });
+  }, [contacts, setValue, isSubmitted]);
 
   useEffect(() => {
     const fetchProvinces = async () => {
@@ -146,14 +156,16 @@ export default function CompanyFactory({
           description="شامل تلفن های تماس، آدرس و ..."
           className={cn(className)}
       >
-        <div className="flex flex-col space-y-2">
+        <div id="field-factoryTels" className="flex flex-col space-y-2">
           <label className="font-medium text-gray-700 dark:text-gray-600">
-            تلفن‌های ثابت کارخانه
+            تلفن‌های ثابت کارخانه*
           </label>
           {factoryTels.map((phone, index) => (
               <div key={index} className="flex items-center gap-2 space-x-2">
                 <Input
-                    type="number"
+                    type="tel"
+                    inputMode="numeric"
+                    maxLength={11}
                     value={phone}
                     placeholder={`تلفن کارخانه ${index + 1}`}
                     onChange={(e) => {
@@ -162,6 +174,8 @@ export default function CompanyFactory({
                       setFactoryTels(newPhones);
                     }}
                     className="flex-grow"
+                    error={(errors.factoryTels as any)?.[index]?.telNumber?.message}
+                    helperText="(مثال: 02112345678)"
                 />
                 <ActionIcon
                     onClick={() =>
@@ -184,14 +198,16 @@ export default function CompanyFactory({
           )}
         </div>
 
-        <div className="flex flex-col space-y-2">
+        <div id="field-factoryFaxes" className="flex flex-col space-y-2">
           <label className="font-medium text-gray-700 dark:text-gray-600">
             فکس ثابت کارخانه
           </label>
           {factoryFaxes.map((fax, index) => (
               <div key={index} className="flex items-center gap-2 space-x-2">
                 <Input
-                    type="number"
+                    type="tel"
+                    inputMode="numeric"
+                    maxLength={11}
                     value={fax}
                     placeholder={`فکس کارخانه ${index + 1}`}
                     onChange={(e) => {
@@ -200,6 +216,8 @@ export default function CompanyFactory({
                       setFactoryFaxes(newFaxes);
                     }}
                     className="flex-grow"
+                    error={(errors.factoryFaxes as any)?.[index]?.telNumber?.message}
+                    helperText="(مثال: 02112345678)"
                 />
                 <ActionIcon
                     onClick={() =>
@@ -222,7 +240,7 @@ export default function CompanyFactory({
           )}
         </div>
 
-        <div className="col-span-full flex flex-col space-y-2">
+        <div id="field-contacts" className="col-span-full flex flex-col space-y-2">
           <label className="mb-4 font-medium text-gray-700 dark:text-gray-600">
             اطلاعات موبایل های شرکت
           </label>
@@ -268,7 +286,9 @@ export default function CompanyFactory({
                 />
                 <Input
                     label="شماره موبایل*"
-                    type="number"
+                    type="tel"
+                    inputMode="numeric"
+                    maxLength={11}
                     placeholder="شماره موبایل*"
                     value={contact.phone}
                     onChange={(e) => {
@@ -277,6 +297,8 @@ export default function CompanyFactory({
                       setContacts(newContacts);
                     }}
                     className="flex-grow"
+                    error={(errors.contacts as any)?.[index]?.phone?.message}
+                    helperText="(مثال: 09123456789)"
                 />
 
                 <Input
@@ -290,6 +312,8 @@ export default function CompanyFactory({
                       setContacts(newContacts);
                     }}
                     className="flex-grow"
+                    error={(errors.contacts as any)?.[index]?.email?.message}
+                    helperText="(مثال: info@foodkeys.com)"
                 />
                 <ActionIcon
                     onClick={() =>

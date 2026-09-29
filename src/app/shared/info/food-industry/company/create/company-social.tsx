@@ -192,7 +192,7 @@ export default function CompanySocial({ className }: { className?: string }) {
   const {
     register,
     control,
-    formState: { errors },
+    formState: { errors, isSubmitted },
     watch,
     setValue
   } = useFormContext();
@@ -202,14 +202,18 @@ export default function CompanySocial({ className }: { className?: string }) {
   // Initialize local state from form values if they exist
   useEffect(() => {
     if (watchedEmails && watchedEmails.length) {
-      setEmails(watchedEmails);
+      setEmails((current) =>
+          JSON.stringify(current) === JSON.stringify(watchedEmails)
+              ? current
+              : watchedEmails
+      );
     }
-  }, []);
+  }, [watchedEmails]);
 
   // Update form values when local state changes
   useEffect(() => {
-    setValue('emails', emails);
-  }, [emails, setValue]);
+    setValue('emails', emails, { shouldValidate: isSubmitted });
+  }, [emails, setValue, isSubmitted]);
 
   return (
       <FormGroup
@@ -218,7 +222,9 @@ export default function CompanySocial({ className }: { className?: string }) {
           className={cn(className)}
       >
         <Input
-            type="number"
+            type="tel"
+            inputMode="numeric"
+            maxLength={11}
             label="شماره تلگرام"
             placeholder="شماره تلگرام"
             {...register('telegramPhoneNo')}
@@ -233,7 +239,9 @@ export default function CompanySocial({ className }: { className?: string }) {
             helperText="(مثال: foodkeys)"
         />
         <Input
-            type="number"
+            type="tel"
+            inputMode="numeric"
+            maxLength={11}
             label="شماره واتساپ"
             placeholder="شماره واتساپ"
             {...register('whatsAppPhoneNo')}
@@ -269,7 +277,9 @@ export default function CompanySocial({ className }: { className?: string }) {
             helperText="(مثال: foodkeys)"
         />
         <Input
-            type="number"
+            type="tel"
+            inputMode="numeric"
+            maxLength={11}
             label="شماره ایتا"
             placeholder="شماره ایتا"
             {...register('eitaaPhoneNo')}
@@ -277,14 +287,16 @@ export default function CompanySocial({ className }: { className?: string }) {
             helperText="(مثال: 09123456789)"
         />
         <Input
-            type="number"
+            type="tel"
+            inputMode="numeric"
+            maxLength={11}
             label="شماره روبیکا"
             placeholder="شماره روبیکا"
             {...register('rubikaPhoneNo')}
             error={errors.rubikaPhoneNo?.message as string}
             helperText="(مثال: 09123456789)"
         />
-        <div className="flex flex-col space-y-2">
+        <div id="field-emails" className="flex flex-col space-y-2">
           <label className="font-medium text-gray-700 dark:text-gray-600">
             ایمیل ها{' '}
           </label>
@@ -300,6 +312,7 @@ export default function CompanySocial({ className }: { className?: string }) {
                       setEmails(newEmails);
                     }}
                     className="flex-grow"
+                    error={(errors.emails as any)?.[index]?.message as string}
                     helperText={index === 0 && '(مثال: foodkeys@gmail.com)'}
                 />
                 <ActionIcon

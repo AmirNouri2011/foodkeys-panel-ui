@@ -288,13 +288,13 @@ export default function CompanyOffice({ className, data }: { className?: string;
   const [provinces, setProvinces] = useState<{ id: string; name: string }[]>([]);
   const [cities, setCities] = useState([]);
   const [selectedProvince, setSelectedProvince] = useState(null);
-  const [officeTels, setOfficeTels] = useState<string[]>([]);
+  const [officeTels, setOfficeTels] = useState<string[]>(['']);
   const [officeFaxes, setOfficeFaxes] = useState<string[]>([]);
 
   const {
     register,
     control,
-    formState: { errors },
+    formState: { errors, isSubmitted },
     watch,
     setValue,
   } = useFormContext();
@@ -305,12 +305,18 @@ export default function CompanyOffice({ className, data }: { className?: string;
   // Initialize local state from form values if they exist
   useEffect(() => {
     if (watchedOfficeTels && watchedOfficeTels.length) {
-      setOfficeTels(watchedOfficeTels.map((tel: OfficeTel) => tel.telNumber));
+      const nextTels = watchedOfficeTels.map((tel: OfficeTel) => tel.telNumber);
+      setOfficeTels((current) =>
+          JSON.stringify(current) === JSON.stringify(nextTels) ? current : nextTels
+      );
     }
     if (watchedOfficeFaxes && watchedOfficeFaxes.length) {
-      setOfficeFaxes(watchedOfficeFaxes.map((fax: OfficeTel) => fax.telNumber));
+      const nextFaxes = watchedOfficeFaxes.map((fax: OfficeTel) => fax.telNumber);
+      setOfficeFaxes((current) =>
+          JSON.stringify(current) === JSON.stringify(nextFaxes) ? current : nextFaxes
+      );
     }
-  }, []);
+  }, [watchedOfficeFaxes, watchedOfficeTels]);
 
   // Update form values when local state changes
   useEffect(() => {
@@ -321,8 +327,8 @@ export default function CompanyOffice({ className, data }: { className?: string;
       telNumber: tel,
       companyId: data?.id || 0,
     }));
-    setValue('officeTels', formattedTels);
-  }, [officeTels, setValue, data?.id]);
+    setValue('officeTels', formattedTels, { shouldValidate: isSubmitted });
+  }, [officeTels, setValue, data?.id, isSubmitted]);
 
   useEffect(() => {
     // Convert string array to required format for the form
@@ -332,8 +338,8 @@ export default function CompanyOffice({ className, data }: { className?: string;
       telNumber: fax,
       companyId: data?.id || 0,
     }));
-    setValue('officeFaxes', formattedFaxes);
-  }, [officeFaxes, setValue, data?.id]);
+    setValue('officeFaxes', formattedFaxes, { shouldValidate: isSubmitted });
+  }, [officeFaxes, setValue, data?.id, isSubmitted]);
 
   return (
       <FormGroup
@@ -341,14 +347,16 @@ export default function CompanyOffice({ className, data }: { className?: string;
           description="شامل تلفن های تماس، آدرس و ..."
           className={cn(className)}
       >
-        <div className="flex flex-col space-y-2">
+        <div id="field-officeTels" className="flex flex-col space-y-2">
           <label className="font-medium text-gray-700 dark:text-gray-600">
-            تلفن‌های ثابت دفتر مرکزی
+            تلفن‌های ثابت دفتر مرکزی*
           </label>
           {officeTels.map((phone, index) => (
               <div key={index} className="flex items-center gap-2 space-x-2">
                 <Input
-                    type="number"
+                    type="tel"
+                    inputMode="numeric"
+                    maxLength={11}
                     value={phone}
                     placeholder={`تلفن دفتر مرکزی ${index + 1}`}
                     onChange={(e) => {
@@ -357,6 +365,8 @@ export default function CompanyOffice({ className, data }: { className?: string;
                       setOfficeTels(newPhones);
                     }}
                     className="flex-grow"
+                    error={(errors.officeTels as any)?.[index]?.telNumber?.message}
+                    helperText="(مثال: 02112345678)"
                 />
                 <ActionIcon
                     onClick={() =>
@@ -379,14 +389,16 @@ export default function CompanyOffice({ className, data }: { className?: string;
           )}
         </div>
 
-        <div className="flex flex-col space-y-2">
+        <div id="field-officeFaxes" className="flex flex-col space-y-2">
           <label className="font-medium text-gray-700 dark:text-gray-600">
             فکس های دفتر مرکزی
           </label>
           {officeFaxes.map((fax, index) => (
               <div key={index} className="flex items-center gap-2 space-x-2">
                 <Input
-                    type="number"
+                    type="tel"
+                    inputMode="numeric"
+                    maxLength={11}
                     value={fax}
                     placeholder={`فکس دفتر مرکزی ${index + 1}`}
                     onChange={(e) => {
@@ -395,6 +407,8 @@ export default function CompanyOffice({ className, data }: { className?: string;
                       setOfficeFaxes(newFaxes);
                     }}
                     className="flex-grow"
+                    error={(errors.officeFaxes as any)?.[index]?.telNumber?.message}
+                    helperText="(مثال: 02112345678)"
                 />
                 <ActionIcon
                     onClick={() =>
@@ -419,17 +433,21 @@ export default function CompanyOffice({ className, data }: { className?: string;
 
         <Input
             label="سامانه پیام کوتاه"
-            type="number"
+            type="text"
+            inputMode="numeric"
             placeholder="سامانه پیام کوتاه"
             {...register('smsNumber')}
             error={errors.smsNumber?.message as string}
+            helperText="(مثال: 30001234)"
         />
         <Input
             label="شماره خط ویژه"
-            type="number"
+            type="text"
+            inputMode="numeric"
             placeholder="شماره خط ویژه"
             {...register('specialLineNumber')}
             error={errors.specialLineNumber?.message as string}
+            helperText="(مثال: 02112345678)"
         />
       </FormGroup>
   );

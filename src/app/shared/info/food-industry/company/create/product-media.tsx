@@ -521,14 +521,14 @@ export default function ProductMedia({ className }: ProductMediaProps) {
         {watchedProductAvailability === '1' ? (
             <>
               <Textarea
-                  label="عنوان محصولات (خدمات)"
+                  label="عنوان محصولات (خدمات)*"
                   {...register('productTitles')}
                   error={errors.productTitles?.message as string}
                   rows={3}
                   placeholder="محصولات یا خدمات اصلی شرکت را وارد کنید"
               />
               <Textarea
-                  label="توضیحات محصولات (خدمات)"
+                  label="توضیحات محصولات (خدمات)*"
                   {...register('productsDescription')}
                   error={errors.productsDescription?.message as string}
                   rows={3}

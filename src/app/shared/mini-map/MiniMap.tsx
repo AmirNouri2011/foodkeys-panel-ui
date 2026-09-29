@@ -1,510 +1,716 @@
-// import { useEffect, useState } from "react";
-// import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
-// import "leaflet/dist/leaflet.css";
-// import { GeoSearchControl, OpenStreetMapProvider } from "leaflet-geosearch";
-// import "node_modules/leaflet-geosearch/dist/geosearch.css";
-// import { useFormContext } from "react-hook-form";
-//
-// const CustomMapStyles = () => {
-//     useEffect(() => {
-//         const styleElement = document.createElement('style');
-//         styleElement.type = 'text/css';
-//         styleElement.innerHTML = `
-//       /* Override geosearch input styles */
-//       .leaflet-control-geosearch form input.glass {
-//         font-family: 'sans', 'yekan', 'Inter var', 'Roboto', 'Helvetica', 'Arial', 'sans-serif';
-//         font-size: 14px !important;
-//         padding: 8px 12px !important;
-//         height: 40px !important;
-//         border-radius: 4px !important;
-//         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
-//         width: 100% !important;
-//         max-width: 300px !important;
-//         transition: all 0.2s ease-in-out;
-//       }
-//
-//       /* Focused state */
-//       .leaflet-control-geosearch form input.glass:focus {
-//         box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15) !important;
-//         border-color: #3f51b5 !important;
-//       }
-//
-//       /* Results list styling */
-//       .leaflet-control-geosearch form .results {
-//         font-family: 'sans', 'yekan', 'Inter var', 'Roboto', 'Helvetica', 'Arial', 'sans-serif';
-//         margin-top: 5px !important;
-//         border-radius: 4px !important;
-//         box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2) !important;
-//       }
-//
-//       .leaflet-control-geosearch form .results > * {
-//         padding: 8px 12px !important;
-//         font-size: 13px !important;
-//         line-height: 1.4 !important;
-//         transition: background-color 0.2s;
-//       }
-//
-//       .leaflet-control-geosearch form .results > *:hover {
-//         background-color: #f0f0f0 !important;
-//       }
-//
-//       /* Reset button styling */
-//       .leaflet-control-geosearch form a.reset {
-//         right: 8px !important;
-//         top: 10px !important;
-//         height: 18px !important;
-//         width: 18px !important;
-//         line-height: 18px !important;
-//       }
-//
-//       /* Container sizing */
-//       .leaflet-control-geosearch {
-//         width: 100% !important;
-//         max-width: 300px !important;
-//         margin-top: 8px !important;
-//         margin-left: 8px !important;
-//       }
-//
-//       /* Custom popup styling */
-//       .leaflet-popup-content {
-//         font-family: 'sans', 'yekan', 'Inter var', 'Roboto', 'Helvetica', 'Arial', 'sans-serif';
-//         font-size: 13px !important;
-//         line-height: 1.5 !important;
-//         margin: 10px 14px !important;
-//         text-align: center;
-//       }
-//     `;
-//
-//         document.head.appendChild(styleElement);
-//
-//         return () => {
-//             document.head.removeChild(styleElement);
-//         };
-//     }, []);
-//
-//     return null;
-// };
-//
-// function MapClickHandler({ onMapClick }) {
-//     const map = useMap();
-//
-//     useEffect(() => {
-//         const handleClick = (e) => {
-//             if (onMapClick) onMapClick(e);
-//         };
-//
-//         map.on('click', handleClick);
-//
-//         return () => {
-//             map.off('click', handleClick);
-//         };
-//     }, [map, onMapClick]);
-//
-//     return null;
-// }
-//
-// function SearchBar({ onLocationSelect, setPosition }) {
-//     const map = useMap();
-//
-//     useEffect(() => {
-//         const provider = new OpenStreetMapProvider();
-//
-//         const searchControl = new GeoSearchControl({
-//             provider,
-//             style: "bar",
-//             autoComplete: true,
-//             searchLabel: "آدرس مورد نظر خود را وارد کنید",
-//             showMarker: false,
-//             showPopup: false,
-//             marker: {
-//                 draggable: false,
-//             },
-//             popupFormat: ({ result }) => result.label,
-//             maxMarkers: 1,
-//             retainZoomLevel: false,
-//         });
-//
-//         map.addControl(searchControl);
-//
-//         const handleSearchResult = (event) => {
-//             try {
-//                 const { x, y, label } = event.location;
-//
-//                 const lat = event.location.lat !== undefined ? event.location.lat : y;
-//                 const lng = event.location.lng !== undefined ? event.location.lng : x;
-//
-//                 if (lat !== undefined && lng !== undefined) {
-//                     setPosition([lat, lng]);
-//
-//                     map.setView([lat, lng], 13);
-//
-//                     if (onLocationSelect) {
-//                         onLocationSelect({
-//                             latitude: lat,
-//                             longitude: lng,
-//                             commonName: label || "",
-//                             fullAddress: label || ""
-//                         });
-//                     }
-//                 }
-//             } catch (error) {
-//                 console.error("Error handling search result:", error);
-//             }
-//         };
-//
-//         map.on("geosearch/showlocation", handleSearchResult);
-//
-//         return () => {
-//             map.off("geosearch/showlocation", handleSearchResult);
-//             map.removeControl(searchControl);
-//         };
-//     }, [map, onLocationSelect, setPosition]);
-//
-//     return null;
-// }
-//
-// function MiniMap({ className = "" }) {
-//     const { setValue, watch } = useFormContext();
-//     const [position, setPosition] = useState([35.6892523, 51.3896004]); // Default position (Tehran)
-//
-//     const latitude = watch("latitude");
-//     const longitude = watch("longitude");
-//
-//     useEffect(() => {
-//         if (latitude && longitude) {
-//             setPosition([parseFloat(latitude), parseFloat(longitude)]);
-//         }
-//     }, [latitude, longitude]);
-//
-//     const handleMapClick = (e) => {
-//         const { lat, lng } = e.latlng;
-//         setPosition([lat, lng]);
-//
-//         setValue("latitude", lat);
-//         setValue("longitude", lng);
-//     };
-//
-//     const handleLocationSelect = (locationData) => {
-//         if (locationData) {
-//             if (locationData.latitude !== undefined && locationData.latitude !== null) {
-//                 setValue("latitude", locationData.latitude);
-//             }
-//
-//             if (locationData.longitude !== undefined && locationData.longitude !== null) {
-//                 setValue("longitude", locationData.longitude);
-//             }
-//
-//             setValue("commonName", locationData.commonName || "");
-//             setValue("fullAddress", locationData.fullAddress || "");
-//         }
-//     };
-//
-//     return (
-//         <div className={`rounded-lg overflow-hidden shadow-md border border-gray-200 ${className}`}>
-//             <MapContainer
-//                 center={position}
-//                 zoom={13}
-//                 style={{ height: "250px", width: "100%" }}
-//                 attributionControl={false}
-//             >
-//                 <CustomMapStyles />
-//                 <TileLayer
-//                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-//                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-//                 />
-//                 <Marker position={position}>
-//                     <Popup>
-//                         موقعیت انتخاب شده: <br />
-//                         عرض جغرافیایی: {position[0].toFixed(6)}, طول جغرافیایی: {position[1].toFixed(6)}
-//                     </Popup>
-//                 </Marker>
-//                 <SearchBar onLocationSelect={handleLocationSelect} setPosition={setPosition} />
-//                 <MapClickHandler onMapClick={handleMapClick} />
-//             </MapContainer>
-//         </div>
-//     );
-// }
-//
-// export default MiniMap;
+'use client';
 
-import { useEffect, useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
-import "leaflet/dist/leaflet.css";
-import { GeoSearchControl, OpenStreetMapProvider } from "leaflet-geosearch";
-import "node_modules/leaflet-geosearch/dist/geosearch.css";
-import { useFormContext } from "react-hook-form";
-import L from "leaflet";
+import {
+  KeyboardEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import {
+  MapContainer,
+  Marker,
+  Popup,
+  TileLayer,
+  useMap,
+  useMapEvents,
+} from 'react-leaflet';
+import { useFormContext } from 'react-hook-form';
+import L, { LeafletMouseEvent, Marker as LeafletMarker } from 'leaflet';
+import {
+  PiCrosshairBold,
+  PiMagnifyingGlassBold,
+  PiMapPinFill,
+  PiSpinnerGapBold,
+  PiWarningCircleBold,
+  PiXBold,
+} from 'react-icons/pi';
+import 'leaflet/dist/leaflet.css';
 
-// Fix Leaflet marker icon issue in Next.js
-const DefaultIcon = L.icon({
-    iconUrl: "/images/marker-icon.png",
-    shadowUrl: "/images/marker-shadow.png",
-    iconSize: [25, 41],
-    iconAnchor: [12, 41],
-    popupAnchor: [1, -34],
-    shadowSize: [41, 41]
+type Coordinates = [number, number];
+
+type NominatimAddress = Partial<
+  Record<
+    | 'country'
+    | 'state'
+    | 'province'
+    | 'county'
+    | 'municipality'
+    | 'city'
+    | 'town'
+    | 'village'
+    | 'suburb'
+    | 'city_district'
+    | 'quarter'
+    | 'neighbourhood'
+    | 'road'
+    | 'pedestrian'
+    | 'residential'
+    | 'footway'
+    | 'path'
+    | 'house_number'
+    | 'postcode',
+    string
+  >
+>;
+
+interface NominatimResult {
+  place_id: number;
+  lat: string;
+  lon: string;
+  type?: string;
+  name?: string;
+  display_name?: string;
+  address?: NominatimAddress;
+}
+
+interface MiniMapProps {
+  className?: string;
+  locationPrefix?: 'factory' | 'office' | string;
+  setAddress?: (address: string) => void;
+}
+
+const DEFAULT_POSITION: Coordinates = [35.6892523, 51.3896004];
+const NOMINATIM_URL = 'https://nominatim.openstreetmap.org';
+
+const markerIcon = L.divIcon({
+  className: '',
+  html: `
+    <span style="display:flex;width:38px;height:38px;align-items:center;justify-content:center;border:3px solid white;border-radius:50% 50% 50% 0;background:#dc2626;box-shadow:0 5px 14px rgba(15,23,42,.3);transform:rotate(-45deg)">
+      <span style="display:block;width:11px;height:11px;border:3px solid white;border-radius:9999px;transform:rotate(45deg)"></span>
+    </span>
+  `,
+  iconSize: [38, 38],
+  iconAnchor: [19, 38],
+  popupAnchor: [0, -36],
 });
 
-L.Marker.prototype.options.icon = DefaultIcon;
+const normalizePersianText = (value = '') =>
+  value.replace(/ي/g, 'ی').replace(/ك/g, 'ک').replace(/\s+/g, ' ').trim();
 
-const CustomMapStyles = () => {
-    useEffect(() => {
-        const styleElement = document.createElement('style');
-        styleElement.type = 'text/css';
-        styleElement.innerHTML = `
-      /* Override geosearch input styles */
-      .leaflet-control-geosearch form input.glass {
-        font-family: 'sans', 'yekan', 'Inter var', 'Roboto', 'Helvetica', 'Arial', 'sans-serif';
-        font-size: 14px !important;
-        padding: 8px 32px 8px 12px !important;
-        height: 40px !important;
-        border-radius: 8px !important;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
-        width: 100% !important;
-        max-width: 300px !important;
-        transition: all 0.2s ease-in-out;
-        border: 2px solid rgba(0, 0, 0, 0.1) !important;
-      }
-      
-      /* Focused state */
-      .leaflet-control-geosearch form input.glass:focus {
-        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15) !important;
-        border-color: #3f51b5 !important;
-        outline: none !important;
-      }
-      
-      /* Results list styling */
-      .leaflet-control-geosearch form .results {
-        font-family: 'sans', 'yekan', 'Inter var', 'Roboto', 'Helvetica', 'Arial', 'sans-serif';
-        margin-top: 5px !important;
-        border-radius: 8px !important;
-        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2) !important;
-        overflow: hidden !important;
-      }
-      
-      .leaflet-control-geosearch form .results > * {
-        padding: 10px 12px !important;
-        font-size: 14px !important;
-        line-height: 1.4 !important;
-        transition: background-color 0.2s;
-        cursor: pointer !important;
-      }
-      
-      .leaflet-control-geosearch form .results > *:hover {
-        background-color: #f0f0f0 !important;
-      }
-      
-      /* Reset button styling */
-      .leaflet-control-geosearch form a.reset {
-        right: 8px !important;
-        top: 10px !important;
-        height: 20px !important;
-        width: 20px !important;
-        line-height: 20px !important;
-        font-size: 18px !important;
-        color: #666 !important;
-      }
-      
-      /* Container sizing */
-      .leaflet-control-geosearch {
-        width: 100% !important;
-        max-width: 300px !important;
-        margin-top: 8px !important;
-        margin-left: 8px !important;
-        z-index: 1000 !important;
-      }
+const hasCoordinateValue = (value: unknown) =>
+  value !== undefined && value !== null && value !== '';
 
-      /* Custom popup styling */
-      .leaflet-popup-content {
-        font-family: 'sans', 'yekan', 'Inter var', 'Roboto', 'Helvetica', 'Arial', 'sans-serif';
-        font-size: 13px !important;
-        line-height: 1.5 !important;
-        margin: 10px 14px !important;
-        text-align: center;
-      }
-      
-      .leaflet-popup-content-wrapper {
-        border-radius: 8px !important;
-      }
-      
-      /* Improve map attribution styling */
-      .leaflet-control-attribution {
-        font-size: 10px !important;
-        background-color: rgba(255, 255, 255, 0.7) !important;
-        padding: 2px 5px !important;
-        border-radius: 3px !important;
-      }
-    `;
+const getSearchCore = (query: string) => {
+  const clauses = query
+    .split(/[،,]/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const neighbourhood = clauses.find((part) => /^(محله|ناحیه)\s+/.test(part));
 
-        document.head.appendChild(styleElement);
-
-        return () => {
-            document.head.removeChild(styleElement);
-        };
-    }, []);
-
-    return null;
+  return neighbourhood
+    ? neighbourhood.replace(/^(محله|ناحیه)\s+/, '').trim()
+    : query;
 };
 
-function MapClickHandler({ onMapClick }) {
-    const map = useMap();
+const stripPrefix = (value: string, prefixes: string[]) => {
+  let result = normalizePersianText(value);
+  prefixes.forEach((prefix) => {
+    result = result.replace(new RegExp(`^${prefix}\\s*`), '').trim();
+  });
+  return result;
+};
 
-    useEffect(() => {
-        const handleClick = (e) => {
-            if (onMapClick) onMapClick(e);
-        };
+const isPersianLocationText = (value?: string) =>
+  Boolean(value && /[\u0600-\u06ff]/.test(value));
 
-        map.on('click', handleClick);
+const firstPersianValue = (...values: Array<string | undefined>) =>
+  values.map(normalizePersianText).find(isPersianLocationText) || '';
 
-        return () => {
-            map.off('click', handleClick);
-        };
-    }, [map, onMapClick]);
+const formatPersianAddress = (result: NominatimResult) => {
+  const address = result.address || {};
+  const state = firstPersianValue(address.state, address.province);
+  const city = firstPersianValue(
+    address.city,
+    address.town,
+    address.village,
+    address.municipality,
+    address.county
+  );
+  const district = firstPersianValue(
+    address.city_district,
+    address.suburb,
+    address.quarter
+  );
+  const neighbourhood = firstPersianValue(address.neighbourhood);
+  const road = firstPersianValue(
+    address.road,
+    address.pedestrian,
+    address.residential,
+    address.footway,
+    address.path
+  );
+  const houseNumber = normalizePersianText(address.house_number);
+  const country = firstPersianValue(address.country) || 'ایران';
+  const roadPrefix = ['service', 'living_street', 'path', 'footway'].includes(
+    result.type || ''
+  )
+    ? 'کوچه '
+    : 'خیابان ';
 
-    return null;
+  const parts = [
+    country,
+    state ? `استان ${stripPrefix(state, ['استان'])}` : '',
+    city ? `شهر ${stripPrefix(city, ['شهرستان', 'شهر'])}` : '',
+    district
+      ? `${/^(منطقه|ناحیه)/.test(district) ? '' : 'منطقه '}${district}`
+      : '',
+    neighbourhood
+      ? `${/^(محله|ناحیه)/.test(neighbourhood) ? '' : 'محله '}${neighbourhood}`
+      : '',
+    road
+      ? `${
+          /^(خیابان|کوچه|بلوار|بزرگراه|میدان|جاده)/.test(road) ? '' : roadPrefix
+        }${road}`
+      : '',
+    houseNumber ? `پلاک ${houseNumber}` : '',
+  ].filter(Boolean);
+
+  const uniqueParts = parts.filter(
+    (part, index) => parts.findIndex((item) => item === part) === index
+  );
+
+  if (uniqueParts.length >= 3) return uniqueParts.join('، ');
+
+  const fallback = normalizePersianText(result.display_name);
+  return isPersianLocationText(fallback) ? fallback : uniqueParts.join('، ');
+};
+
+const getAdministrativeValues = (result: NominatimResult) => {
+  const address = result.address || {};
+
+  return {
+    state: stripPrefix(firstPersianValue(address.state, address.province), [
+      'استان',
+    ]),
+    city: stripPrefix(
+      firstPersianValue(
+        address.city,
+        address.town,
+        address.village,
+        address.municipality,
+        address.county
+      ),
+      ['شهرستان', 'شهر']
+    ),
+    postcode: normalizePersianText(address.postcode).replace(/[^0-9۰-۹]/g, ''),
+  };
+};
+
+function MapViewport({
+  position,
+  zoom,
+}: {
+  position: Coordinates;
+  zoom: number;
+}) {
+  const map = useMap();
+
+  useEffect(() => {
+    map.invalidateSize();
+    map.flyTo(position, zoom, { duration: 0.8 });
+  }, [map, position, zoom]);
+
+  return null;
 }
 
-function SearchBar({ onLocationSelect, setPosition }) {
-    const map = useMap();
+function MapInteractions({
+  onPick,
+}: {
+  onPick: (coordinates: Coordinates) => void;
+}) {
+  useMapEvents({
+    click(event: LeafletMouseEvent) {
+      onPick([event.latlng.lat, event.latlng.lng]);
+    },
+  });
 
-    useEffect(() => {
-        const provider = new OpenStreetMapProvider();
+  return null;
+}
 
-        const searchControl = new GeoSearchControl({
-            provider,
-            style: "bar",
-            autoComplete: true,
-            searchLabel: "آدرس مورد نظر خود را وارد کنید",
-            showMarker: false,
-            showPopup: false,
-            marker: {
-                draggable: false,
-            },
-            popupFormat: ({ result }) => result.label,
-            maxMarkers: 1,
-            retainZoomLevel: false,
-            autoClose: true,
+export default function MiniMap({
+  className = '',
+  locationPrefix = '',
+  setAddress,
+}: MiniMapProps) {
+  const { setValue, unregister, watch } = useFormContext();
+  const latitudeField = `${locationPrefix}Latitude`;
+  const longitudeField = `${locationPrefix}Longitude`;
+  const stateField = `${locationPrefix}State`;
+  const cityField = `${locationPrefix}City`;
+  const addressField = `${locationPrefix}Location`;
+  const latitude = watch(latitudeField);
+  const longitude = watch(longitudeField);
+  const formState = watch(stateField) || '';
+  const formCity = watch(cityField) || '';
+  const formAddress = watch(addressField) || '';
+
+  const [position, setPosition] = useState<Coordinates>(() => {
+    const initialLatitude = Number(latitude);
+    const initialLongitude = Number(longitude);
+    return hasCoordinateValue(latitude) &&
+      hasCoordinateValue(longitude) &&
+      Number.isFinite(initialLatitude) &&
+      Number.isFinite(initialLongitude)
+      ? [initialLatitude, initialLongitude]
+      : DEFAULT_POSITION;
+  });
+  const [targetZoom, setTargetZoom] = useState(
+    hasCoordinateValue(latitude) && hasCoordinateValue(longitude) ? 16 : 12
+  );
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<NominatimResult[]>([]);
+  const [selectedAddress, setSelectedAddress] = useState(() =>
+    normalizePersianText(formAddress)
+  );
+  const [isSearching, setIsSearching] = useState(false);
+  const [isResolving, setIsResolving] = useState(false);
+  const [isCenteringState, setIsCenteringState] = useState(false);
+  const [error, setError] = useState('');
+  const abortController = useRef<AbortController | null>(null);
+  const cityAbortController = useRef<AbortController | null>(null);
+  const lastCenteredState = useRef('');
+  const isStateSelected = Boolean(normalizePersianText(formState));
+
+  useEffect(() => {
+    const nextLatitude = Number(latitude);
+    const nextLongitude = Number(longitude);
+    if (
+      hasCoordinateValue(latitude) &&
+      hasCoordinateValue(longitude) &&
+      Number.isFinite(nextLatitude) &&
+      Number.isFinite(nextLongitude)
+    ) {
+      setPosition([nextLatitude, nextLongitude]);
+      setTargetZoom(16);
+    }
+  }, [latitude, longitude]);
+
+  useEffect(() => {
+    if (formAddress) setSelectedAddress(normalizePersianText(formAddress));
+  }, [formAddress]);
+
+  useEffect(
+    () => () => {
+      abortController.current?.abort();
+      cityAbortController.current?.abort();
+    },
+    []
+  );
+
+  useEffect(() => {
+    const normalizedState = normalizePersianText(formState);
+
+    if (!normalizedState) {
+      lastCenteredState.current = '';
+      return;
+    }
+
+    if (normalizedState.length < 2 || lastCenteredState.current === normalizedState) {
+      return;
+    }
+
+    if (
+      !lastCenteredState.current &&
+      hasCoordinateValue(latitude) &&
+      hasCoordinateValue(longitude)
+    ) {
+      lastCenteredState.current = normalizedState;
+      return;
+    }
+
+    const timer = window.setTimeout(async () => {
+      cityAbortController.current?.abort();
+      const controller = new AbortController();
+      cityAbortController.current = controller;
+      setIsCenteringState(true);
+      setError('');
+      setQuery('');
+      setResults([]);
+
+      try {
+        const params = new URLSearchParams({
+          format: 'jsonv2',
+          q: [normalizedState, 'ایران'].filter(Boolean).join('، '),
+          addressdetails: '1',
+          countrycodes: 'ir',
+          limit: '1',
+          'accept-language': 'fa-IR,fa',
         });
+        const response = await fetch(`${NOMINATIM_URL}/search?${params}`, {
+          signal: controller.signal,
+          headers: { 'Accept-Language': 'fa-IR,fa;q=0.9' },
+        });
+        if (!response.ok) throw new Error('city-search-failed');
+        const cityResults = (await response.json()) as NominatimResult[];
+        const cityResult = cityResults[0];
 
-        map.addControl(searchControl);
-
-        const handleSearchResult = (event) => {
-            try {
-                const { x, y, label } = event.location;
-
-                const lat = event.location.lat !== undefined ? event.location.lat : y;
-                const lng = event.location.lng !== undefined ? event.location.lng : x;
-
-                if (lat !== undefined && lng !== undefined) {
-                    setPosition([lat, lng]);
-
-                    map.setView([lat, lng], 15);
-
-                    if (onLocationSelect) {
-                        onLocationSelect({
-                            latitude: lat,
-                            longitude: lng,
-                            commonName: label || "",
-                            fullAddress: label || ""
-                        });
-                    }
-                }
-            } catch (error) {
-                console.error("Error handling search result:", error);
-            }
-        };
-
-        map.on("geosearch/showlocation", handleSearchResult);
-
-        return () => {
-            map.off("geosearch/showlocation", handleSearchResult);
-            map.removeControl(searchControl);
-        };
-    }, [map, onLocationSelect, setPosition]);
-
-    return null;
-}
-
-function MiniMap({ className = "", locationPrefix = "", setAddress }) {
-    const { setValue, watch } = useFormContext();
-    const [position, setPosition] = useState([35.6892523, 51.3896004]); // Default position (Tehran)
-
-    const latitudeField = `${locationPrefix}Latitude`;
-    const longitudeField = `${locationPrefix}Longitude`;
-
-    const latitude = watch(latitudeField);
-    const longitude = watch(longitudeField);
-
-    useEffect(() => {
-        if (latitude && longitude) {
-            setPosition([parseFloat(latitude), parseFloat(longitude)]);
+        if (!cityResult) {
+          setError('استان واردشده پیدا نشد؛ نام استان را بررسی کنید.');
+          return;
         }
-    }, [latitude, longitude]);
 
-    const handleMapClick = async (e) => {
-        const { lat, lng } = e.latlng;
-        setPosition([lat, lng]);
-
-        // Set the coordinates in the form
-        setValue(latitudeField, lat);
-        setValue(longitudeField, lng);
-
-        // Try to reverse geocode to get address (for demonstration)
-        try {
-            const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
-            const data = await response.json();
-
-            if (data.display_name && setAddress) {
-                setAddress(data.display_name);
-            }
-        } catch (error) {
-            console.error("Error reverse geocoding:", error);
+        lastCenteredState.current = normalizedState;
+        setPosition([Number(cityResult.lat), Number(cityResult.lon)]);
+        setTargetZoom(12);
+        unregister([latitudeField, longitudeField]);
+      } catch (requestError) {
+        if ((requestError as Error).name !== 'AbortError') {
+          setError('امکان یافتن استان وجود ندارد؛ دوباره تلاش کنید.');
         }
-    };
+      } finally {
+        if (!controller.signal.aborted) setIsCenteringState(false);
+      }
+    }, 600);
 
-    const handleLocationSelect = (locationData) => {
-        if (locationData) {
-            if (locationData.latitude !== undefined && locationData.latitude !== null) {
-                setValue(latitudeField, locationData.latitude);
-            }
+    return () => window.clearTimeout(timer);
+  }, [formState, latitude, latitudeField, longitude, longitudeField, unregister]);
 
-            if (locationData.longitude !== undefined && locationData.longitude !== null) {
-                setValue(longitudeField, locationData.longitude);
-            }
+  const applyLocation = useCallback(
+    (result: NominatimResult, coordinates: Coordinates) => {
+      const persianAddress = formatPersianAddress(result);
+      const administrative = getAdministrativeValues(result);
 
-            // Set address information if available
-            if (locationData.fullAddress && setAddress) {
-                setAddress(locationData.fullAddress);
-            }
+      setPosition(coordinates);
+      setTargetZoom(16);
+      setValue(latitudeField, coordinates[0], {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+      setValue(longitudeField, coordinates[1], {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+
+      if (administrative.state) {
+        lastCenteredState.current = normalizePersianText(administrative.state);
+        setValue(stateField, administrative.state, {
+          shouldDirty: true,
+          shouldValidate: true,
+        });
+      }
+      if (administrative.city) {
+        setValue(cityField, administrative.city, {
+          shouldDirty: true,
+          shouldValidate: true,
+        });
+      }
+      if (persianAddress) {
+        setSelectedAddress(persianAddress);
+        setAddress?.(persianAddress);
+      }
+    },
+    [
+      cityField,
+      latitudeField,
+      longitudeField,
+      setAddress,
+      setValue,
+      stateField,
+    ]
+  );
+
+  const reverseGeocode = useCallback(
+    async (coordinates: Coordinates) => {
+      abortController.current?.abort();
+      const controller = new AbortController();
+      abortController.current = controller;
+      setPosition(coordinates);
+      setResults([]);
+      setError('');
+      setIsResolving(true);
+
+      try {
+        const params = new URLSearchParams({
+          format: 'jsonv2',
+          lat: String(coordinates[0]),
+          lon: String(coordinates[1]),
+          zoom: '18',
+          addressdetails: '1',
+          'accept-language': 'fa-IR,fa',
+        });
+        const response = await fetch(`${NOMINATIM_URL}/reverse?${params}`, {
+          signal: controller.signal,
+          headers: { 'Accept-Language': 'fa-IR,fa;q=0.9' },
+        });
+        if (!response.ok) throw new Error('reverse-geocode-failed');
+        const result = (await response.json()) as NominatimResult;
+        applyLocation(result, coordinates);
+      } catch (requestError) {
+        if ((requestError as Error).name !== 'AbortError') {
+          setError(
+            'نشانی این نقطه دریافت نشد؛ دوباره تلاش کنید یا نشانی را دستی وارد نمایید.'
+          );
+          setValue(latitudeField, coordinates[0], { shouldDirty: true });
+          setValue(longitudeField, coordinates[1], { shouldDirty: true });
         }
-    };
+      } finally {
+        if (!controller.signal.aborted) setIsResolving(false);
+      }
+    },
+    [applyLocation, latitudeField, longitudeField, setValue]
+  );
 
-    return (
-        <div className={`rounded-lg overflow-hidden shadow-md border border-gray-200 ${className}`}>
-            <MapContainer
-                center={position}
-                zoom={14}
-                style={{ height: "100%", minHeight: "350px", width: "100%" }}
-                attributionControl={true}
-                className="z-0"
-            >
-                <CustomMapStyles />
-                <TileLayer
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                />
-                <Marker position={position}>
-                    <Popup>
-                        موقعیت انتخاب شده <br />
-                        عرض: {position[0].toFixed(6)}<br/>
-                        طول: {position[1].toFixed(6)}
-                    </Popup>
-                </Marker>
-                <SearchBar onLocationSelect={handleLocationSelect} setPosition={setPosition} />
-                <MapClickHandler onMapClick={handleMapClick} />
-            </MapContainer>
-        </div>
+  const search = async () => {
+    if (!isStateSelected) {
+      setError('ابتدا نام استان را وارد کنید تا نقشه روی همان استان قرار بگیرد.');
+      return;
+    }
+
+    const normalizedQuery = normalizePersianText(query);
+    if (normalizedQuery.length < 3) {
+      setError('برای جست‌وجو دست‌کم سه حرف وارد کنید.');
+      return;
+    }
+
+    abortController.current?.abort();
+    const controller = new AbortController();
+    abortController.current = controller;
+    setIsSearching(true);
+    setError('');
+    setResults([]);
+
+    const locationContext = [formCity, formState]
+      .map(normalizePersianText)
+      .filter((value) => value && !normalizedQuery.includes(value))
+      .join('، ');
+    const searchCore = getSearchCore(normalizedQuery);
+    const contextualQuery = locationContext
+      ? `${searchCore}، ${locationContext}، ایران`
+      : `${searchCore}، ایران`;
+
+    try {
+      const params = new URLSearchParams({
+        format: 'jsonv2',
+        q: contextualQuery,
+        addressdetails: '1',
+        countrycodes: 'ir',
+        limit: '6',
+        dedupe: '1',
+        'accept-language': 'fa-IR,fa',
+      });
+      const response = await fetch(`${NOMINATIM_URL}/search?${params}`, {
+        signal: controller.signal,
+        headers: { 'Accept-Language': 'fa-IR,fa;q=0.9' },
+      });
+      if (!response.ok) throw new Error('search-failed');
+      const searchResults = (await response.json()) as NominatimResult[];
+      setResults(searchResults);
+      if (searchResults.length === 0) {
+        setError(
+          'نتیجه‌ای پیدا نشد. نام محله یا خیابان را کوتاه‌تر وارد کنید؛ سپس نقطه دقیق را روی نقشه انتخاب نمایید.'
+        );
+      }
+    } catch (requestError) {
+      if ((requestError as Error).name !== 'AbortError') {
+        setError('جست‌وجوی نشانی در دسترس نیست؛ لطفاً دوباره تلاش کنید.');
+      }
+    } finally {
+      if (!controller.signal.aborted) setIsSearching(false);
+    }
+  };
+
+  const selectSearchResult = (result: NominatimResult) => {
+    const nextPosition: Coordinates = [Number(result.lat), Number(result.lon)];
+    setResults([]);
+    setQuery(formatPersianAddress(result));
+    applyLocation(result, nextPosition);
+  };
+
+  const useCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      setError('مکان‌یابی در این مرورگر پشتیبانی نمی‌شود.');
+      return;
+    }
+
+    setError('');
+    setIsResolving(true);
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => reverseGeocode([coords.latitude, coords.longitude]),
+      () => {
+        setIsResolving(false);
+        setError('دسترسی به موقعیت فعلی ممکن نشد.');
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
     );
-}
+  };
 
-export default MiniMap;
+  const markerHandlers = useMemo(
+    () => ({
+      dragend(event: L.DragEndEvent) {
+        const marker = event.target as LeafletMarker;
+        const coordinates = marker.getLatLng();
+        reverseGeocode([coordinates.lat, coordinates.lng]);
+      },
+    }),
+    [reverseGeocode]
+  );
+
+  return (
+    <div
+      dir="rtl"
+      className={`overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm ${className}`}
+    >
+      <div className="relative border-b border-gray-200 bg-gray-50 p-3 sm:p-4">
+        <div className="flex gap-2">
+          <div className="relative min-w-0 flex-1">
+            <PiMagnifyingGlassBold
+              className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500"
+              aria-hidden="true"
+            />
+            <input
+              value={query}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setError('');
+              }}
+              onKeyDown={(event: KeyboardEvent<HTMLInputElement>) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  void search();
+                }
+              }}
+              aria-label="جست‌وجوی نشانی"
+              placeholder={isStateSelected ? 'مثلاً نام شهر، محله یا خیابان' : 'ابتدا استان را وارد کنید'}
+              disabled={!isStateSelected || isCenteringState}
+              className="h-11 w-full rounded-xl border border-gray-300 bg-white pl-10 pr-10 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
+            />
+            {query && !isSearching && (
+              <button
+                type="button"
+                onClick={() => {
+                  setQuery('');
+                  setResults([]);
+                }}
+                aria-label="پاک کردن جست‌وجو"
+                className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+              >
+                <PiXBold className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => void search()}
+            disabled={!isStateSelected || isSearching || isCenteringState}
+            className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-gray-900 px-4 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-wait disabled:opacity-70"
+          >
+            {isSearching ? (
+              <PiSpinnerGapBold className="h-5 w-5 animate-spin" />
+            ) : (
+              <PiMagnifyingGlassBold className="h-5 w-5" />
+            )}
+            <span className="hidden sm:inline">جست‌وجو</span>
+          </button>
+          <button
+            type="button"
+            onClick={useCurrentLocation}
+            disabled={!isStateSelected || isCenteringState}
+            title="استفاده از موقعیت فعلی"
+            aria-label="استفاده از موقعیت فعلی"
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-gray-300 bg-white text-gray-700 transition hover:border-gray-900 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <PiCrosshairBold className="h-5 w-5" />
+          </button>
+        </div>
+
+        {results.length > 0 && (
+          <div className="absolute inset-x-3 top-[64px] z-[1100] overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl sm:inset-x-4 sm:top-[68px]">
+            <ul className="max-h-64 overflow-y-auto py-1">
+              {results.map((result) => (
+                <li key={result.place_id}>
+                  <button
+                    type="button"
+                    onClick={() => selectSearchResult(result)}
+                    className="flex w-full items-start gap-3 px-4 py-3 text-right transition hover:bg-gray-50 focus:bg-gray-50 focus:outline-none"
+                  >
+                    <PiMapPinFill className="text-red-600 mt-0.5 h-5 w-5 shrink-0" />
+                    <span className="text-sm leading-6 text-gray-800">
+                      {formatPersianAddress(result)}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {error && (
+          <div
+            role="alert"
+            className="bg-amber-50 text-amber-800 mt-3 flex items-start gap-2 rounded-lg px-3 py-2 text-xs leading-5"
+          >
+            <PiWarningCircleBold className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+      </div>
+
+      <div className="relative h-[360px] min-h-[360px] w-full bg-gray-100">
+        <MapContainer
+          center={position}
+          zoom={14}
+          scrollWheelZoom
+          className="z-0 h-full w-full"
+          attributionControl
+        >
+          <TileLayer
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution='&copy; مشارکت‌کنندگان <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          />
+          <Marker
+            position={position}
+            icon={markerIcon}
+            draggable
+            eventHandlers={markerHandlers}
+          >
+            <Popup>
+              <div dir="rtl" className="max-w-64 text-right text-xs leading-6">
+                {selectedAddress || 'نشانگر را جابه‌جا کنید یا روی نقشه بزنید.'}
+              </div>
+            </Popup>
+          </Marker>
+          <MapViewport position={position} zoom={targetZoom} />
+          {isStateSelected && !isCenteringState && (
+            <MapInteractions onPick={reverseGeocode} />
+          )}
+        </MapContainer>
+
+        {!isStateSelected && (
+          <div className="absolute inset-0 z-[600] flex items-center justify-center bg-white/75 p-6 text-center backdrop-blur-[2px]">
+            <div className="max-w-sm rounded-2xl border border-gray-200 bg-white px-5 py-4 text-sm font-medium leading-7 text-gray-700 shadow-lg">
+              ابتدا نام استان را در فرم وارد کنید؛ نقشه به‌صورت خودکار روی همان استان قرار می‌گیرد.
+            </div>
+          </div>
+        )}
+
+        {isCenteringState && (
+          <div className="absolute inset-0 z-[600] flex items-center justify-center bg-white/65 backdrop-blur-[1px]">
+            <div className="flex items-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-medium text-gray-800 shadow-lg">
+              <PiSpinnerGapBold className="h-5 w-5 animate-spin" />
+              در حال انتقال نقشه به استان انتخاب‌شده…
+            </div>
+          </div>
+        )}
+
+        {isResolving && (
+          <div className="bg-white/45 pointer-events-none absolute inset-0 z-[500] flex items-center justify-center backdrop-blur-[1px]">
+            <div className="flex items-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-medium text-gray-800 shadow-lg">
+              <PiSpinnerGapBold className="h-5 w-5 animate-spin" />
+              در حال دریافت نشانی فارسی…
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-start gap-2 border-t border-gray-200 bg-white px-4 py-3 text-xs leading-5 text-gray-600">
+        <PiMapPinFill className="text-red-600 mt-0.5 h-4 w-4 shrink-0" />
+        <span>
+          برای ثبت دقیق، روی نقشه بزنید یا نشانگر را جابه‌جا کنید. استان، شهر و
+          نشانی فارسی به‌صورت خودکار تکمیل می‌شود.
+        </span>
+      </div>
+    </div>
+  );
+}

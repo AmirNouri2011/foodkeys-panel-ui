@@ -16,8 +16,7 @@ const portalCooperationFields = [
   },
   {
     name: 'sendRelatedNewsToPortal',
-    label:
-      'ارسال اخبار و مقالات مرتبط با فعالیت شرکت جهت درج در پرتال',
+    label: 'ارسال اخبار و مقالات مرتبط با فعالیت شرکت جهت درج در پرتال',
   },
   {
     name: 'acceptStudentGroupVisit',

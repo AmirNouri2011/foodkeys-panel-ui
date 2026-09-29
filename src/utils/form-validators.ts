@@ -4,9 +4,10 @@ export const validationMessages = {
   required: 'این فیلد اجباری میباشد',
   email: 'آدرس ایمیل اشتباه میباشد',
   mobilePhone: 'شماره همراه باید ۱۱ رقم و با ۰۹ شروع شود',
-  landlinePhone: 'شماره تلفن باید بین ۸ تا ۱۱ رقم باشد',
-  website: 'آدرس وبسایت باید معتبر باشد',
+  landlinePhone: 'شماره تلفن یا فکس باید با صفر شروع شود و دقیقاً ۱۱ رقم باشد',
+  website: 'آدرس وبسایت باید معتبر و با https:// شروع شود',
   postalCode: 'کد پستی باید ۱۰ رقم باشد',
+  digitsOnly: 'فقط عدد وارد کنید',
   productName: 'نام محصول الزامی است',
   productCategory: 'دسته‌بندی محصول الزامی است',
   serviceName: 'نام خدمت الزامی است',
@@ -14,7 +15,7 @@ export const validationMessages = {
 };
 
 export const MOBILE_PHONE_REGEX = /^09\d{9}$/;
-export const LANDLINE_PHONE_REGEX = /^\d{8,11}$/;
+export const LANDLINE_PHONE_REGEX = /^0\d{10}$/;
 export const POSTAL_CODE_REGEX = /^\d{10}$/;
 export const EMAIL_REGEX = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
 
@@ -32,12 +33,11 @@ export function isValidEmail(value: string): boolean {
 
 export function isValidWebsite(value: string): boolean {
   const trimmed = value.trim();
-  if (!trimmed) return false;
+  if (!trimmed || !trimmed.startsWith('https://')) return false;
 
   try {
-    const normalized = trimmed.startsWith('http') ? trimmed : `https://${trimmed}`;
-    const url = new URL(normalized);
-    return Boolean(url.hostname);
+    const url = new URL(trimmed);
+    return url.protocol === 'https:' && Boolean(url.hostname) && url.hostname.includes('.');
   } catch {
     return false;
   }
@@ -52,7 +52,19 @@ export function isValidPostalCode(value: string): boolean {
 }
 
 export const requiredStringSchema = () =>
-  z.string().min(1, { message: validationMessages.required });
+  z.string().trim().min(1, { message: validationMessages.required });
+
+export const optionalDigitsSchema = () =>
+  z.string().refine(
+    (val) => isEmptyValue(val) || /^\d+$/.test(String(val).trim()),
+    { message: validationMessages.digitsOnly }
+  );
+
+export const optionalNumberSchema = () =>
+  z.string().refine(
+    (val) => isEmptyValue(val) || /^\d+(?:\.\d+)?$/.test(String(val).trim()),
+    { message: 'مقدار باید عدد باشد' }
+  );
 
 export const optionalMobilePhoneSchema = () =>
   z.string().refine(
@@ -85,6 +97,14 @@ export const optionalLandlineSchema = () =>
     (val) => isEmptyValue(val) || isValidLandline(String(val)),
     { message: validationMessages.landlinePhone }
   );
+
+export const requiredLandlineSchema = () =>
+  z
+    .string()
+    .min(1, { message: validationMessages.required })
+    .refine((val) => isValidLandline(val), {
+      message: validationMessages.landlinePhone,
+    });
 
 export const optionalPostalCodeSchema = () =>
   z.string().refine(

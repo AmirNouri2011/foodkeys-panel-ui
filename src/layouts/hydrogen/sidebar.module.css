@@ -1,0 +1,359 @@
+.sidebar {
+  background: #fff;
+  color: #4e6459;
+  border-inline-end: 1px solid #e3eae5;
+  font-family: 'iransansfa', sans-serif;
+}
+.inner {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 17px 14px;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 5px 23px;
+}
+.brand > a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+.brand img {
+  width: 39px;
+  height: 39px;
+  object-fit: contain;
+}
+.brand strong {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  color: #234c38;
+  font-size: 23px;
+  font-weight: 900;
+  line-height: 1.6;
+}
+.brand strong span {
+  font-family: Arial, sans-serif;
+  font-size: 11px;
+  letter-spacing: 1.3px;
+  font-weight: 600;
+  color: #90a295;
+}
+.brand small {
+  display: block;
+  font-size: 11px;
+  color: #86988d;
+  margin-top: 1px;
+  white-space: nowrap;
+}
+.close {
+  display: none;
+  padding: 6px;
+  color: #7c9384;
+}
+.create {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 13px;
+  background: #285d43;
+  color: #f0f5e9;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  min-height: 43px;
+  transition: background 150ms;
+}
+.create > svg:last-child {
+  margin-inline-start: auto;
+  opacity: 0.6;
+}
+.create:hover {
+  background: #347853;
+}
+.search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #e7ece8;
+  background: #f8faf8;
+  color: #97a69c;
+  border-radius: 9px;
+  padding: 0 10px;
+  margin: 13px 0 12px;
+}
+.search input {
+  background: transparent;
+  border: 0;
+  font-family: inherit;
+  box-shadow: none;
+  min-width: 0;
+  width: 100%;
+  padding: 10px 0;
+  font-size: 11px;
+  color: #395442;
+}
+.search input:focus {
+  outline: none;
+  box-shadow: none;
+}
+.search:focus-within {
+  border-color: #e7ece8;
+  box-shadow: none;
+}
+.search button {
+  display: grid;
+  place-items: center;
+  padding: 3px;
+}
+.navigation {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0 1px 14px;
+  scrollbar-width: thin;
+  scrollbar-color: #d8e3da transparent;
+}
+.navigation section + section {
+  margin-top: 19px;
+}
+.navigation h2 {
+  padding: 7px 12px;
+  margin-bottom: 5px;
+  font-family: inherit;
+  font-weight: 500;
+  font-size: 11px;
+  color: #96a499;
+}
+.menuLink {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  min-height: 43px;
+  padding: 10px 12px;
+  margin-bottom: 4px;
+  border-radius: 9px;
+  font-size: 11px;
+  line-height: 1.8;
+  text-align: start;
+  transition:
+    background 150ms,
+    color 150ms;
+}
+.menuLink > svg {
+  flex-shrink: 0;
+  color: #7b9484;
+  stroke-width: 1.6;
+}
+.menuLink > span:first-of-type {
+  flex: 1;
+}
+.menuLink > svg:last-child:not(:first-child) {
+  transition: transform 150ms;
+  opacity: 0.65;
+}
+.menuLink:hover {
+  background: #f2f6f2;
+  color: #285d43;
+}
+.menuLink.active {
+  color: #2a6948;
+  background: #eaf2e9;
+  font-weight: 700;
+}
+.menuLink.active svg,
+.menuLink.groupActive svg {
+  color: #3b7b52;
+}
+.menuLink.groupActive {
+  color: #2b6643;
+}
+.activeDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #75a66c;
+}
+.rotated {
+  transform: rotate(180deg);
+}
+.submenu {
+  margin: 0 20px 11px 5px;
+  padding: 1px 14px 1px 0;
+  border-right: 1px solid #dce7dd;
+}
+.submenu a {
+  display: block;
+  padding: 8px 9px;
+  font-size: 11px;
+  line-height: 1.9;
+  color: #7c8d81;
+  border-radius: 6px;
+  margin-bottom: 2px;
+}
+.submenu a:hover {
+  background: #f4f7f3;
+  color: #315e40;
+}
+.submenu .childActive {
+  color: #2e7249;
+  background: #edf4e9;
+  font-weight: 700;
+}
+.sidebarBottom {
+  flex-shrink: 0;
+  border-top: 1px solid #e9eeea;
+  padding-top: 11px;
+}
+.website {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  color: #81947f;
+  font-size: 11px;
+  padding: 5px 12px 14px;
+}
+.website > span {
+  flex: 1;
+}
+.account {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f5f7f3;
+  border: 1px solid #e9ede3;
+  border-radius: 10px;
+  padding: 11px;
+}
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 35px;
+  height: 35px;
+  border-radius: 10px;
+  background: #e3ebdc;
+  color: #6a8458;
+  font-size: 17px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.account > div {
+  min-width: 0;
+  flex: 1;
+}
+.account strong {
+  display: block;
+  font-size: 11px;
+  color: #426140;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.account small {
+  display: block;
+  font-size: 11px;
+  color: #8b9983;
+  margin-top: 4px;
+}
+.account > svg {
+  color: #8ba17c;
+}
+.empty {
+  font-size: 11px;
+  color: #91a093;
+  text-align: center;
+  padding: 30px 12px;
+}
+.sidebar :is(a, button):focus-visible {
+  outline: 2px solid #79ab8b;
+  outline-offset: 2px;
+}
+.sidebar button {
+  cursor: pointer;
+}
+@media (max-width: 1279px) {
+  .close {
+    display: grid;
+    place-items: center;
+  }
+  .inner {
+    padding-top: 20px;
+  }
+}
+@media (max-height: 750px) {
+  .inner {
+    padding-top: 16px;
+  }
+  .brand {
+    padding-bottom: 16px;
+  }
+  .menuLink {
+    min-height: 39px;
+    padding-block: 8px;
+  }
+  .navigation section + section {
+    margin-top: 12px;
+  }
+}
+:global(.dark) .sidebar {
+  background: #19271f;
+  border-color: #304035;
+  color: #b2c7b7;
+}
+:global(.dark) .brand strong {
+  color: #d3e5d5;
+}
+:global(.dark) .search {
+  background: #213128;
+  border-color: #334638;
+}
+:global(.dark) .search input {
+  color: #c7dbcb;
+}
+:global(.dark) .menuLink:hover,
+:global(.dark) .submenu a:hover {
+  background: #25392b;
+  color: #d1e6cc;
+}
+:global(.dark) .menuLink.active,
+:global(.dark) .submenu .childActive {
+  background: #30482f;
+  color: #d0e4b9;
+}
+:global(.dark) .menuLink.groupActive {
+  color: #c8dfbb;
+}
+:global(.dark) .menuLink > svg {
+  color: #99b59d;
+}
+:global(.dark) .submenu {
+  border-color: #415540;
+}
+:global(.dark) .sidebarBottom {
+  border-color: #304035;
+}
+:global(.dark) .account {
+  background: #283725;
+  border-color: #394934;
+}
+:global(.dark) .avatar {
+  background: #3d5035;
+  color: #c4d7ad;
+}
+:global(.dark) .account strong {
+  color: #c6dcbd;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sidebar * {
+    transition: none !important;
+  }
+}

@@ -514,6 +514,7 @@ const Select = dynamic(() => import('@/components/ui/select'), {
 interface UploadedFileDTO {
     id: string;
     fileName: string;
+    originalFileName?: string;
     filePath: string;
 }
 
@@ -522,6 +523,7 @@ interface GalleryItemData {
     uploadedFileId?: string | string[];
     filePath?: string;
     fileName?: string;
+    originalFileName?: string;
     priority?: number;
 
     [key: string]: any;
@@ -574,7 +576,7 @@ export default function CompanyGallery({
     // Memoize field definitions to avoid re-creation on each render
     const productFields = useMemo(
         () => [
-            {name: 'title', label: 'عنوان محصول', type: 'text'},
+            {name: 'title', label: 'عنوان محصول*', type: 'text'},
             {name: 'description', label: 'توضیحات بیشتر', type: 'text'},
         ],
         []
@@ -582,7 +584,7 @@ export default function CompanyGallery({
 
     const certificateFields = useMemo(
         () => [
-            {name: 'title', label: 'نام گواهینامه', type: 'text'},
+            {name: 'title', label: 'نام گواهینامه*', type: 'text'},
             {name: 'description', label: 'توضیحات گواهینامه', type: 'text'},
         ],
         []
@@ -590,6 +592,7 @@ export default function CompanyGallery({
 
     const contactFields = useMemo(
         () => [
+            {name: 'title', label: 'عنوان تصویر*', type: 'text'},
             {name: 'firstName', label: 'نام', type: 'text'},
             {name: 'lastName', label: 'نام خانوادگی', type: 'text'},
             {name: 'phoneNumbers', label: 'شماره تلفن', type: 'text'},
@@ -604,7 +607,7 @@ export default function CompanyGallery({
 
     const sliderFields = useMemo(
         () => [
-            {name: 'title', label: 'متن زیرنویس', type: 'text'},
+            {name: 'title', label: 'متن زیرنویس*', type: 'text'},
             {name: 'description', label: 'توضیحات بیشتر', type: 'text'},
         ],
         []
@@ -612,7 +615,7 @@ export default function CompanyGallery({
 
     const catalogFields = useMemo(
         () => [
-            {name: 'title', label: 'عنوان کاتالوگ', type: 'text'},
+            {name: 'title', label: 'عنوان کاتالوگ*', type: 'text'},
             // { name: 'altText', label: 'متن جایگزین', type: 'text' },
             {name: 'description', label: 'توضیحات بیشتر', type: 'text'},
         ],
@@ -621,7 +624,7 @@ export default function CompanyGallery({
 
     const videoFields = useMemo(
         () => [
-            {name: 'title', label: 'عنوان ویدیو', type: 'text'},
+            {name: 'title', label: 'عنوان ویدیو*', type: 'text'},
             {name: 'description', label: 'توضیحات ویدیو', type: 'text'}
         ],
         []
@@ -629,7 +632,7 @@ export default function CompanyGallery({
 
     const documentFields = useMemo(
         () => [
-            {name: 'title', label: 'نام سند', type: 'text'},
+            {name: 'title', label: 'نام سند*', type: 'text'},
             {name: 'description', label: 'توضیحات سند', type: 'text'},
         ],
         []
@@ -637,7 +640,7 @@ export default function CompanyGallery({
 
     const officeEnvironmentFields = useMemo(
         () => [
-            {name: 'title', label: 'عنوان', type: 'text'},
+            {name: 'title', label: 'عنوان*', type: 'text'},
             {name: 'description', label: 'توضیحات بیشتر', type: 'text'},
         ],
         []
@@ -749,8 +752,8 @@ export default function CompanyGallery({
                 label="ویدیو‌های شرکت"
                 uploadAreaContent={
                     <>
-                        تیزرها و ویدیو‌های شرکت خود را اینجا آپلود کنید حجم فایل باید کمتر از{' '}
-                        <strong className="font-medium text-gray-900">۷۵ مگابایت باشد</strong>
+                        طبق محدودیت فعلی سرور، فرمت فایل باید JPG، PNG، PDF یا WebP و حجم آن کمتر از{' '}
+                        <strong className="font-medium text-gray-900">۲۰ مگابایت باشد</strong>
                     </>
                 }
                 registerName="gallery.videos"
@@ -799,7 +802,7 @@ function GallerySection({
     initialFiles?: any[];
 }) {
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const {register, setValue, unregister} = useFormContext();
+    const {register, setValue, unregister, formState: {errors, isSubmitted}} = useFormContext();
     const [galleryItems, setGalleryItems] = useState<GalleryItemData[]>([]);
     const [isUploading, setIsUploading] = useState(false);
     const [isInitialized, setIsInitialized] = useState(false);
@@ -856,6 +859,7 @@ function GallerySection({
                     id: file.id || file.uploadedFileId,
                     filePath: file.filePath,
                     fileName: file.fileName,
+                    originalFileName: file.originalFileName,
                     priority: idx + 1,
                 };
                 fields.forEach((f) => {
@@ -895,6 +899,7 @@ function GallerySection({
                     uploadedFileId: file.id,
                     filePath: file.filePath,
                     fileName: file.fileName,
+                    originalFileName: file.originalFileName,
                     priority: galleryItems.length + i + 1,
                     ...Object.fromEntries(
                         fields.map(f => [f.name, f.type === 'checkbox' ? true : ''])
@@ -915,7 +920,9 @@ function GallerySection({
         setGalleryItems(prev => {
             const copy = [...prev];
             copy[index] = {...copy[index], [name]: val};
-            setValue(`${registerName}[${index}].${name}`, val);
+            setValue(`${registerName}[${index}].${name}`, val, {
+                shouldValidate: isSubmitted,
+            });
             return copy;
         });
     };
@@ -945,17 +952,25 @@ function GallerySection({
                     {galleryItems.map((item, idx) => (
                         <div key={item.id || item.uploadedFileId || idx}
                              className="flex flex-col md:flex-row items-start border rounded-lg p-4 gap-4">
-                            <div className="w-full md:w-1/5 flex justify-center">
-                                {item.filePath && /\.(jpe?g|png)$/i.test(item.fileName || '') ? (
-                                    <div className="relative w-24 h-24 overflow-hidden rounded-lg border">
-                                        <Image src={`${STATIC_FILES_URL}${item.filePath}`} alt={item.fileName}
-                                               width={96} height={96} objectFit="cover"/>
+                            <div className="flex w-full flex-col items-center md:w-1/5">
+                                {item.filePath && /\.(jpe?g|png|webp)$/i.test(item.originalFileName || item.fileName || item.filePath || '') ? (
+                                    <div className="relative h-24 w-24 overflow-hidden rounded-lg border">
+                                        <Image src={`${STATIC_FILES_URL}${item.filePath}`} alt={item.originalFileName || item.fileName || `فایل ${idx + 1}`}
+                                               width={96} height={96} className="h-full w-full object-cover" unoptimized/>
                                     </div>
                                 ) : (
                                     <div
                                         className="flex items-center justify-center w-24 h-24 bg-gray-100 rounded-lg border">
-                                        <span className="text-xs text-gray-500 p-2 break-all">{item.fileName}</span>
+                                        <span className="text-xs text-gray-500 p-2">فایل آپلودشده</span>
                                     </div>
+                                )}
+                                {(item.originalFileName || item.fileName) && (
+                                    <p
+                                        className="mt-2 w-28 truncate text-center text-xs text-gray-500"
+                                        title={item.originalFileName || item.fileName}
+                                    >
+                                        {item.originalFileName || item.fileName}
+                                    </p>
                                 )}
                             </div>
 
@@ -983,6 +998,14 @@ function GallerySection({
                                             // keep it controlled if you like
                                             value={item[f.name] || ''}
                                             onChange={(e) => handleFieldChange(idx, f.name, e.target.value)}
+                                            error={(errors.gallery as any)?.[registerName.split('.')[1]]?.[idx]?.[f.name]?.message as string}
+                                            helperText={
+                                                f.name === 'phoneNumbers'
+                                                    ? '(مثال: 09123456789)'
+                                                    : f.name === 'emails'
+                                                      ? '(مثال: info@foodkeys.com)'
+                                                      : undefined
+                                            }
                                         />
                                     )
                                 ))}

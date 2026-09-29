@@ -29,6 +29,8 @@ export interface NotificationItem {
   id: number | string;
   title: string;
   message: string;
+  /** Optional extended body returned by the detail endpoint. */
+  description?: string;
   isRead: boolean;
   archived: boolean;
   priority?: string;
@@ -61,7 +63,12 @@ export const notificationKeys = {
   updates: () => [...notificationKeys.all, 'updates'] as const,
   lists: () => [...notificationKeys.all, 'list'] as const,
   list: (archived: boolean, page: number) =>
-    [...notificationKeys.all, 'list', archived ? 'archive' : 'active', page] as const,
+    [
+      ...notificationKeys.all,
+      'list',
+      archived ? 'archive' : 'active',
+      page,
+    ] as const,
   detail: (id: number | string) =>
     [...notificationKeys.all, 'detail', String(id)] as const,
 };
@@ -72,6 +79,11 @@ export function normalizeNotification(raw: any): NotificationItem {
     id: raw?.id ?? raw?.notificationId ?? raw?.userNotificationId,
     title: raw?.title ?? raw?.subject ?? raw?.name ?? '',
     message: raw?.message ?? raw?.content ?? raw?.body ?? raw?.text ?? '',
+    description:
+      raw?.description ??
+      raw?.details ??
+      raw?.additionalDescription ??
+      raw?.additionalInfo,
     isRead: Boolean(raw?.read ?? raw?.isRead ?? raw?.seen ?? false),
     archived: Boolean(raw?.archived ?? raw?.isArchived ?? false),
     priority: raw?.priority,

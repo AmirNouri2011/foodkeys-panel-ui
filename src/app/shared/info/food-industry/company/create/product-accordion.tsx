@@ -674,23 +674,33 @@ const MultipleFiles: React.FC<MultipleFilesProps> = ({
                             <SwiperSlide
                                 key={file?.id || `img-${productIndex}-${index}`}
                             >
-                                <div className="relative aspect-square overflow-hidden rounded-lg border border-gray-200 bg-gray-50 flex items-center justify-center group">
-                                    <Image
-                                        src={getImageSrc(file)}
-                                        alt={file?.originalFileName || file?.fileName || 'عکس محصول'}
-                                        width={200}
-                                        height={200}
-                                        className="object-contain w-full h-full transition-all duration-300 group-hover:blur-[2px] group-hover:scale-105"
-                                        unoptimized
-                                    />
-                                    <button
-                                        onClick={() => handleMultiImageDelete(index)}
-                                        type="button"
-                                        className="absolute right-2 top-2 rounded-full bg-gray-0/70 p-1.5 text-gray-700 shadow-sm transition-colors hover:bg-red-500 hover:text-white opacity-0 group-hover:opacity-100 dark:bg-gray-100/70 dark:text-gray-600"
-                                        aria-label="حذف تصویر"
-                                    >
-                                        <TrashIcon className="h-3.5 w-3.5" />
-                                    </button>
+                                <div>
+                                    <div className="group relative flex aspect-square items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
+                                        <Image
+                                            src={getImageSrc(file)}
+                                            alt={file?.originalFileName || file?.fileName || 'عکس محصول'}
+                                            width={200}
+                                            height={200}
+                                            className="h-full w-full object-contain transition-all duration-300 group-hover:scale-105 group-hover:blur-[2px]"
+                                            unoptimized
+                                        />
+                                        <button
+                                            onClick={() => handleMultiImageDelete(index)}
+                                            type="button"
+                                            className="absolute right-2 top-2 rounded-full bg-gray-0/70 p-1.5 text-gray-700 opacity-0 shadow-sm transition-colors hover:bg-red-500 hover:text-white group-hover:opacity-100 dark:bg-gray-100/70 dark:text-gray-600"
+                                            aria-label="حذف تصویر"
+                                        >
+                                            <TrashIcon className="h-3.5 w-3.5" />
+                                        </button>
+                                    </div>
+                                    {(file?.originalFileName || file?.fileName) && (
+                                        <p
+                                            className="mt-1 truncate text-center text-xs text-gray-500"
+                                            title={file?.originalFileName || file?.fileName}
+                                        >
+                                            {file?.originalFileName || file?.fileName}
+                                        </p>
+                                    )}
                                 </div>
                             </SwiperSlide>
                         ))}

@@ -34,6 +34,7 @@ import CompanyHistory from './company-history';
 import useAxiosPrivate from '@/hooks/use-axios-private';
 import { z } from 'zod';
 import CompanyGallery from '@/app/shared/info/food-industry/company/create/company-gallery';
+import CompanyLocation from '@/app/shared/info/food-industry/company/create/company-location';
 import { useRouter } from 'next/navigation';
 import { createGlobalState } from 'react-use';
 import { socialMediaConverter } from '@/utils/social-media-converter';
@@ -42,6 +43,7 @@ import { telConverter } from '@/utils/tel-converter';
 const MAP_STEP_TO_COMPONENT = {
   [formParts.intro]: CompanySummary,
   [formParts.history]: CompanyHistory,
+  [formParts.location]: CompanyLocation,
   [formParts.factory]: CompanyFactory,
   [formParts.office]: CompanyOffice,
   [formParts.social]: CompanySocial,
@@ -102,6 +104,10 @@ interface Location {
   factoryCity: string;
   industrialCity: string;
   country: string;
+  factoryLongitude?: number;
+  factoryLatitude?: number;
+  officeLongitude?: number;
+  officeLatitude?: number;
 }
 
 export interface Company {
@@ -280,6 +286,10 @@ export default function CreateCompany({
         industrialCity: data.industrialCity,
         factoryPoBox: data.factoryPoBox,
         officePoBox: data.officePoBox,
+        factoryLongitude: data.factoryLongitude,
+        factoryLatitude: data.factoryLatitude,
+        officeLongitude: data.officeLongitude,
+        officeLatitude: data.officeLatitude,
       };
 
       const transformedData = {

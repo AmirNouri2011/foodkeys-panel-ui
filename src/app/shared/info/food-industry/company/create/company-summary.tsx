@@ -409,7 +409,6 @@ import TrashIcon from '@/components/icons/trash';
 import { useCallback, useEffect, useState, useRef } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import LogoUpload from '@/components/ui/logo-upload';
-import JalaliDatePicker from '@/components/ui/react-shamsi-date-picker';
 import useAxiosPrivate from '@/hooks/use-axios-private';
 import toast from 'react-hot-toast';
 import Image from 'next/image';
@@ -423,6 +422,7 @@ const Select = dynamic(() => import('@/components/ui/select'), {
 interface SimpleTempFileDTO {
   id: string;
   fileName: string;
+  originalFileName?: string;
   filePath: string;
 }
 
@@ -455,11 +455,11 @@ export default function CompanySummary({
   const [logoProgress, setLogoProgress] = useState<number>(0);
   const [logoError, setLogoError] = useState<string | null>(null);
   const [logoSuccess, setLogoSuccess] = useState<boolean>(false);
-  const [establishDateValue, setEstablishDateValue] = useState<any>('');
   const [logoData, setLogoData] = useState<SimpleTempFileDTO | null>(null);
 
   // State for brand image uploads
   const [brandImageUploading, setBrandImageUploading] = useState<{ [key: number]: boolean }>({});
+  const [brandImageFileNames, setBrandImageFileNames] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const fetchSubCategories = async () => {
@@ -499,12 +499,6 @@ export default function CompanySummary({
 
   const watchedLogo = watch('currentLogo', '');
   const watchedCompanyType = watch('companyType', '');
-  const watchedEstablishDate = watch('establishDate', '');
-
-  useEffect(() => {
-    if (watchedEstablishDate)
-      setEstablishDateValue(new Date(watchedEstablishDate));
-  }, [watchedEstablishDate]);
 
   // Handle successful logo upload
   const handleLogoUploadSuccess = (fileData: SimpleTempFileDTO) => {
@@ -566,7 +560,14 @@ export default function CompanySummary({
       if (response.data.status === 'SUCCESS' && response.data.data && response.data.data.length > 0) {
         const uploadedFile = response.data.data[0];
         // Set the brand image path in the form
-        setValue(`brands.${brandIndex}.brandImage`, uploadedFile.filePath);
+        setValue(`brands.${brandIndex}.brandImage`, uploadedFile.filePath, {
+          shouldDirty: true,
+          shouldValidate: true,
+        });
+        setBrandImageFileNames((current) => ({
+          ...current,
+          [uploadedFile.filePath]: uploadedFile.originalFileName || uploadedFile.fileName,
+        }));
         toast.success('تصویر برند با موفقیت آپلود شد');
         return uploadedFile;
       } else {
@@ -630,6 +631,7 @@ export default function CompanySummary({
         {/* Logo upload in its own row */}
         <div className="w-full col-span-full mb-6">
           <LogoUpload
+              label="لوگوی شرکت"
               accept="image/*"
               logoPreview={logoPreview}
               loading={logoLoading}
@@ -646,7 +648,7 @@ export default function CompanySummary({
         </div>
 
         {/* Subcategory field */}
-        <div className="w-full col-span-full mb-6">
+        <div id="field-subcategory" className="w-full col-span-full mb-6">
           <Controller
               name="subcategory"
               control={control}
@@ -658,7 +660,7 @@ export default function CompanySummary({
                       }))}
                       onChange={onChange}
                       value={value}
-                      label="دسته بندی"
+                      label="دسته بندی*"
                       error={errors?.subcategory?.message as string}
                       placeholder="انتخاب"
                       className="w-full"
@@ -701,6 +703,7 @@ export default function CompanySummary({
 
         <div className="w-full flex flex-col md:flex-row gap-6 mb-6">
           <div
+              id="field-companyType"
               className={`w-full ${
                   watchedCompanyType?.value === 'OTHER' ? 'md:w-1/2' : 'md:w-full'
               }`}
@@ -737,35 +740,24 @@ export default function CompanySummary({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Controller
-              name="establishDate"
-              control={control}
-              render={({ field: { onChange, value, onBlur } }) => (
-                  <JalaliDatePicker
-                      selected={establishDateValue}
-                      onChange={(e: any) => {
-                        setEstablishDateValue(e);
-                        setValue('establishDate', e);
-                      }}
-                      dateFormat="yyyy-MM-dd'T'HH:mm:ss"
-                      maxDate={new Date()}
-                      placeholderText="تاریخ تاسیس"
-                      inputProps={{
-                        variant: 'outline',
-                        label: 'تاریخ تاسیس',
-                        inputClassName: 'p-4 border border-gray-300 rounded-md',
-                      }}
-                      popperPlacement="bottom-end"
-                      className="rmdp-mobile custom-calendar flex-grow"
-                  />
-              )}
+          <Input
+              id="field-establishDate"
+              label="سال تأسیس*"
+              placeholder="سال تأسیس"
+              inputMode="numeric"
+              maxLength={4}
+              {...register('establishDate')}
+              error={errors.establishDate?.message as string}
+              helperText="(مثال: 1403)"
           />
 
           <Input
               label="تعداد کارکنان"
               placeholder="تعداد کارکنان"
+              inputMode="numeric"
               {...register('employeesCount')}
               error={errors.employeesCount?.message as string}
+              helperText="(مثال: 120)"
           />
         </div>
 
@@ -773,15 +765,19 @@ export default function CompanySummary({
           <Input
               label="متراژ بنای کارخانه"
               placeholder="متراژ بنای کارخانه"
+              inputMode="decimal"
               {...register('buildingArea')}
               error={errors.buildingArea?.message as string}
+              helperText="(مثال: 12 متر مربع)"
           />
 
           <Input
               label="متراژ زمین کارخانه"
               placeholder="متراژ زمین کارخانه"
+              inputMode="decimal"
               {...register('landArea')}
               error={errors.landArea?.message as string}
+              helperText="(مثال: 12 متر مربع)"
           />
         </div>
 
@@ -796,6 +792,8 @@ export default function CompanySummary({
           <Input
               dir='rtl'
               type="tel"
+              inputMode="numeric"
+              maxLength={11}
               label="تلفن همراه مدیر عامل"
               placeholder="تلفن همراه مدیر عامل"
               {...register('ceoPhoneNumber')}
@@ -816,6 +814,10 @@ export default function CompanySummary({
         {/* Updated brands section with image upload */}
         {fields.map((item, index) => {
           const brandImagePath = watch(`brands.${index}.brandImage`);
+          const brandImageFileName = brandImagePath
+              ? brandImageFileNames[brandImagePath] ||
+                decodeURIComponent(brandImagePath.split('/').pop()?.split('?')[0] || '')
+              : '';
 
           return (
               <div key={item.id} className="relative grid grid-cols-1 gap-4 rounded-lg border border-gray-200 p-6 pt-10 dark:border-gray-300">
@@ -834,6 +836,7 @@ export default function CompanySummary({
                               width={128}
                               height={128}
                               className="object-cover w-full h-full"
+                              unoptimized
                           />
                         </div>
                         <button
@@ -843,6 +846,14 @@ export default function CompanySummary({
                         >
                           ×
                         </button>
+                        {brandImageFileName && (
+                            <p
+                                className="mt-2 max-w-32 truncate text-center text-xs text-gray-500"
+                                title={brandImageFileName}
+                            >
+                              {brandImageFileName}
+                            </p>
+                        )}
                       </div>
                   ) : (
                       <div className="flex items-center gap-2">

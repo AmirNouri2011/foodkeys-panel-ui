@@ -212,8 +212,11 @@ import {
   optionalEmailSchema,
   optionalLandlineSchema,
   optionalMobilePhoneSchema,
+  optionalDigitsSchema,
+  optionalNumberSchema,
   optionalPostalCodeSchema,
   optionalWebsiteSchema,
+  requiredLandlineSchema,
   requiredMobilePhoneSchema,
   requiredStringSchema,
   validationMessages,
@@ -252,8 +255,13 @@ const locationSchema = z.object({
     country: z.string(),
 });
 
-const telSchema = z.object({
+const optionalTelSchema = z.object({
     telNumber: optionalLandlineSchema(),
+    telType: z.string().optional(),
+});
+
+const requiredTelSchema = z.object({
+    telNumber: requiredLandlineSchema(),
     telType: z.string().optional(),
 });
 
@@ -268,6 +276,7 @@ const contactSchema = z.object({
 });
 
 const galleryContactSchema = z.object({
+    title: requiredStringSchema(),
     firstName: z.string().optional(),
     lastName: z.string().optional(),
     emails: optionalEmailSchema(),
@@ -283,7 +292,7 @@ const galleryContactSchema = z.object({
 });
 
 const galleryCertificateSchema = z.object({
-    title: z.string().optional(),
+    title: requiredStringSchema(),
     description: z.string().optional(),
     uploadedFileId: z.union([z.string(), z.array(z.string())]).optional().nullable(),
     removedFileIds: z.union([z.string(), z.array(z.string())]).optional().nullable(),
@@ -291,7 +300,7 @@ const galleryCertificateSchema = z.object({
 });
 
 const galleryProductSchema = z.object({
-    title: z.string().optional(),
+    title: requiredStringSchema(),
     description: z.string().optional(),
     uploadedFileId: z.union([z.string(), z.array(z.string())]).optional().nullable(),
     removedFileIds: z.union([z.string(), z.array(z.string())]).optional().nullable(),
@@ -299,7 +308,7 @@ const galleryProductSchema = z.object({
 });
 
 const gallerySliderSchema = z.object({
-    title: z.string().optional(),
+    title: requiredStringSchema(),
     description: z.string().optional(),
     uploadedFileId: z.union([z.string(), z.array(z.string())]).optional().nullable(),
     removedFileIds: z.union([z.string(), z.array(z.string())]).optional().nullable(),
@@ -307,7 +316,7 @@ const gallerySliderSchema = z.object({
 });
 
 const galleryCatalogSchema = z.object({
-    title: z.string().optional(),
+    title: requiredStringSchema(),
     description: z.string().optional(),
     uploadedFileId: z.union([z.string(), z.array(z.string())]).optional().nullable(),
     removedFileIds: z.union([z.string(), z.array(z.string())]).optional().nullable(),
@@ -315,7 +324,7 @@ const galleryCatalogSchema = z.object({
 });
 
 const galleryDocumentSchema = z.object({
-    title: z.string().optional(),
+    title: requiredStringSchema(),
     description: z.string().optional(),
     uploadedFileId: z.union([z.string(), z.array(z.string())]).optional().nullable(),
     removedFileIds: z.union([z.string(), z.array(z.string())]).optional().nullable(),
@@ -323,7 +332,7 @@ const galleryDocumentSchema = z.object({
 });
 
 const galleryVideoSchema = z.object({
-    title: z.string().optional(),
+    title: requiredStringSchema(),
     description: z.string().optional(),
     uploadedFileId: z.union([z.string(), z.array(z.string())]).optional().nullable(),
     removedFileIds: z.union([z.string(), z.array(z.string())]).optional().nullable(),
@@ -331,7 +340,7 @@ const galleryVideoSchema = z.object({
 });
 
 const galleryOfficeEnvironmentSchema = z.object({
-    title: z.string().optional(),
+    title: requiredStringSchema(),
     description: z.string().optional(),
     uploadedFileId: z.union([z.string(), z.array(z.string())]).optional().nullable(),
     removedFileIds: z.union([z.string(), z.array(z.string())]).optional().nullable(),
@@ -408,25 +417,45 @@ const companyBrandSchema = z.object({
     brandImage: z.string().optional()
 });
 
+const requiredSubcategorySchema = z
+    .union([subcategorySchema, z.null()])
+    .refine((value) => value !== null, {
+        message: validationMessages.required,
+    });
+
+const requiredCompanyTypeSchema = z
+    .union([companyTypeSchema, z.null()])
+    .refine((value) => value !== null, {
+        message: validationMessages.required,
+    });
+
+const requiredEstablishYearSchema = z
+    .string()
+    .trim()
+    .min(1, { message: validationMessages.required })
+    .regex(/^\d{4}$/, { message: 'سال تأسیس باید یک عدد ۴ رقمی باشد' });
+
 export const companyFormSchema = z.object({
-    brands: z.array(companyBrandSchema).optional(),
+    brands: z.array(companyBrandSchema).max(50, {
+        message: 'حداکثر ۵۰ نام تجاری قابل ثبت است',
+    }).optional(),
     ceo: requiredStringSchema(),
     ceoPhoneNumber: optionalMobilePhoneSchema(),
     companyName: requiredStringSchema(),
     companyNameEn: requiredStringSchema(),
     companyStakeHolders: z.string().optional(),
-    specialLineNumber: optionalLandlineSchema(),
+    specialLineNumber: optionalDigitsSchema(),
     owner: z.string().optional(),
     answerName: z.string().optional(),
     history: z.string().optional(),
     visit: z.number().optional(),
-    buildingArea: z.string().optional(),
-    landArea: z.string().optional(),
+    buildingArea: optionalNumberSchema(),
+    landArea: optionalNumberSchema(),
     holding: z.string().optional(),
     description: z.string().optional(),
     advertisingSlogan: z.string().optional(),
-    employeesCount: z.string().optional(),
-    companyType: companyTypeSchema.optional(),
+    employeesCount: optionalDigitsSchema(),
+    companyType: requiredCompanyTypeSchema,
     companyTypeOther: z.string().optional(),
     // backgroundImage: z.array(z.instanceof(File)).optional(),
     logo: z.string().optional(),
@@ -434,7 +463,7 @@ export const companyFormSchema = z.object({
     //     message: 'حداکثر حجم فایل باید ۲۰ مگابایت باشد',
     // }).nullable().optional(),
     subjectOfActivity: z.string().optional(),
-    establishDate: z.string().optional(),
+    establishDate: requiredEstablishYearSchema,
     rawMaterialsOrigin: z.string().optional(),
     keyWords: z.string().optional(),
     tags: z.string().optional(),
@@ -446,13 +475,25 @@ export const companyFormSchema = z.object({
     mainBrandEn: requiredStringSchema(),
     companyBrands: z.array(z.string()).optional(),
     location: locationSchema.optional(),
-    factoryTels: z.array(telSchema).optional(),
-    factoryFaxes: z.array(telSchema).optional(),
-    officeTels: z.array(telSchema).optional(),
-    officeFaxes: z.array(telSchema).optional(),
+    factoryTels: z.array(requiredTelSchema).min(1, {
+        message: validationMessages.required,
+    }).max(3, {
+        message: 'حداکثر ۳ تلفن کارخانه قابل ثبت است',
+    }),
+    factoryFaxes: z.array(optionalTelSchema).max(3, {
+        message: 'حداکثر ۳ فکس کارخانه قابل ثبت است',
+    }).optional(),
+    officeTels: z.array(requiredTelSchema).min(1, {
+        message: validationMessages.required,
+    }).max(3, {
+        message: 'حداکثر ۳ تلفن دفتر مرکزی قابل ثبت است',
+    }),
+    officeFaxes: z.array(optionalTelSchema).max(3, {
+        message: 'حداکثر ۳ فکس دفتر مرکزی قابل ثبت است',
+    }).optional(),
     telegramId: z.string().optional(),
     telegramPhoneNo: optionalMobilePhoneSchema(),
-    smsNumber: optionalMobilePhoneSchema(),
+    smsNumber: optionalDigitsSchema(),
     hotlineNumber: optionalLandlineSchema(),
     whatsAppId: z.string().optional(),
     whatsAppPhoneNo: optionalMobilePhoneSchema(),
@@ -462,10 +503,15 @@ export const companyFormSchema = z.object({
     rubikaPhoneNo: optionalMobilePhoneSchema(),
     skypeId: z.string().optional(),
     website: optionalWebsiteSchema(),
-    contacts: z.array(contactSchema).optional(),
-    emails: optionalEmailArraySchema(),
+    contacts: z.array(contactSchema).max(10, {
+        message: 'حداکثر ۱۰ مخاطب قابل ثبت است',
+    }).optional(),
+    emails: optionalEmailArraySchema().refine(
+        (emails) => !emails || emails.length <= 3,
+        { message: 'حداکثر ۳ ایمیل قابل ثبت است' }
+    ),
     productAvailability: z.string().optional(),
-    subcategory: subcategorySchema.optional(),
+    subcategory: requiredSubcategorySchema,
     productTitles: z.string().optional(),
     outSourcedProductTitles: z.string().optional(),
     productsDescription: z.string().optional(),
@@ -478,7 +524,7 @@ export const companyFormSchema = z.object({
     factoryPoBox: optionalPostalCodeSchema(),
     officePoBox: optionalPostalCodeSchema(),
     factoryLocation: requiredStringSchema(),
-    officeLocation: requiredStringSchema(),
+    officeLocation: z.string().optional(),
     officeCity: z.string().optional(),
     officeState: z.string().optional(),
     gallery: gallerySchema.optional(),
@@ -493,6 +539,31 @@ export const companyFormSchema = z.object({
     timelyInfoUpdate: z.boolean().nullable().optional(),
     sendRelatedNewsToPortal: z.boolean().nullable().optional(),
     acceptStudentGroupVisit: z.boolean().nullable().optional(),
+}).superRefine((data, ctx) => {
+    if (data.productAvailability === '1') {
+        if (!data.productTitles?.trim()) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ['productTitles'],
+                message: validationMessages.required,
+            });
+        }
+        if (!data.productsDescription?.trim()) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ['productsDescription'],
+                message: validationMessages.required,
+            });
+        }
+    }
+
+    if (data.productAvailability === '2' && !data.products?.length) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['products'],
+            message: 'ثبت حداقل یک محصول یا خدمت الزامی است',
+        });
+    }
 });
 
 export type CreateCompanyInput = z.infer<typeof companyFormSchema>;
@@ -514,12 +585,14 @@ export function defaultValues(company?: CreateCompanyInput | null) {
         description: company?.description ?? '',
         advertisingSlogan: company?.advertisingSlogan ?? '',
         employeesCount: company?.employeesCount ?? '',
-        companyType: company?.companyType ?? '',
+        companyType: company?.companyType ?? null,
         companyTypeOther: company?.companyTypeOther ?? '',
         // backgroundImage: company?.backgroundImage ?? '',
         // logo: company?.logo ?? '',
         subjectOfActivity: company?.subjectOfActivity ?? '',
-        establishDate: company?.establishDate ?? '',
+        establishDate: company?.establishDate
+            ? String(company.establishDate).match(/\d{4}/)?.[0] ?? ''
+            : '',
         rawMaterialsOrigin: company?.rawMaterialsOrigin ?? '',
         keyWords: company?.keyWords ?? '',
         tags: company?.tags ?? '',
