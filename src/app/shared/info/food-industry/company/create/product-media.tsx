@@ -1,709 +1,287 @@
-// // import dynamic from 'next/dynamic';
-// // import PencilIcon from '@/components/icons/pencil';
-// // import { Textarea } from '@/components/ui/textarea';
-// // import { useState } from 'react';
-// // import { Controller, useFieldArray, useFormContext } from 'react-hook-form';
-// // import FormGroup from '@/app/shared/form-group';
-// // import cn from '@/utils/class-names';
-// // import { ActionIcon, Button, Text } from 'rizzui';
-// // import { HiXMark } from 'react-icons/hi2';
-// // import ProductAvailability from './product-availability';
-// // import ProductAccordion from './product-accordion';
-// // import 'swiper/css';
-// // import 'swiper/css/navigation';
-// // import 'swiper/css/pagination';
-// //
-// // interface ProductMediaProps {
-// //   className?: string;
-// // }
-// //
-// // export default function ProductMedia({ className }: ProductMediaProps) {
-// //   const {
-// //     control,
-// //     formState: { errors },
-// //     register,
-// //     watch,
-// //     getValues,
-// //   } = useFormContext();
-// //
-// //   const {
-// //     fields: products,
-// //     append: appendProduct,
-// //     remove: removeProduct,
-// //     update: updateProduct,
-// //   } = useFieldArray({ control, name: 'products' });
-// //
-// //   const {
-// //     fields: outSourcedProducts,
-// //     append: appendOutSourcedProduct,
-// //     remove: removeOutSourcedProduct,
-// //     update: updateOutSourcedProduct,
-// //   } = useFieldArray({ control, name: 'outSourcedProducts' });
-// //
-// //   const [modalState, setModalState] = useState({ isOpen: false, type: 0 });
-// //   const watchedProductAvailability = watch('productAvailability', '2');
-// //
-// //   // Function to handle image selection/upload - would need to be implemented based on your backend
-// //   const handleImageSelection = async (index, files) => {
-// //     // This is a placeholder - implement your actual image upload logic here
-// //     console.log("Uploading files for product index", index, files);
-// //
-// //     // Return some kind of identifiers for the uploaded files
-// //     // In a real implementation, this would call your upload API and return the file IDs
-// //     return files.map((file, i) => ({
-// //       id: `temp-${Date.now()}-${i}`,
-// //       name: file.name,
-// //       filePath: URL.createObjectURL(file)
-// //     }));
-// //   };
-// //
-// //   return (
-// //     <FormGroup
-// //       title="مدیریت محصولات و خدمات"
-// //       description="محصولات و خدمات شرکت خود را ثبت کنید"
-// //       className={cn(className)}
-// //     >
-// //       <ProductAvailability />
-// //
-// //       {/* Preview Buttons */}
-// //       {watchedProductAvailability === '1' ? (
-// //         <>
-// //           <Textarea label="عنوان محصولات (خدمات)" {...register('productTitles')} error={errors.productTitles?.message as string} rows={3} />
-// //           <Textarea label="توضیحات محصولات (خدمات)" {...register('productsDescription')} error={errors.productsDescription?.message as string} rows={3} />
-// //           <Textarea label="عنوان محصولات برون‌سپاری" {...register('outSourcedProductTitles')} error={errors.outSourcedProductTitles?.message as string} rows={3} />
-// //         </>
-// //       ) : (
-// //         <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-// //           {/* Fixed button 1 - Better padding and height control */}
-// //           <div className="flex flex-col items-stretch p-8 bg-white rounded-lg shadow">
-// //             <Button
-// //               variant="outline"
-// //               color="secondary"
-// //               className="w-full h-auto min-h-16 px-4 py-6 text-base font-medium text-center break-words flex flex-col items-center justify-center"
-// //               onClick={() => setModalState({ isOpen: true, type: 0 })}
-// //             >
-// //               <span className="block">محصولات و خدمات</span>
-// //             </Button>
-// //             <Text className="mt-4 text-sm text-gray-500 text-center">ثبت شده: {products.length}</Text>
-// //           </div>
-// //
-// //           {/* Fixed button 2 - Better padding and height control */}
-// //           <div className="flex flex-col items-stretch p-8 bg-white rounded-lg shadow">
-// //             <Button
-// //               variant="outline"
-// //               color="secondary"
-// //               className="w-full h-auto min-h-16 px-4 py-6 text-base font-medium text-center break-words flex flex-col items-center justify-center"
-// //               onClick={() => setModalState({ isOpen: true, type: 1 })}
-// //             >
-// //               <span className="block">محصولات برون‌سپاری‌شده</span>
-// //             </Button>
-// //             <Text className="mt-4 text-sm text-gray-500 text-center">ثبت شده: {outSourcedProducts.length}</Text>
-// //           </div>
-// //         </div>
-// //       )}
-// //
-// //       {/* Modal */}
-// //       <Modal
-// //         isOpen={modalState.isOpen}
-// //         onClose={() => setModalState({ ...modalState, isOpen: false })}
-// //         className="flex items-center justify-center p-4"
-// //       >
-// //         <div className="w-full max-w-4xl bg-white dark:bg-gray-900 rounded-2xl shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
-// //           <div className="flex justify-between items-center border-b px-6 py-4">
-// //             <Text className="text-lg font-semibold">{modalState.type === 1 ? 'محصولات برون‌سپاری‌شده' : 'محصولات و خدمات'}</Text>
-// //             <ActionIcon size="lg" onClick={() => setModalState({ ...modalState, isOpen: false })}>
-// //               <HiXMark className="h-6 w-6" />
-// //             </ActionIcon>
-// //           </div>
-// //           <div className="px-6 py-5 overflow-auto flex-1">
-// //             <ProductAccordion
-// //               products={modalState.type === 1 ? outSourcedProducts : products}
-// //               append={modalState.type === 1 ? appendOutSourcedProduct : appendProduct}
-// //               remove={modalState.type === 1 ? removeOutSourcedProduct : removeProduct}
-// //               update={modalState.type === 1 ? updateOutSourcedProduct : updateProduct}
-// //               handleImageSelection={handleImageSelection}
-// //               dataObjectName={modalState.type === 1 ? 'outSourcedProducts' : 'products'}
-// //             />
-// //           </div>
-// //         </div>
-// //       </Modal>
-// //     </FormGroup>
-// //   );
-// // }
-// //
-// // // You'll need to implement or import Modal component if it's not already available
-// // const Modal = ({ isOpen, onClose, children, className }) => {
-// //   if (!isOpen) return null;
-// //
-// //   return (
-// //     <div className="fixed inset-0 z-50 overflow-y-auto">
-// //       <div className="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
-// //         <div className="fixed inset-0 bg-black bg-opacity-30 transition-opacity" onClick={onClose} />
-// //         <div className={`relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 ${className}`}>
-// //           {children}
-// //         </div>
-// //       </div>
-// //     </div>
-// //   );
-// // };
-//
-// import dynamic from 'next/dynamic';
-// import PencilIcon from '@/components/icons/pencil';
-// import { Textarea } from '@/components/ui/textarea';
-// import { useState, useCallback, useEffect } from 'react';
-// import { Controller, useFieldArray, useFormContext } from 'react-hook-form';
-// import FormGroup from '@/app/shared/form-group';
-// import cn from '@/utils/class-names';
-// import { ActionIcon, Button, Text } from 'rizzui';
-// import { HiXMark } from 'react-icons/hi2';
-// import ProductAvailability from './product-availability';
-// import ProductAccordion from './product-accordion';
-// import 'swiper/css';
-// import 'swiper/css/navigation';
-// import 'swiper/css/pagination';
-// import useFileUploadService from '@/hooks/useFileUploadService';
-// import useProductService from '@/hooks/useProductService';
-//
-// interface ProductMediaProps {
-//   className?: string;
-// }
-//
-// export default function ProductMedia({ className }: ProductMediaProps) {
-//   const {
-//     control,
-//     formState: { errors },
-//     register,
-//     watch,
-//     getValues,
-//     setValue,
-//   } = useFormContext();
-//
-//   const fileUploadService = useFileUploadService();
-//   const productService = useProductService();
-//
-//   const {
-//     fields: products,
-//     append: appendProduct,
-//     remove: removeProduct,
-//     update: updateProduct,
-//   } = useFieldArray({ control, name: 'products', keyName: 'fieldId' });
-//
-//   const {
-//     fields: outSourcedProducts,
-//     append: appendOutSourcedProduct,
-//     remove: removeOutSourcedProduct,
-//     update: updateOutSourcedProduct,
-//   } = useFieldArray({ control, name: 'outSourcedProducts', keyName: 'fieldId' });
-//
-//   const [modalState, setModalState] = useState({ isOpen: false, type: 0 });
-//   const watchedProductAvailability = watch('productAvailability', '2');
-//
-//   // This is a helper function to handle file uploads
-//   const handleImageSelection = useCallback(async (index, files) => {
-//     try {
-//       if (!files || files.length === 0) return [];
-//
-//       // Use the file upload service from our hook
-//       const uploadPromises = Array.from(files).map(file => {
-//         const formData = new FormData();
-//         formData.append('files', file);
-//         formData.append('fileServiceType', 'PRODUCT_PICTURE');
-//         return fileUploadService.uploadFile(formData);
-//       });
-//
-//       const results = await Promise.all(uploadPromises);
-//
-//       // Return file identifiers in a format your backend expects
-//       return results.map(res => ({
-//         id: res.data.id,
-//         name: res.data.name,
-//         filePath: res.data.filePath,
-//         url: res.data.url || fileUploadService.getFileUrl(res.data.filePath)
-//       }));
-//     } catch (error) {
-//       console.error('Error uploading product images:', error);
-//       return [];
-//     }
-//   }, [fileUploadService]);
-//
-//   // // Show first panel automatically on initial load if no products exist
-//   // useEffect(() => {
-//   //   if (modalState.isOpen === false && watchedProductAvailability === '2' &&
-//   //       products.length === 0 && outSourcedProducts.length === 0) {
-//   //     setTimeout(() => {
-//   //       setModalState({ isOpen: true, type: 0 });
-//   //     }, 500);
-//   //   }
-//   // }, [products.length, outSourcedProducts.length, modalState.isOpen, watchedProductAvailability]);
-//
-//   return (
-//       <FormGroup
-//           title="مدیریت محصولات و خدمات"
-//           description="محصولات و خدمات شرکت خود را ثبت کنید"
-//           className={cn(className)}
-//       >
-//         <ProductAvailability />
-//
-//         {/* Products UI based on availability selection */}
-//         {watchedProductAvailability === '1' ? (
-//             <>
-//               <Textarea
-//                   label="عنوان محصولات (خدمات)"
-//                   {...register('productTitles')}
-//                   error={errors.productTitles?.message as string}
-//                   rows={3}
-//                   placeholder="محصولات یا خدمات اصلی شرکت را وارد کنید"
-//               />
-//               <Textarea
-//                   label="توضیحات محصولات (خدمات)"
-//                   {...register('productsDescription')}
-//                   error={errors.productsDescription?.message as string}
-//                   rows={3}
-//                   placeholder="توضیحات تکمیلی در مورد محصولات یا خدمات"
-//               />
-//               <Textarea
-//                   label="عنوان محصولات برون‌سپاری"
-//                   {...register('outSourcedProductTitles')}
-//                   error={errors.outSourcedProductTitles?.message as string}
-//                   rows={3}
-//                   placeholder="محصولات یا خدماتی که به صورت برون‌سپاری ارائه می‌کنید"
-//               />
-//             </>
-//         ) : (
-//             <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-//               {/* Main Products Button */}
-//               <div className="flex flex-col items-stretch rounded-lg border border-gray-200 bg-gray-0 p-6 shadow-sm transition-all hover:shadow-md dark:border-gray-300 dark:bg-gray-50">
-//                 <Button
-//                     variant="outline"
-//                     color="primary"
-//                     className="w-full h-auto min-h-16 px-4 py-6 text-base font-medium text-center break-words flex flex-col items-center justify-center"
-//                     onClick={() => setModalState({ isOpen: true, type: 0 })}
-//                 >
-//                   <span className="block">محصولات و خدمات</span>
-//                   <span className="mt-1 text-sm font-normal text-gray-500">مدیریت محصولات اصلی شرکت</span>
-//                 </Button>
-//                 <div className="mt-4 rounded-lg bg-gray-50 p-3 dark:bg-gray-100">
-//                   <Text className="text-sm text-gray-600 text-center">
-//                     <span className="font-medium text-gray-800">{products.length}</span> محصول ثبت شده
-//                   </Text>
-//                   {products.length > 0 && (
-//                       <div className="mt-2 flex flex-wrap gap-2 justify-center">
-//                         {products.slice(0, 3).map((product, index) => (
-//                             <span key={index} className="inline-flex items-center rounded-full bg-primary-50 px-2.5 py-0.5 text-xs font-medium text-primary-700">
-//                       {product.name}
-//                     </span>
-//                         ))}
-//                         {products.length > 3 && (
-//                             <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
-//                       +{products.length - 3}
-//                     </span>
-//                         )}
-//                       </div>
-//                   )}
-//                 </div>
-//               </div>
-//
-//               {/* Outsourced Products Button */}
-//               <div className="flex flex-col items-stretch rounded-lg border border-gray-200 bg-gray-0 p-6 shadow-sm transition-all hover:shadow-md dark:border-gray-300 dark:bg-gray-50">
-//                 <Button
-//                     variant="outline"
-//                     color="secondary"
-//                     className="w-full h-auto min-h-16 px-4 py-6 text-base font-medium text-center break-words flex flex-col items-center justify-center"
-//                     onClick={() => setModalState({ isOpen: true, type: 1 })}
-//                 >
-//                   <span className="block">محصولات برون‌سپاری‌شده</span>
-//                   <span className="mt-1 text-sm font-normal text-gray-500">محصولاتی که توسط دیگران تولید می‌شود</span>
-//                 </Button>
-//                 <div className="mt-4 rounded-lg bg-gray-50 p-3 dark:bg-gray-100">
-//                   <Text className="text-sm text-gray-600 text-center">
-//                     <span className="font-medium text-gray-800">{outSourcedProducts.length}</span> محصول ثبت شده
-//                   </Text>
-//                   {outSourcedProducts.length > 0 && (
-//                       <div className="mt-2 flex flex-wrap gap-2 justify-center">
-//                         {outSourcedProducts.slice(0, 3).map((product, index) => (
-//                             <span key={index} className="inline-flex items-center rounded-full bg-secondary-50 px-2.5 py-0.5 text-xs font-medium text-secondary-700">
-//                       {product.name}
-//                     </span>
-//                         ))}
-//                         {outSourcedProducts.length > 3 && (
-//                             <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
-//                       +{outSourcedProducts.length - 3}
-//                     </span>
-//                         )}
-//                       </div>
-//                   )}
-//                 </div>
-//               </div>
-//             </div>
-//         )}
-//
-//         {/* Modal for Product Management */}
-//         <Modal
-//             isOpen={modalState.isOpen}
-//             onClose={() => setModalState({ ...modalState, isOpen: false })}
-//             className="flex items-center justify-center p-4"
-//         >
-//           <div className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-gray-0 shadow-xl dark:bg-gray-100">
-//             <div className="flex justify-between items-center border-b px-6 py-4">
-//               <Text className="text-lg font-semibold">
-//                 {modalState.type === 1 ? 'محصولات برون‌سپاری‌شده' : 'محصولات و خدمات'}
-//               </Text>
-//               <ActionIcon
-//                   size="lg"
-//                   variant="text"
-//                   onClick={() => setModalState({ ...modalState, isOpen: false })}
-//                   className="hover:bg-gray-100 rounded-full"
-//               >
-//                 <HiXMark className="h-6 w-6" />
-//               </ActionIcon>
-//             </div>
-//             <div className="px-6 py-5 overflow-auto flex-1">
-//               <ProductAccordion
-//                   products={modalState.type === 1 ? outSourcedProducts : products}
-//                   append={modalState.type === 1 ? appendOutSourcedProduct : appendProduct}
-//                   remove={modalState.type === 1 ? removeOutSourcedProduct : removeProduct}
-//                   update={modalState.type === 1 ? updateOutSourcedProduct : updateProduct}
-//                   handleImageSelection={handleImageSelection}
-//                   dataObjectName={modalState.type === 1 ? 'outSourcedProducts' : 'products'}
-//               />
-//             </div>
-//             <div className="px-6 py-4 border-t">
-//               <div className="flex justify-end">
-//                 <Button
-//                     variant="outline"
-//                     className="me-3"
-//                     onClick={() => setModalState({ ...modalState, isOpen: false })}
-//                 >
-//                   بستن
-//                 </Button>
-//                 <Button
-//                     variant="solid"
-//                     color="primary"
-//                     onClick={() => {
-//                       // When closing the modal, process the products for submission
-//                       if (modalState.type === 0) {
-//                         // Process regular products for submission
-//                         const processedProducts = productService.prepareProductsForSubmission(
-//                             getValues('products') || [],
-//                             []
-//                         ).products;
-//                         setValue('products', processedProducts);
-//                       } else {
-//                         // Process outsourced products for submission
-//                         const processedProducts = productService.prepareProductsForSubmission(
-//                             [],
-//                             getValues('outSourcedProducts') || []
-//                         ).outSourcedProducts;
-//                         setValue('outSourcedProducts', processedProducts);
-//                       }
-//                       setModalState({ ...modalState, isOpen: false });
-//                     }}
-//                 >
-//                   تایید و بازگشت
-//                 </Button>
-//               </div>
-//             </div>
-//           </div>
-//         </Modal>
-//       </FormGroup>
-//   );
-// }
-//
-// // Modal component implementation
-// const Modal = ({ isOpen, onClose, children, className }) => {
-//   if (!isOpen) return null;
-//
-//   return (
-//       <div className="fixed inset-0 z-50 overflow-y-auto">
-//         <div className="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
-//           <div
-//               className="fixed inset-0 bg-black bg-opacity-30 transition-opacity"
-//               onClick={onClose}
-//           />
-//           <div className={`relative transform overflow-hidden rounded-lg bg-gray-0 text-left shadow-xl transition-all dark:bg-gray-100 sm:my-8 ${className}`}>
-//             {children}
-//           </div>
-//         </div>
-//       </div>
-//   );
-// };
-import { STATIC_FILES_URL } from '@/config/api.config';
-import dynamic from 'next/dynamic';
-import PencilIcon from '@/components/icons/pencil';
+import { useState } from 'react';
+import { useFieldArray, useFormContext } from 'react-hook-form';
+import { Modal, Button } from 'rizzui';
+import { Plus, ArrowLeft, X, Package, Boxes } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
-import { useState, useCallback, useEffect } from 'react';
-import { Controller, useFieldArray, useFormContext } from 'react-hook-form';
-import FormGroup from '@/app/shared/form-group';
 import cn from '@/utils/class-names';
-import { ActionIcon, Button, Text } from 'rizzui';
-import { HiXMark } from 'react-icons/hi2';
 import ProductAvailability from './product-availability';
 import ProductAccordion from './product-accordion';
-import 'swiper/css';
-import 'swiper/css/navigation';
-import 'swiper/css/pagination';
-import useFileUploadService from '@/hooks/useFileUploadService';
-import useProductService from '@/hooks/useProductService';
+import { groupProducts, GroupedProduct } from './product-groups';
+import toast from 'react-hot-toast';
+import styles from './product-theme.module.css';
 
-interface ProductMediaProps {
-  className?: string;
-}
-
-export default function ProductMedia({ className }: ProductMediaProps) {
+export default function ProductMedia({ className }: { className?: string }) {
   const {
     control,
-    formState: { errors },
     register,
     watch,
     getValues,
-    setValue,
+    setError,
+    clearErrors,
+    formState: { errors },
   } = useFormContext();
+  const products = useFieldArray({
+    control,
+    name: 'products',
+    keyName: 'fieldId',
+  });
+  const outsourced = useFieldArray({
+    control,
+    name: 'outSourcedProducts',
+    keyName: 'fieldId',
+  });
+  const [modalType, setModalType] = useState<0 | 1 | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const mode = watch('productAvailability', '2');
+  const currentProducts: GroupedProduct[] = watch('products') || [];
+  const currentOutsourced: GroupedProduct[] = watch('outSourcedProducts') || [];
+  const active = modalType === 1 ? outsourced : products;
+  const fieldName = modalType === 1 ? 'outSourcedProducts' : 'products';
+  const close = () => {
+    if (!uploading) setModalType(null);
+  };
 
-  const fileUploadService = useFileUploadService();
-  const productService = useProductService();
-
-  const {
-    fields: products,
-    append: appendProduct,
-    remove: removeProduct,
-    update: updateProduct,
-  } = useFieldArray({ control, name: 'products', keyName: 'fieldId' });
-
-  const {
-    fields: outSourcedProducts,
-    append: appendOutSourcedProduct,
-    remove: removeOutSourcedProduct,
-    update: updateOutSourcedProduct,
-  } = useFieldArray({ control, name: 'outSourcedProducts', keyName: 'fieldId' });
-
-  const [modalState, setModalState] = useState({ isOpen: false, type: 0 });
-  const watchedProductAvailability = watch('productAvailability', '2');
-
-  // This is a helper function to handle file uploads
-  const handleImageSelection = useCallback(async (index: number, files: File[]) => {
-    try {
-      if (!files || files.length === 0) return [];
-
-      // Upload files one by one using the correct endpoint
-      const uploadPromises = Array.from(files).map(file => {
-        const formData = new FormData();
-        formData.append('files', file); // Use 'file' instead of 'files'
-        formData.append('fileServiceType', 'PRODUCT_PICTURE');
-        return fileUploadService.uploadFile(formData);
-      });
-
-      const results = await Promise.all(uploadPromises);
-
-      // Return file identifiers in the format expected by the backend
-      return results.map(res => ({
-        id: res.data.id,
-        name: res.data.filename || res.data.name,
-        filePath: res.data.filePath,
-        fileId: res.data.id,
-        url: res.data.url || `${STATIC_FILES_URL}${res.data.filePath}`
-      }));
-    } catch (error) {
-      console.error('Error uploading product images:', error);
-      // Show error message to user
-      return [];
+  const confirm = () => {
+    const rows: GroupedProduct[] = getValues(fieldName) || [];
+    clearErrors(fieldName);
+    let invalid = false;
+    rows.forEach((row, index) => {
+      if (!row.categoryType?.trim()) {
+        setError(`${fieldName}.${index}.categoryType`, {
+          type: 'required',
+          message: 'نام دسته‌بندی را وارد کنید',
+        });
+        invalid = true;
+      }
+      if (!row.name?.trim()) {
+        setError(`${fieldName}.${index}.name`, {
+          type: 'required',
+          message: 'عنوان محصول را وارد کنید',
+        });
+        invalid = true;
+      }
+      if (modalType === 1 && !row.pictures?.length) {
+        setError(`${fieldName}.${index}.pictures`, {
+          type: 'required',
+          message: 'یک تصویر برای دسته‌بندی انتخاب کنید',
+        });
+        invalid = true;
+      }
+    });
+    const categoryNames = new Set<string>();
+    groupProducts(rows).forEach((group) => {
+      const name = group.name.trim();
+      if (name && categoryNames.has(name)) {
+        setError(`${fieldName}.${group.indices[0]}.categoryType`, {
+          type: 'duplicate',
+          message:
+            'این دسته‌بندی قبلاً اضافه شده؛ محصول را به همان دسته اضافه کنید',
+        });
+        invalid = true;
+      }
+      categoryNames.add(name);
+    });
+    if (invalid) {
+      toast.error(
+        modalType === 1
+          ? 'نام دسته‌بندی، تصویر آن و عنوان تمام محصولات را تکمیل کنید.'
+          : 'نام دسته‌بندی و عنوان تمام محصولات را تکمیل کنید.'
+      );
+      return;
     }
-  }, [fileUploadService]);
+    close();
+  };
 
   return (
-      <FormGroup
-          title="مدیریت محصولات و خدمات"
-          description="محصولات و خدمات شرکت خود را ثبت کنید"
-          className={cn(className)}
-      >
-        <ProductAvailability />
-
-        {/* Products UI based on availability selection */}
-        {watchedProductAvailability === '1' ? (
-            <>
-              <Textarea
-                  label="عنوان محصولات (خدمات)*"
-                  {...register('productTitles')}
-                  error={errors.productTitles?.message as string}
-                  rows={3}
-                  placeholder="محصولات یا خدمات اصلی شرکت را وارد کنید"
-              />
-              <Textarea
-                  label="توضیحات محصولات (خدمات)*"
-                  {...register('productsDescription')}
-                  error={errors.productsDescription?.message as string}
-                  rows={3}
-                  placeholder="توضیحات تکمیلی در مورد محصولات یا خدمات"
-              />
-              <Textarea
-                  label="عنوان محصولات برون‌سپاری"
-                  {...register('outSourcedProductTitles')}
-                  error={errors.outSourcedProductTitles?.message as string}
-                  rows={3}
-                  placeholder="محصولات یا خدماتی که به صورت برون‌سپاری ارائه می‌کنید"
-              />
-            </>
-        ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-              {/* Main Products Button */}
-              <div className="flex flex-col items-stretch rounded-lg border border-gray-200 bg-gray-0 p-6 shadow-sm transition-all hover:shadow-md dark:border-gray-300 dark:bg-gray-50">
-                <Button
-                    variant="outline"
-                    color="primary"
-                    className="w-full h-auto min-h-16 px-4 py-6 text-base font-medium text-center break-words flex flex-col items-center justify-center"
-                    onClick={() => setModalState({ isOpen: true, type: 0 })}
-                >
-                  <span className="block">محصولات و خدمات</span>
-                  <span className="mt-1 text-sm font-normal text-gray-500">مدیریت محصولات اصلی شرکت</span>
-                </Button>
-                <div className="mt-4 rounded-lg bg-gray-50 p-3 dark:bg-gray-100">
-                  <Text className="text-sm text-gray-600 text-center">
-                    <span className="font-medium text-gray-800">{products.length}</span> محصول ثبت شده
-                  </Text>
-                  {products.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-2 justify-center">
-                        {products.slice(0, 3).map((product, index) => (
-                            <span key={product.fieldId || index} className="inline-flex items-center rounded-full bg-primary-50 px-2.5 py-0.5 text-xs font-medium text-primary-700">
-                      {product.name}
-                    </span>
-                        ))}
-                        {products.length > 3 && (
-                            <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
-                      +{products.length - 3}
-                    </span>
-                        )}
-                      </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Outsourced Products Button */}
-              <div className="flex flex-col items-stretch rounded-lg border border-gray-200 bg-gray-0 p-6 shadow-sm transition-all hover:shadow-md dark:border-gray-300 dark:bg-gray-50">
-                <Button
-                    variant="outline"
-                    color="secondary"
-                    className="w-full h-auto min-h-16 px-4 py-6 text-base font-medium text-center break-words flex flex-col items-center justify-center"
-                    onClick={() => setModalState({ isOpen: true, type: 1 })}
-                >
-                  <span className="block">محصولات برون‌سپاری‌شده</span>
-                  <span className="mt-1 text-sm font-normal text-gray-500">محصولاتی که توسط دیگران تولید می‌شود</span>
-                </Button>
-                <div className="mt-4 rounded-lg bg-gray-50 p-3 dark:bg-gray-100">
-                  <Text className="text-sm text-gray-600 text-center">
-                    <span className="font-medium text-gray-800">{outSourcedProducts.length}</span> محصول ثبت شده
-                  </Text>
-                  {outSourcedProducts.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-2 justify-center">
-                        {outSourcedProducts.slice(0, 3).map((product, index) => (
-                            <span key={product.fieldId || index} className="inline-flex items-center rounded-full bg-secondary-50 px-2.5 py-0.5 text-xs font-medium text-secondary-700">
-                      {product.name}
-                    </span>
-                        ))}
-                        {outSourcedProducts.length > 3 && (
-                            <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
-                      +{outSourcedProducts.length - 3}
-                    </span>
-                        )}
-                      </div>
-                  )}
-                </div>
-              </div>
+    <div className={cn(styles.theme, 'space-y-6', className)}>
+      <div>
+        <h4 className="text-base font-semibold">مدیریت محصولات و خدمات</h4>
+        <p className="mt-2 text-sm text-gray-500">
+          محصولات و خدمات شرکت خود را معرفی کنید.
+        </p>
+      </div>
+      <ProductAvailability />
+      <div className="rounded-2xl border border-gray-200 p-4 sm:p-6">
+        {mode === '1' ? (
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div className="col-span-full">
+              <h5 className="font-semibold">معرفی کلی محصولات</h5>
+              <p className="mt-1 text-sm text-gray-500">
+                عناوین و توضیحات محصولات و خدمات شرکت را بنویسید.
+              </p>
             </div>
-        )}
-
-        {/* Modal for Product Management */}
-        <Modal
-            isOpen={modalState.isOpen}
-            onClose={() => setModalState({ ...modalState, isOpen: false })}
-            className="flex items-center justify-center p-4"
-        >
-          <div className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-gray-0 shadow-xl dark:bg-gray-100">
-            <div className="flex justify-between items-center border-b px-6 py-4">
-              <Text className="text-lg font-semibold">
-                {modalState.type === 1 ? 'محصولات برون‌سپاری‌شده' : 'محصولات و خدمات'}
-              </Text>
-              <ActionIcon
-                  size="lg"
-                  variant="text"
-                  onClick={() => setModalState({ ...modalState, isOpen: false })}
-                  className="hover:bg-gray-100 rounded-full"
-              >
-                <HiXMark className="h-6 w-6" />
-              </ActionIcon>
-            </div>
-            <div className="px-6 py-5 overflow-auto flex-1">
-              <ProductAccordion
-                  products={modalState.type === 1 ? outSourcedProducts : products}
-                  append={modalState.type === 1 ? appendOutSourcedProduct : appendProduct}
-                  remove={modalState.type === 1 ? removeOutSourcedProduct : removeProduct}
-                  update={modalState.type === 1 ? updateOutSourcedProduct : updateProduct}
-                  handleImageSelection={handleImageSelection}
-                  dataObjectName={modalState.type === 1 ? 'outSourcedProducts' : 'products'}
-              />
-            </div>
-            <div className="px-6 py-4 border-t">
-              <div className="flex justify-end">
-                <Button
-                    variant="outline"
-                    className="me-3"
-                    onClick={() => setModalState({ ...modalState, isOpen: false })}
-                >
-                  بستن
-                </Button>
-                <Button
-                    variant="solid"
-                    color="primary"
-                    onClick={() => {
-                      // When closing the modal, process the products for submission
-                      if (modalState.type === 0) {
-                        // Process regular products for submission
-                        const processedProducts = productService.prepareProductsForSubmission(
-                            getValues('products') || [],
-                            []
-                        ).products;
-                        setValue('products', processedProducts);
-                      } else {
-                        // Process outsourced products for submission
-                        const processedProducts = productService.prepareProductsForSubmission(
-                            [],
-                            getValues('outSourcedProducts') || []
-                        ).outSourcedProducts;
-                        setValue('outSourcedProducts', processedProducts);
-                      }
-                      setModalState({ ...modalState, isOpen: false });
-                    }}
-                >
-                  تایید و بازگشت
-                </Button>
-              </div>
-            </div>
+            <Textarea
+              label="عنوان محصولات و خدمات *"
+              {...register('productTitles')}
+              error={errors.productTitles?.message as string}
+              rows={3}
+              placeholder="مثلاً: شیر، ماست و پنیر"
+            />
+            <Textarea
+              label="توضیحات محصولات و خدمات *"
+              {...register('productsDescription')}
+              error={errors.productsDescription?.message as string}
+              rows={3}
+              placeholder="معرفی کلی محصولات و خدمات شرکت"
+            />
+            <Textarea
+              className="col-span-full"
+              label="عنوان محصولات برون‌سپاری‌شده"
+              {...register('outSourcedProductTitles')}
+              error={errors.outSourcedProductTitles?.message as string}
+              rows={3}
+              placeholder="محصولاتی که تولید آن‌ها را به دیگران می‌سپارید (اختیاری)"
+            />
           </div>
-        </Modal>
-      </FormGroup>
-  );
-}
-
-// Modal component implementation
-interface ModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  children: React.ReactNode;
-  className?: string;
-}
-
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, children, className }) => {
-  if (!isOpen) return null;
-
-  return (
-      <div className="fixed inset-0 z-50 overflow-y-auto">
-        <div className="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
-          <div
-              className="fixed inset-0 bg-black bg-opacity-30 transition-opacity"
-              onClick={onClose}
-          />
-          <div className={`relative transform overflow-hidden rounded-lg bg-gray-0 text-left shadow-xl transition-all dark:bg-gray-100 sm:my-8 ${className}`}>
-            {children}
+        ) : (
+          <div className="space-y-4">
+            <div>
+              <h5 className="font-semibold">دسته‌بندی‌ها و محصولات شرکت</h5>
+              <p className="mt-1 text-sm leading-6 text-gray-500">
+                ابتدا دسته‌بندی بسازید و محصولات آن را اضافه کنید.
+              </p>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              {[
+                {
+                  type: 0 as const,
+                  title: 'محصولات و خدمات اصلی',
+                  description: 'محصولات تولیدی و خدمات ارائه‌شده توسط شرکت',
+                  rows: currentProducts,
+                  Icon: Package,
+                },
+                {
+                  type: 1 as const,
+                  title: 'محصولات برون‌سپاری‌شده',
+                  description: 'محصولاتی که تولید آن‌ها را به دیگران می‌سپارید',
+                  rows: currentOutsourced,
+                  Icon: Boxes,
+                },
+              ].map(({ type, title, description, rows, Icon }) => {
+                const groups = groupProducts(rows);
+                return (
+                  <div
+                    key={type}
+                    className="flex min-w-0 flex-col rounded-xl border border-gray-200 p-4 sm:p-5"
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="rounded-lg bg-primary-lighter p-2 text-primary">
+                        <Icon className="h-5 w-5" />
+                      </span>
+                      <div>
+                        <h6 className="font-semibold">{title}</h6>
+                        <p className="mt-1 text-sm leading-6 text-gray-500">
+                          {description}
+                        </p>
+                      </div>
+                    </div>
+                    <p className="my-4 text-sm text-gray-600">
+                      {groups.length.toLocaleString('fa-IR')} دسته‌بندی{' '}
+                      <span className="px-2 text-gray-300">|</span>{' '}
+                      {rows.length.toLocaleString('fa-IR')} محصول
+                    </p>
+                    {groups.length > 0 && (
+                      <div className="mb-4 flex flex-wrap gap-2">
+                        {groups.slice(0, 3).map((group) => (
+                          <span
+                            key={group.key}
+                            className="max-w-full truncate rounded-md bg-gray-50 px-2 py-1 text-xs text-gray-600"
+                          >
+                            {group.name || 'دسته‌بندی جدید'}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <Button
+                      type="button"
+                      color="primary"
+                      variant={type === 0 ? 'solid' : 'outline'}
+                      className="mt-auto w-full"
+                      onClick={() => setModalType(type)}
+                    >
+                      {rows.length ? (
+                        <ArrowLeft className="me-2 h-4 w-4" />
+                      ) : (
+                        <Plus className="me-2 h-4 w-4" />
+                      )}
+                      {rows.length
+                        ? 'مدیریت دسته‌بندی‌ها و محصولات'
+                        : 'افزودن دسته‌بندی و محصول'}
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+            {errors.products?.message && (
+              <p className="text-sm text-red-dark">
+                {errors.products.message as string}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+      <Modal isOpen={modalType !== null} onClose={close} customSize="1120px">
+        <div
+          dir="rtl"
+          className={cn(styles.theme, 'flex max-h-[90dvh] flex-col')}
+        >
+          <div className="flex shrink-0 items-center justify-between gap-3 border-b p-4 sm:px-6">
+            <div>
+              <h3 className="text-lg font-semibold">
+                {modalType === 1
+                  ? 'محصولات برون‌سپاری‌شده'
+                  : 'محصولات و خدمات اصلی'}
+              </h3>
+              <p className="mt-1 text-sm text-gray-500">
+                یک دسته‌بندی انتخاب کنید؛ سپس محصولات همان دسته را وارد کنید.
+              </p>
+            </div>
+            <button
+              type="button"
+              aria-label="بستن مدیریت محصولات"
+              disabled={uploading}
+              onClick={close}
+              className="rounded-lg p-2 hover:bg-gray-100 disabled:opacity-50"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <ProductAccordion
+              key={fieldName}
+              products={active.fields}
+              append={active.append}
+              insert={active.insert}
+              remove={active.remove}
+              dataObjectName={fieldName}
+              onUploadingChange={setUploading}
+            />
+          </div>
+          <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t bg-gray-50 p-4 sm:px-6">
+            <p className="text-xs text-gray-500">
+              اطلاعات تا زمان ثبت نهایی شرکت در این فرم نگه داشته می‌شوند.
+            </p>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={uploading}
+                onClick={close}
+              >
+                انصراف
+              </Button>
+              <Button
+                type="button"
+                color="primary"
+                disabled={uploading}
+                onClick={confirm}
+              >
+                تأیید اطلاعات و بازگشت
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
+      </Modal>
+    </div>
   );
-};
+}

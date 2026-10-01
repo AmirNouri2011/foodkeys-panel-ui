@@ -6,6 +6,10 @@ import { Progressbar } from 'rizzui';
 import { PhotoProvider, PhotoView } from 'react-photo-view';
 import { PiPencilBold, PiUploadSimpleBold, PiTrashBold } from 'react-icons/pi';
 import useAxiosPrivate from '@/hooks/use-axios-private';
+import { UploadValidationState } from '@/hooks/use-company-upload-validation';
+import { validateUploadFile } from '@/utils/file-upload-validation';
+import FileUploadGuidelines from './file-upload-guidelines';
+import { isAxiosError } from 'axios';
 
 const inputClasses = {
     base: 'relative border rounded-xl duration-75 ease-in-out focus:ring',
@@ -35,6 +39,7 @@ export interface LogoUploadProps
     fileServiceType?: string;
     shape?: 'circle' | 'landscape';
     dimensionsHint?: string;
+    uploadValidation?: UploadValidationState;
 }
 
 function LogoUpload(
@@ -52,6 +57,7 @@ function LogoUpload(
         fileServiceType = 'COMPANY_LOGO',
         shape = 'circle',
         dimensionsHint,
+        uploadValidation,
         ...props
     }: LogoUploadProps,
     ref: ForwardedRef<HTMLInputElement>
@@ -81,8 +87,17 @@ function LogoUpload(
         const uploadedFile = (event.target as HTMLInputElement).files?.[0];
         if (!uploadedFile) return;
 
-        // Check file size and type
-        if (!checkFileSizeAndType(uploadedFile)) {
+        if (uploadValidation) {
+            if (!uploadValidation.ready || !uploadValidation.validation) return;
+            setLoading(true);
+            const validationError = await validateUploadFile(uploadedFile, uploadValidation.validation);
+            if (validationError) {
+                setError(validationError);
+                setLoading(false);
+                event.target.value = '';
+                return;
+            }
+        } else if (!checkFileSizeAndType(uploadedFile)) {
             setError(
                 'فرمت فایل اشتباه است. تنها فایل‌های با پسوند .JPG، .PNG و .WebP مجاز هستند و حداکثر حجم مجاز ۸ مگابایت است'
             );
@@ -137,9 +152,11 @@ function LogoUpload(
             }
         } catch (error) {
             console.error('Error uploading logo:', error);
-            setError(error?.response?.data?.message || 'خطا در آپلود لوگو. لطفا دوباره تلاش کنید.');
+            setError((isAxiosError(error) && error.response?.data?.message) || 'خطا در آپلود لوگو. لطفا دوباره تلاش کنید.');
         } finally {
+            clearInterval(progressInterval);
             setLoading(false);
+            event.target.value = '';
         }
     };
 
@@ -182,9 +199,11 @@ function LogoUpload(
                 </label>
             )}
 
+            <div className={cn(uploadValidation && 'flex flex-col items-center justify-center gap-5 sm:flex-row sm:items-start')}>
             <div
                 className={cn(
                     'relative flex flex-col items-center justify-center',
+                    uploadValidation && 'shrink-0',
                     'transition duration-200',
                     className
                 )}
@@ -196,10 +215,12 @@ function LogoUpload(
                     }}
                     title=""
                     type="file"
-                    accept="image/jpeg,image/png,image/webp"
                     className="sr-only"
                     onChange={handleLogoUpload}
                     {...props}
+                    accept={uploadValidation ? uploadValidation.accept : props.accept || 'image/jpeg,image/png,image/webp'}
+                    disabled={props.disabled || loading || (!!uploadValidation && !uploadValidation.ready)}
+                    aria-describedby={uploadValidation ? 'company-logo-upload-rules' : props['aria-describedby']}
                 />
 
                 {loading ? (
@@ -225,7 +246,7 @@ function LogoUpload(
                             'group relative overflow-hidden transition-all duration-200',
                             currentLogoPreview
                                 ? cn(
-                                      'h-40 border-2 border-solid',
+                                      'h-40 border-2 border-solid bg-white',
                                       shape === 'landscape'
                                           ? 'w-full rounded-2xl'
                                           : 'w-40 rounded-full'
@@ -251,17 +272,20 @@ function LogoUpload(
                             <>
                                 <PhotoProvider>
                                     <PhotoView src={currentLogoPreview}>
+                                        <div className={cn('absolute', shape === 'circle' ? 'inset-[16%]' : 'inset-0')}>
                                         <Image
                                             src={currentLogoPreview}
                                             alt="تصویر لوگو"
-                                            layout="fill"
-                                            objectFit="cover"
+                                            fill
+                                            sizes={shape === 'circle' ? '110px' : '100vw'}
                                             unoptimized
                                             className={cn(
                                                 'transition-opacity duration-300',
+                                                shape === 'circle' ? 'object-contain' : 'object-cover',
                                                 hover ? 'opacity-70' : 'opacity-100'
                                             )}
                                         />
+                                        </div>
                                     </PhotoView>
                                 </PhotoProvider>
 
@@ -272,6 +296,7 @@ function LogoUpload(
                                     <div className="flex gap-2">
                                         <button
                                             type="button"
+                                            aria-label="تغییر لوگو"
                                             className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-0 text-gray-600 hover:bg-blue-lighter hover:text-blue-dark dark:bg-gray-100 dark:text-gray-600 dark:hover:bg-blue-lighter/30 dark:hover:text-blue-light"
                                             onClick={(e) => {
                                                 e.stopPropagation();
@@ -282,7 +307,8 @@ function LogoUpload(
                                         </button>
                                         <button
                                             type="button"
-                                            className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-0 text-gray-600 hover:bg-red-lighter hover:text-red-dark dark:bg-gray-100 dark:text-gray-600 dark:hover:bg-red-lighter/30 dark:hover:text-red-light"
+                                            aria-label="حذف لوگو"
+                                            className="flex h-10 w-10 items-center justify-center rounded-full border border-red-light bg-red-lighter text-red-dark transition-colors hover:bg-red-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red"
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 handleLogoRemove();
@@ -306,7 +332,7 @@ function LogoUpload(
                     </div>
                 )}
 
-                {!loading && !currentLogoPreview && (
+                {!uploadValidation && !loading && !currentLogoPreview && (
                     <div className="mt-3 w-full max-w-sm rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-center">
                         <p className="text-sm font-medium text-gray-700">
                             برای بارگذاری لوگو روی کادر بالا کلیک کنید
@@ -347,6 +373,8 @@ function LogoUpload(
                         تصویر با موفقیت آپلود شد
                     </p>
                 )}
+            </div>
+            {uploadValidation && <FileUploadGuidelines id="company-logo-upload-rules" state={uploadValidation} className="mt-0 w-full max-w-sm" />}
             </div>
         </div>
     );

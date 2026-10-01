@@ -394,8 +394,7 @@
 //   );
 // }
 
-import { API_BASE_URL } from '@/config/api.config';
-import { STATIC_FILES_URL } from '@/config/api.config';
+import { API_BASE_URL, STATIC_FILES_URL } from '@/config/api.config';
 import { Controller, useFieldArray, useFormContext } from 'react-hook-form';
 import { Input } from '@/components/ui/input';
 import FormGroup from '@/app/shared/form-group';
@@ -412,6 +411,9 @@ import LogoUpload from '@/components/ui/logo-upload';
 import useAxiosPrivate from '@/hooks/use-axios-private';
 import toast from 'react-hot-toast';
 import Image from 'next/image';
+import { useCompanyUploadValidation } from '@/hooks/use-company-upload-validation';
+import { validateUploadFile } from '@/utils/file-upload-validation';
+import FileUploadGuidelines from '@/components/ui/file-upload-guidelines';
 
 const Select = dynamic(() => import('@/components/ui/select'), {
   ssr: false,
@@ -442,6 +444,8 @@ export default function CompanySummary({
   category: number;
 }) {
   const _axios = useAxiosPrivate();
+  const logoValidation = useCompanyUploadValidation('COMPANY_LOGO');
+  const brandValidation = useCompanyUploadValidation('BRAND_IMAGE');
   const [subcategories, setSubcategories] = useState<
       { value: number; name: string }[]
   >([]);
@@ -587,17 +591,11 @@ export default function CompanySummary({
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Validate file type and size
-    const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
-    const maxSize = 5 * 1024 * 1024; // 5MB
-
-    if (!validTypes.includes(file.type)) {
-      toast.error('فرمت فایل باید JPG، PNG یا WebP باشد');
-      return;
-    }
-
-    if (file.size > maxSize) {
-      toast.error('حجم فایل باید کمتر از 5 مگابایت باشد');
+    if (!brandValidation.ready || !brandValidation.validation) return;
+    const validationError = await validateUploadFile(file, brandValidation.validation);
+    event.target.value = '';
+    if (validationError) {
+      toast.error(validationError);
       return;
     }
 
@@ -632,6 +630,7 @@ export default function CompanySummary({
         <div className="w-full col-span-full mb-6">
           <LogoUpload
               label="لوگوی شرکت"
+              uploadValidation={logoValidation}
               accept="image/*"
               logoPreview={logoPreview}
               loading={logoLoading}
@@ -765,19 +764,21 @@ export default function CompanySummary({
           <Input
               label="متراژ بنای کارخانه"
               placeholder="متراژ بنای کارخانه"
-              inputMode="decimal"
+              type="text"
+              inputMode="text"
               {...register('buildingArea')}
               error={errors.buildingArea?.message as string}
-              helperText="(مثال: 12 متر مربع)"
+              helperText="(مثال: ۱۲ متر مربع یا ۲ هکتار)"
           />
 
           <Input
               label="متراژ زمین کارخانه"
               placeholder="متراژ زمین کارخانه"
-              inputMode="decimal"
+              type="text"
+              inputMode="text"
               {...register('landArea')}
               error={errors.landArea?.message as string}
-              helperText="(مثال: 12 متر مربع)"
+              helperText="(مثال: ۱۲ متر مربع یا ۲ هکتار)"
           />
         </div>
 
@@ -820,38 +821,39 @@ export default function CompanySummary({
               : '';
 
           return (
-              <div key={item.id} className="relative grid grid-cols-1 gap-4 rounded-lg border border-gray-200 p-6 pt-10 dark:border-gray-300">
+              <div key={item.id} className="@container/brand-card relative grid min-w-0 grid-cols-1 gap-4 rounded-lg border border-gray-200 p-4 pt-10 dark:border-gray-300 @md:p-6 @md:pt-10">
                 {/* Brand Image Upload Section */}
-                <div className="mb-4">
+                <div>
                   <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-600">
                     تصویر برند
                   </label>
-
+                  <div className="flex min-w-0 flex-col gap-4 @md/brand-card:flex-row @md/brand-card:items-start">
                   {brandImagePath ? (
-                      <div className="relative inline-block">
-                        <div className="w-32 h-32 relative border border-gray-200 rounded-lg overflow-hidden dark:border-gray-300">
+                      <div className="relative w-20 shrink-0">
+                        <div className="relative h-20 w-20 overflow-hidden rounded-lg border border-gray-200 bg-white p-2 dark:border-gray-300">
                           <Image
                               src={`${STATIC_FILES_URL}${brandImagePath}`}
                               alt={`Brand ${index + 1}`}
-                              width={128}
-                              height={128}
-                              className="object-cover w-full h-full"
+                              width={80}
+                              height={80}
+                              className="h-full w-full object-contain"
                               unoptimized
                           />
                         </div>
                         <button
                             type="button"
                             onClick={() => removeBrandImage(index)}
-                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600 transition"
+                            aria-label={`حذف تصویر برند ${index + 1}`}
+                            className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full border border-red-light bg-red-lighter text-xs text-red-dark transition hover:bg-red-light focus-visible:ring-2 focus-visible:ring-red"
                         >
                           ×
                         </button>
                         {brandImageFileName && (
                             <p
-                                className="mt-2 max-w-32 truncate text-center text-xs text-gray-500"
+                                className="mt-2 w-20 truncate text-center text-xs text-gray-500"
                                 title={brandImageFileName}
                             >
-                              {brandImageFileName}
+                              <bdi>{brandImageFileName}</bdi>
                             </p>
                         )}
                       </div>
@@ -860,33 +862,36 @@ export default function CompanySummary({
                         <input
                             type="file"
                             id={`brand-image-${index}`}
-                            accept="image/jpeg,image/png,image/webp"
+                            accept={brandValidation.accept}
+                            aria-describedby={`brand-image-rules-${index}`}
                             onChange={(e) => handleBrandImageChange(e, index)}
                             className="hidden"
-                            disabled={brandImageUploading[index]}
+                            disabled={brandImageUploading[index] || !brandValidation.ready}
                         />
-                        <label
-                            htmlFor={`brand-image-${index}`}
+                        <button
+                            type="button"
+                            onClick={() => document.getElementById(`brand-image-${index}`)?.click()}
+                            disabled={brandImageUploading[index] || !brandValidation.ready}
                             className={`cursor-pointer rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-300 dark:text-gray-600 dark:hover:bg-gray-100 ${
-                                brandImageUploading[index] ? 'opacity-50 cursor-not-allowed' : ''
+                                brandImageUploading[index] || !brandValidation.ready ? 'opacity-50 cursor-not-allowed' : ''
                             }`}
                         >
                           {brandImageUploading[index] ? 'در حال آپلود...' : 'آپلود'}
-                        </label>
-                        <span className="text-xs text-gray-500">
-                      فرمت‌های مجاز: JPG, PNG, WebP (حداکثر 5MB)
-                    </span>
+                        </button>
                       </div>
                   )}
+                  <FileUploadGuidelines id={`brand-image-rules-${index}`} state={brandValidation} className="mt-0 w-full min-w-0 flex-1" />
+                  </div>
                 </div>
 
                 {/* Brand Name Fields */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Input
-                      label="نام تجاری"
+                      label="نام تجاری*"
                       placeholder="نام تجاری"
                       className="flex-grow"
                       {...register(`brands.${index}.name`)}
+                      error={(errors.brands as any)?.[index]?.name?.message as string}
                   />
 
                   <Input

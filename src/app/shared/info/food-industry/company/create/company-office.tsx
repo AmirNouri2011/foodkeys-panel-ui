@@ -352,9 +352,13 @@ export default function CompanyOffice({ className, data }: { className?: string;
             تلفن‌های ثابت دفتر مرکزی*
           </label>
           {officeTels.map((phone, index) => (
-              <div key={index} className="flex items-center gap-2 space-x-2">
+              <div
+                  key={index}
+                  className="grid grid-cols-[minmax(0,1fr)_2.5rem] items-start gap-2"
+              >
                 <Input
                     type="tel"
+                    dir="ltr"
                     inputMode="numeric"
                     maxLength={11}
                     value={phone}
@@ -364,11 +368,15 @@ export default function CompanyOffice({ className, data }: { className?: string;
                       newPhones[index] = e.target.value;
                       setOfficeTels(newPhones);
                     }}
-                    className="flex-grow"
+                    className="min-w-0"
+                    inputClassName="text-left"
                     error={(errors.officeTels as any)?.[index]?.telNumber?.message}
                     helperText="(مثال: 02112345678)"
                 />
                 <ActionIcon
+                    type="button"
+                    aria-label={`حذف تلفن دفتر مرکزی ${index + 1}`}
+                    className="h-10 w-10 shrink-0 self-start"
                     onClick={() =>
                         setOfficeTels(officeTels.filter((_, i) => i !== index))
                     }
@@ -394,9 +402,13 @@ export default function CompanyOffice({ className, data }: { className?: string;
             فکس های دفتر مرکزی
           </label>
           {officeFaxes.map((fax, index) => (
-              <div key={index} className="flex items-center gap-2 space-x-2">
+              <div
+                  key={index}
+                  className="grid grid-cols-[minmax(0,1fr)_2.5rem] items-start gap-2"
+              >
                 <Input
                     type="tel"
+                    dir="ltr"
                     inputMode="numeric"
                     maxLength={11}
                     value={fax}
@@ -406,11 +418,15 @@ export default function CompanyOffice({ className, data }: { className?: string;
                       newFaxes[index] = e.target.value;
                       setOfficeFaxes(newFaxes);
                     }}
-                    className="flex-grow"
+                    className="min-w-0"
+                    inputClassName="text-left"
                     error={(errors.officeFaxes as any)?.[index]?.telNumber?.message}
                     helperText="(مثال: 02112345678)"
                 />
                 <ActionIcon
+                    type="button"
+                    aria-label={`حذف فکس دفتر مرکزی ${index + 1}`}
+                    className="h-10 w-10 shrink-0 self-start"
                     onClick={() =>
                         setOfficeFaxes(officeFaxes.filter((_, i) => i !== index))
                     }

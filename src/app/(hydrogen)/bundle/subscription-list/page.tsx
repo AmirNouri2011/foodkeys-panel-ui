@@ -1,260 +1,319 @@
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
+import {
+  PiArrowLeft,
+  PiArrowClockwise,
+  PiMagnifyingGlass,
+  PiStack,
+} from 'react-icons/pi';
 import UpgradeStorage, {
   type SubscriptionItem,
 } from '@/app/shared/bundle/upgrade-storage';
-import PageHeader from '@/app/shared/page-header';
+import styles from '@/app/shared/bundle/subscriptions.module.css';
 import SelectBox, { type SelectOption } from '@/components/ui/select';
-import { Text } from '@/components/ui/text';
-import { routes } from '@/config/routes';
 import useAxiosPrivate from '@/hooks/use-axios-private';
 import cn from '@/utils/class-names';
-import { useEffect, useState } from 'react';
-import toast from 'react-hot-toast';
-import {
-  PiCheckCircleFill,
-  PiClockCountdownFill,
-  PiStackFill,
-  PiWarningCircleFill,
-} from 'react-icons/pi';
 
-const pageHeader = {
-  title: 'مدیریت اشتراک',
-  breadcrumb: [
-    {
-      href: routes.info.dashboard,
-      name: 'مدیریت اطلاعات',
-    },
-    {
-      name: 'مدیریت اشتراک',
-    },
-  ],
-};
-
-type StatusFilter = 'همه' | 'فعال' | 'در انتظار تایید' | 'غیرفعال';
-
-const statusOptions: {
-  label: StatusFilter;
-  value: string;
-}[] = [
-  { label: 'همه', value: 'ALL' },
+type StatusFilter = 'ALL' | 'DISABLE' | 'ACTIVE' | 'PENDING';
+const statusOptions: { label: string; value: StatusFilter }[] = [
+  { label: 'همه اشتراک‌ها', value: 'ALL' },
+  { label: 'نیازمند تمدید', value: 'DISABLE' },
   { label: 'فعال', value: 'ACTIVE' },
   { label: 'در انتظار تایید', value: 'PENDING' },
-  { label: 'غیرفعال', value: 'DISABLE' },
 ];
+
+function normalizeSearch(value: string) {
+  return value
+    .replace(/[يى]/g, 'ی')
+    .replace(/ك/g, 'ک')
+    .replace(/\u200c/g, ' ')
+    .trim()
+    .toLowerCase();
+}
 
 export default function ProfileSettingsFormPage() {
   const [categories, setCategories] = useState<SelectOption[]>([]);
-  const [categoryFilter, setCategoryFilter] = useState<SelectOption | null>(null);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('همه');
+  const [categoryFilter, setCategoryFilter] = useState<SelectOption | null>(
+    null
+  );
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('ALL');
+  const [query, setQuery] = useState('');
   const [items, setItems] = useState<SubscriptionItem[]>([]);
-  const [counts, setCounts] = useState({
-    all: 0,
-    active: 0,
-    pending: 0,
-    inactive: 0,
-  });
   const [isLoading, setIsLoading] = useState(true);
-  const _axios = useAxiosPrivate();
+  const [hasError, setHasError] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  const axios = useAxiosPrivate();
 
   useEffect(() => {
-    const fetchSubscriptions = async () => {
+    let current = true;
+    async function fetchSubscriptions() {
       setIsLoading(true);
-
+      setHasError(false);
       try {
-        const params = new URLSearchParams();
-        const selectedStatus = statusOptions.find(
-          (option) => option.label === statusFilter
-        )?.value;
-
-        if (selectedStatus && selectedStatus !== 'ALL') {
-          params.set('status', selectedStatus);
-        }
-        if (categoryFilter?.value) {
-          params.set('subCategoryId', String(categoryFilter.value));
-        }
-
-        const response = await _axios.get(
-          `/subscription${params.toString() ? `?${params.toString()}` : ''}`
-        );
-
-        if (response.data.status === 'SUCCESS') {
-          const subscriptions: SubscriptionItem[] = response.data.data ?? [];
-          setItems(subscriptions);
-
-          if (statusFilter === 'همه') {
-            setCounts({
-              all: subscriptions.length,
-              active: subscriptions.filter(
-                (item) => item.subscriptionStatus === 'ACTIVE'
-              ).length,
-              pending: subscriptions.filter(
-                (item) => item.subscriptionStatus === 'PENDING'
-              ).length,
-              inactive: subscriptions.filter(
-                (item) => item.subscriptionStatus === 'DISABLE'
-              ).length,
-            });
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching subscriptions:', error);
-        toast.error(<Text tag="b">خطا در دریافت اطلاعات اشتراک</Text>);
+        const response = await axios.get('/subscription');
+        if (response.data.status !== 'SUCCESS')
+          throw new Error('Unable to load subscriptions');
+        if (current) setItems(response.data.data ?? []);
+      } catch {
+        if (current) setHasError(true);
       } finally {
-        setIsLoading(false);
+        if (current) setIsLoading(false);
       }
-    };
-
+    }
     fetchSubscriptions();
-  }, [_axios, statusFilter, categoryFilter]);
+    return () => {
+      current = false;
+    };
+  }, [axios, reloadKey]);
 
   useEffect(() => {
-    const fetchCategories = async () => {
+    let current = true;
+    async function fetchCategories() {
       try {
-        const response = await _axios.get('/subcategory/options');
-        if (response.data.status === 'SUCCESS') {
+        const response = await axios.get('/subcategory/options');
+        if (current && response.data.status === 'SUCCESS')
           setCategories(response.data.data ?? []);
-        } else {
-          toast.error(<Text tag="b">خطا در دریافت دسته‌بندی‌ها</Text>);
-        }
-      } catch (error) {
-        console.error('Error fetching categories:', error);
-        toast.error(<Text tag="b">خطا در دریافت دسته‌بندی‌ها</Text>);
+      } catch {
+        // Categories from the subscriptions keep the filter usable if options fail.
       }
-    };
-
+    }
     fetchCategories();
-  }, [_axios]);
+    return () => {
+      current = false;
+    };
+  }, [axios]);
 
-  const summaryItems = [
-    {
-      label: 'اشتراک فعال',
-      value: counts.active,
-      icon: PiCheckCircleFill,
-      className: 'bg-green-lighter/60 text-green-dark ring-green-lighter',
-    },
-    {
-      label: 'در انتظار تایید',
-      value: counts.pending,
-      icon: PiClockCountdownFill,
-      className: 'bg-orange-lighter/60 text-orange-dark ring-orange-lighter',
-    },
-    {
-      label: 'غیرفعال',
-      value: counts.inactive,
-      icon: PiWarningCircleFill,
-      className: 'bg-red-lighter/60 text-red-dark ring-red-lighter',
-    },
-  ];
+  const categoryOptions = useMemo(() => {
+    const options = new Map<string, SelectOption>();
+    const categoryNames = new Map(
+      categories.map((category) => [String(category.value), category])
+    );
+    items.forEach((item) => {
+      if (
+        item.subCategoryId != null &&
+        !options.has(String(item.subCategoryId))
+      ) {
+        options.set(String(item.subCategoryId), {
+          ...(categoryNames.get(String(item.subCategoryId)) ?? {
+            name: item.subCategoryName || 'بانک اطلاعاتی',
+            value: item.subCategoryId,
+          }),
+        });
+      }
+    });
+    return [
+      { name: 'همه بانک‌های اطلاعاتی', value: '' },
+      ...Array.from(options.values()),
+    ];
+  }, [categories, items]);
+
+  const scopedItems = useMemo(() => {
+    const search = normalizeSearch(query);
+    return items.filter((item) => {
+      if (
+        categoryFilter &&
+        String(item.subCategoryId) !== String(categoryFilter.value)
+      )
+        return false;
+      return (
+        !search ||
+        normalizeSearch(
+          `${item.subCategoryName ?? ''} ${item.bundleTitle ?? ''}`
+        ).includes(search)
+      );
+    });
+  }, [items, categoryFilter, query]);
+  const counts = useMemo(
+    () => ({
+      ALL: scopedItems.length,
+      DISABLE: scopedItems.filter(
+        (item) => item.subscriptionStatus === 'DISABLE'
+      ).length,
+      ACTIVE: scopedItems.filter((item) => item.subscriptionStatus === 'ACTIVE')
+        .length,
+      PENDING: scopedItems.filter(
+        (item) => item.subscriptionStatus === 'PENDING'
+      ).length,
+    }),
+    [scopedItems]
+  );
+  const filteredItems = scopedItems.filter(
+    (item) => statusFilter === 'ALL' || item.subscriptionStatus === statusFilter
+  );
+  const renewalCount = items.filter(
+    (item) => item.subscriptionStatus === 'DISABLE'
+  ).length;
+  const hasActiveFilters =
+    statusFilter !== 'ALL' || Boolean(categoryFilter) || Boolean(query.trim());
+
+  function clearFilters() {
+    setStatusFilter('ALL');
+    setCategoryFilter(null);
+    setQuery('');
+  }
 
   return (
-    <>
-      <PageHeader title={pageHeader.title} breadcrumb={pageHeader.breadcrumb} />
-
-      <section className="relative mt-2 overflow-hidden rounded-2xl border border-green-lighter bg-gradient-to-l from-green-lighter/40 via-white to-blue-lighter/30 p-5 shadow-sm sm:p-7">
-        <div className="pointer-events-none absolute -left-16 -top-20 h-56 w-56 rounded-full bg-blue-lighter/40 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-20 right-1/3 h-48 w-48 rounded-full bg-green-lighter/40 blur-3xl" />
-
-        <div className="relative grid items-center gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+    <div className={styles.theme}>
+      <header className={styles.pageHeader}>
+        <nav aria-label="مسیر صفحه" className={styles.breadcrumb}>
+          <Link href="/">میز کار</Link>
+          <span aria-hidden="true">/</span>
+          <span>مدیریت اشتراک</span>
+        </nav>
+        <div className={styles.headingLine}>
           <div>
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1.5 text-xs font-semibold text-green-dark ring-1 ring-green-lighter">
-              <PiStackFill className="h-4 w-4" />
-              مرکز اشتراک‌های شما
-            </div>
-            <h2 className="max-w-2xl text-xl font-bold leading-9 text-gray-1000 sm:text-2xl">
-              وضعیت دسترسی به بانک‌های اطلاعاتی، یک‌جا و شفاف
-            </h2>
-            <p className="mt-2 max-w-2xl text-sm leading-7 text-gray-600">
-              اینجا می‌توانید ببینید هر اشتراک به کدام بانک تعلق دارد، تا چه زمانی
-              اعتبار دارد و برای ادامه دسترسی چه کاری لازم است.
+            <h1 className={styles.pageTitle}>مدیریت اشتراک</h1>
+            <p className={styles.pageDescription}>
+              دسترسی به بانک‌های اطلاعاتی و تمدید اشتراک‌ها، در یک جا.
             </p>
           </div>
-
-          <div className="grid grid-cols-3 gap-2.5 sm:gap-3">
-            {summaryItems.map((summary) => {
-              const Icon = summary.icon;
-              return (
-                <div
-                  key={summary.label}
-                  className={cn(
-                    'rounded-xl p-3 ring-1 ring-inset sm:p-4',
-                    summary.className
-                  )}
-                >
-                  <Icon className="mb-3 h-5 w-5 sm:h-6 sm:w-6" />
-                  <strong className="block text-xl font-bold sm:text-2xl">
-                    {isLoading ? '—' : summary.value.toLocaleString('fa-IR')}
-                  </strong>
-                  <span className="mt-1 block text-[11px] font-medium leading-5 sm:text-xs">
-                    {summary.label}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
+          <button
+            type="button"
+            aria-label="به‌روزرسانی اشتراک‌ها"
+            className={styles.refreshButton}
+            disabled={isLoading}
+            onClick={() => setReloadKey((key) => key + 1)}
+          >
+            <PiArrowClockwise aria-hidden="true" />
+            <span>به‌روزرسانی</span>
+          </button>
         </div>
-      </section>
+      </header>
 
-      <section className="mt-7">
-        <div className="flex flex-col gap-4 border-b border-gray-200 pb-5 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-lg font-bold text-gray-1000">اشتراک‌های من</h3>
-              {!isLoading && (
-                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-semibold text-gray-600">
-                  {counts.all.toLocaleString('fa-IR')}
-                </span>
-              )}
+      {!isLoading && !hasError && renewalCount > 0 && (
+        <section
+          aria-label="اشتراک‌های نیازمند تمدید"
+          className={styles.renewalNotice}
+        >
+          <div className={styles.noticeContent}>
+            <span className={styles.noticeIcon}>
+              <PiStack aria-hidden="true" />
+            </span>
+            <div>
+              <h2>
+                {renewalCount.toLocaleString('fa-IR')} اشتراک شما نیاز به تمدید
+                دارد
+              </h2>
+              <p>
+                برای ادامه دسترسی، اشتراک موردنظر را از فهرست زیر تمدید کنید.
+              </p>
             </div>
-            <p className="mt-1 text-sm text-gray-500">
-              برای دیدن اشتراک موردنظر، وضعیت یا بانک اطلاعاتی را انتخاب کنید.
-            </p>
           </div>
+          <button
+            type="button"
+            className={styles.noticeAction}
+            onClick={() => {
+              clearFilters();
+              setStatusFilter('DISABLE');
+            }}
+          >
+            مشاهده موارد
+            <PiArrowLeft aria-hidden="true" />
+          </button>
+        </section>
+      )}
 
-          <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto lg:items-end">
-            <div className="flex min-h-11 w-full items-center gap-1 overflow-x-auto rounded-xl bg-gray-100 p-1 sm:w-auto">
-              {statusOptions.map((option) => (
-                <button
-                  key={option.value}
-                  type="button"
-                  onClick={() => setStatusFilter(option.label)}
-                  className={cn(
-                    'whitespace-nowrap rounded-lg px-3 py-2 text-xs font-semibold transition sm:text-sm',
-                    statusFilter === option.label
-                      ? 'bg-white text-gray-1000 shadow-sm ring-1 ring-gray-200'
-                      : 'text-gray-500 hover:text-gray-900'
-                  )}
-                >
-                  {option.label}
-                </button>
-              ))}
+      <section aria-label="فهرست اشتراک‌های شما" className={styles.panel}>
+        <div className={styles.panelTop}>
+          <div className={styles.panelHeading}>
+            <h2>اشتراک‌های شما</h2>
+            <span aria-live="polite">
+              {isLoading
+                ? 'در حال دریافت…'
+                : hasError
+                ? 'دریافت اطلاعات ناموفق بود'
+                : `${filteredItems.length.toLocaleString('fa-IR')} اشتراک`}
+            </span>
+          </div>
+          <div className={styles.filters}>
+            <div className={styles.searchField}>
+              <label htmlFor="subscription-search">جست‌وجو در اشتراک‌ها</label>
+              <div className={styles.searchInput}>
+                <PiMagnifyingGlass aria-hidden="true" />
+                <input
+                  id="subscription-search"
+                  type="search"
+                  placeholder="نام بانک یا پلن را بنویسید…"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                />
+              </div>
             </div>
-
             <SelectBox
-              aria-label="فیلتر بر اساس بانک اطلاعاتی"
-              options={[{ name: 'همه بانک‌ها', value: '' }, ...categories]}
-              value={categoryFilter}
-              onChange={(selected: SelectOption) => {
-                setStatusFilter('همه');
-                setCategoryFilter(selected.value ? selected : null);
-              }}
-              className="w-full sm:w-64"
-              placeholder="همه بانک‌ها"
-              selectClassName="!h-11 !rounded-xl"
+              label="بانک اطلاعاتی"
+              value={categoryFilter ?? categoryOptions[0]}
+              options={categoryOptions}
+              onChange={(selected: SelectOption) =>
+                setCategoryFilter(selected.value !== '' ? selected : null)
+              }
+              className={styles.bankFilter}
+              labelClassName={styles.filterLabel}
+              selectClassName={styles.bankSelect}
+              dropdownClassName={styles.bankDropdown}
             />
           </div>
         </div>
-
-        <UpgradeStorage
-          items={items}
-          isLoading={isLoading}
-          hasActiveFilters={statusFilter !== 'همه' || Boolean(categoryFilter)}
-          onClearFilters={() => {
-            setStatusFilter('همه');
-            setCategoryFilter(null);
-          }}
-        />
+        <div className={styles.tabsLine}>
+          <div
+            role="group"
+            aria-label="فیلتر وضعیت اشتراک"
+            className={styles.statusTabs}
+          >
+            {statusOptions.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                aria-pressed={statusFilter === option.value}
+                onClick={() => setStatusFilter(option.value)}
+                className={cn(
+                  styles.tab,
+                  statusFilter === option.value && styles.selectedTab
+                )}
+              >
+                {option.label}
+                <span>
+                  {isLoading || hasError
+                    ? '—'
+                    : counts[option.value].toLocaleString('fa-IR')}
+                </span>
+              </button>
+            ))}
+          </div>
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className={styles.clearFilters}
+            >
+              پاک کردن فیلترها
+            </button>
+          )}
+        </div>
+        {hasError && !isLoading ? (
+          <div role="alert" className={styles.emptyState}>
+            <PiStack aria-hidden="true" />
+            <h3>اطلاعات اشتراک‌ها دریافت نشد</h3>
+            <p>دوباره تلاش کنید تا وضعیت و اعتبار اشتراک‌ها نمایش داده شود.</p>
+            <button
+              type="button"
+              onClick={() => setReloadKey((key) => key + 1)}
+              className={styles.secondaryAction}
+            >
+              تلاش دوباره
+            </button>
+          </div>
+        ) : (
+          <UpgradeStorage
+            items={filteredItems}
+            isLoading={isLoading}
+            hasActiveFilters={hasActiveFilters}
+            onClearFilters={clearFilters}
+            prioritizeRenewals={statusFilter === 'ALL'}
+          />
+        )}
       </section>
-    </>
+    </div>
   );
 }

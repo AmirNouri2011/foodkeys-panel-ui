@@ -550,7 +550,7 @@ export default function MiniMap({
   return (
     <div
       dir="rtl"
-      className={`overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm ${className}`}
+      className={`relative isolate z-0 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm ${className}`}
     >
       <div className="relative border-b border-gray-200 bg-gray-50 p-3 sm:p-4">
         <div className="flex gap-2">
@@ -647,7 +647,7 @@ export default function MiniMap({
         )}
       </div>
 
-      <div className="relative h-[360px] min-h-[360px] w-full bg-gray-100">
+      <div className="relative isolate h-[360px] min-h-[360px] w-full bg-gray-100">
         <MapContainer
           center={position}
           zoom={14}

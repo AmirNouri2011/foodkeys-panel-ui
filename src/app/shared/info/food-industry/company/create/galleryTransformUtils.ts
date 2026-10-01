@@ -29,11 +29,16 @@ export const transformGalleryFiles = (galleryFiles: any[]) => {
         // Skip files without a file service type
         if (!file.fileServiceType) return;
 
-        // Parse metadata JSON if available
+        // Accept JSON objects and legacy string metadata when loading a company.
         let metadata = {};
         try {
             if (file.metadata) {
-                metadata = JSON.parse(file.metadata);
+                const parsed = typeof file.metadata === 'string'
+                    ? JSON.parse(file.metadata)
+                    : file.metadata;
+                if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                    metadata = parsed;
+                }
             }
         } catch (error) {
             console.error(`Error parsing metadata for file ${file.id}:`, error);
@@ -153,14 +158,14 @@ export function prepareGalleryFilesForSubmission(galleryData: any) {
                 const metadata: any = {};
                 Object.keys(item).forEach(key => {
                     // Skip special fields
-                    if (['id', 'uploadedFileId', 'filePath', 'fileName'].includes(key)) return;
+                    if (['id', 'uploadedFileId', 'filePath', 'fileName', 'originalFileName', 'metadata', 'fileServiceType'].includes(key)) return;
                     metadata[key] = item[key];
                 });
 
                 // Add to gallery files
                 galleryFiles.push({
                     id: fileId,
-                    metadata: JSON.stringify(metadata),
+                    metadata,
                     fileServiceType
                 });
             });

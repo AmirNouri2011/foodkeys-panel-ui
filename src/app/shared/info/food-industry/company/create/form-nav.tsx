@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import cn from '@/utils/class-names';
+import { activeFormSection, sectionScrollTop } from './form-nav-utils';
 
 export const formParts = {
   summary: 'summary',
@@ -75,7 +76,10 @@ interface FormNavProps {
 }
 
 export default function FormNav({ className }: FormNavProps) {
+  const navRef = useRef<HTMLElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const pendingNavigation = useRef<{ value: string; top: number } | null>(null);
+  const [headerHeight, setHeaderHeight] = useState(68);
   const [activeSection, setActiveSection] = useState(formParts.intro);
   const [canScrollBackward, setCanScrollBackward] = useState(false);
   const [canScrollForward, setCanScrollForward] = useState(false);
@@ -93,112 +97,272 @@ export default function FormNav({ className }: FormNavProps) {
   }, []);
 
   useEffect(() => {
-    updateScrollControls();
-    window.addEventListener('resize', updateScrollControls);
-
-    return () => window.removeEventListener('resize', updateScrollControls);
-  }, [updateScrollControls]);
-
-  useEffect(() => {
+    let frame = 0;
     const updateActiveSection = () => {
-      let currentSection = menuItems[0].value;
-
-      for (const item of menuItems) {
-        const section = document.querySelector<HTMLElement>(
-          `div[name="${item.value}"]`
-        );
-
-        if (section && section.getBoundingClientRect().top <= 170) {
-          currentSection = item.value;
-        } else {
-          break;
-        }
+      frame = 0;
+      const pending = pendingNavigation.current;
+      if (pending) {
+        setActiveSection(pending.value);
+        if (Math.abs(window.scrollY - pending.top) <= 2)
+          pendingNavigation.current = null;
+        return;
       }
-
-      setActiveSection(currentSection);
+      const anchor =
+        (navRef.current?.getBoundingClientRect().bottom ?? 140) + 12;
+      const footer = document.querySelector('[data-form-footer]');
+      const visibleBottom = Math.min(
+        window.innerHeight,
+        footer?.getBoundingClientRect().top ?? window.innerHeight
+      );
+      const sections = menuItems.flatMap((item) => {
+        const section = document.getElementById(item.value);
+        if (!section) return [];
+        const rect = section.getBoundingClientRect();
+        return [{ value: item.value, top: rect.top, bottom: rect.bottom }];
+      });
+      const atPageEnd =
+        window.scrollY + window.innerHeight >=
+        document.documentElement.scrollHeight - 3;
+      const current = activeFormSection(
+        sections,
+        anchor,
+        visibleBottom,
+        atPageEnd
+      );
+      if (current) setActiveSection(current);
     };
-
-    window.addEventListener('scroll', updateActiveSection, { passive: true });
-
-    return () => window.removeEventListener('scroll', updateActiveSection);
+    const scheduleUpdate = () => {
+      if (!frame) frame = window.requestAnimationFrame(updateActiveSection);
+    };
+    const cancelNavigation = () => {
+      pendingNavigation.current = null;
+      scheduleUpdate();
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (
+        [
+          'ArrowUp',
+          'ArrowDown',
+          'PageUp',
+          'PageDown',
+          'Home',
+          'End',
+          ' ',
+        ].includes(event.key) &&
+        !(
+          event.target instanceof HTMLElement &&
+          event.target.closest(
+            'input, textarea, select, button, [contenteditable]'
+          )
+        )
+      ) {
+        cancelNavigation();
+      }
+    };
+    const header = document.querySelector('header');
+    const observer = new ResizeObserver(() => {
+      setHeaderHeight(header?.getBoundingClientRect().height ?? 0);
+      scheduleUpdate();
+    });
+    if (header) observer.observe(header);
+    if (navRef.current) observer.observe(navRef.current);
+    scheduleUpdate();
+    window.addEventListener('scroll', scheduleUpdate, { passive: true });
+    window.addEventListener('resize', cancelNavigation);
+    window.addEventListener('wheel', cancelNavigation, { passive: true });
+    window.addEventListener('touchstart', cancelNavigation, { passive: true });
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      observer.disconnect();
+      window.removeEventListener('scroll', scheduleUpdate);
+      window.removeEventListener('resize', cancelNavigation);
+      window.removeEventListener('wheel', cancelNavigation);
+      window.removeEventListener('touchstart', cancelNavigation);
+      window.removeEventListener('keydown', onKeyDown);
+    };
   }, []);
 
-  const scrollMenu = (direction: 'backward' | 'forward') => {
-    scrollContainerRef.current?.scrollBy({
-      left: direction === 'forward' ? -320 : 320,
-      behavior: 'smooth',
+  const scrollToSection = (value: string) => {
+    const section = document.getElementById(value);
+    if (!section) return;
+
+    setActiveSection(value);
+    window.history.replaceState(null, '', `#${value}`);
+    const top = sectionScrollTop(
+      section.getBoundingClientRect().top,
+      window.scrollY,
+      headerHeight + (navRef.current?.offsetHeight ?? 54) + 12,
+      document.documentElement.scrollHeight - window.innerHeight
+    );
+    pendingNavigation.current = { value, top };
+    window.scrollTo({
+      top,
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        ? 'auto'
+        : 'smooth',
     });
   };
 
-  const keepActiveItemVisible = (value: string) => {
-    const activeItem = scrollContainerRef.current?.querySelector(
+  const scrollMenu = (direction: 'backward' | 'forward') => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    container.scrollBy({
+      left: (direction === 'forward' ? -1 : 1) * container.clientWidth * 0.75,
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        ? 'auto'
+        : 'smooth',
+    });
+  };
+
+  const keepActiveItemVisible = useCallback((value: string) => {
+    const container = scrollContainerRef.current;
+    const activeItem = container?.querySelector<HTMLElement>(
       `[data-form-nav="${value}"]`
     );
 
-    activeItem?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'nearest',
-      inline: 'center',
+    if (!container || !activeItem) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const activeItemRect = activeItem.getBoundingClientRect();
+
+    container.scrollBy({
+      left:
+        activeItemRect.left -
+        containerRect.left -
+        (containerRect.width - activeItemRect.width) / 2,
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        ? 'auto'
+        : 'smooth',
     });
-  };
+  }, []);
 
   useEffect(() => {
-    keepActiveItemVisible(activeSection);
-  }, [activeSection]);
+    const update = () => {
+      keepActiveItemVisible(activeSection);
+      updateScrollControls();
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    if (scrollContainerRef.current)
+      observer.observe(scrollContainerRef.current);
+    return () => observer.disconnect();
+  }, [activeSection, keepActiveItemVisible, updateScrollControls]);
+
+  const activeIndex = menuItems.findIndex(
+    (item) => item.value === activeSection
+  );
+  const number = (value: number) =>
+    new Intl.NumberFormat('fa-IR').format(value);
+  const arrowClass =
+    'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-gray-0 text-gray-600 transition hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-default disabled:opacity-30';
 
   return (
     <nav
+      ref={navRef}
       aria-label="دسترسی سریع به بخش‌های فرم"
       dir="rtl"
+      style={{ top: headerHeight }}
       className={cn(
-        'sticky top-[68px] z-20 border-y border-gray-200 bg-gray-0/95 px-10 py-2 font-medium shadow-[0_8px_24px_-20px_rgba(15,23,42,0.55)] backdrop-blur-md @2xl:top-[72px] dark:border-gray-300 dark:bg-gray-50/95 2xl:top-20',
+        'sticky z-20 mb-2 min-w-0 rounded-xl border border-gray-200 bg-gray-0/95 p-2 shadow-sm backdrop-blur-md dark:border-gray-300 dark:bg-gray-50/95',
         className
       )}
     >
-      <button
-        type="button"
-        aria-label="مشاهده بخش‌های قبلی"
-        onClick={() => scrollMenu('backward')}
-        disabled={!canScrollBackward}
-        className="absolute right-1 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-gray-200 bg-gray-0 text-gray-700 shadow-sm transition hover:border-gray-400 hover:text-gray-1000 disabled:pointer-events-none disabled:opacity-25 dark:border-gray-300 dark:bg-gray-50"
-      >
-        <ChevronRight className="h-4 w-4" aria-hidden="true" />
-      </button>
-
-      <div
-        ref={scrollContainerRef}
-        onScroll={updateScrollControls}
-        className="custom-scrollbar-x overflow-x-auto scroll-smooth px-1 pb-1"
-      >
-        <div className="flex w-max min-w-full items-center gap-2">
-          {menuItems.map((tab) => (
-            <a
-              key={tab.value}
-              href={`#${tab.value}`}
-              data-form-nav={tab.value}
-              aria-current={activeSection === tab.value ? 'step' : undefined}
-              onClick={() => setActiveSection(tab.value)}
-              className={cn(
-                'cursor-pointer whitespace-nowrap rounded-lg border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm text-gray-600 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:text-gray-1000 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 dark:border-gray-300',
-                activeSection === tab.value &&
-                  '!border-gray-1000 !bg-gray-1000 !font-semibold !text-gray-0 shadow-sm dark:!border-gray-900 dark:!bg-gray-900'
-              )}
-            >
-              {tab.label}
-            </a>
-          ))}
+      <div className="flex min-w-0 items-center gap-2 sm:hidden">
+        <button
+          type="button"
+          aria-label="بخش قبلی"
+          disabled={activeIndex <= 0}
+          className={arrowClass}
+          onClick={() => scrollToSection(menuItems[activeIndex - 1].value)}
+        >
+          <ChevronRight className="h-4 w-4" aria-hidden="true" />
+        </button>
+        <div className="min-w-0 flex-1">
+          <label
+            htmlFor="company-form-section"
+            className="mb-1 block px-1 text-[10px] text-gray-500"
+          >
+            بخش {number(activeIndex + 1)} از {number(menuItems.length)}
+          </label>
+          <select
+            id="company-form-section"
+            value={activeSection}
+            onChange={(event) => scrollToSection(event.target.value)}
+            className="h-9 w-full min-w-0 rounded-lg border border-primary-light bg-primary-lighter py-1 pe-8 ps-3 text-xs font-semibold text-primary-dark [background-position:left_0.5rem_center] focus:border-primary focus:ring-primary"
+          >
+            {menuItems.map((item) => (
+              <option key={item.value} value={item.value}>
+                {item.label}
+              </option>
+            ))}
+          </select>
         </div>
+        <button
+          type="button"
+          aria-label="بخش بعدی"
+          disabled={activeIndex >= menuItems.length - 1}
+          className={arrowClass}
+          onClick={() => scrollToSection(menuItems[activeIndex + 1].value)}
+        >
+          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+        </button>
       </div>
 
-      <button
-        type="button"
-        aria-label="مشاهده بخش‌های بعدی"
-        onClick={() => scrollMenu('forward')}
-        disabled={!canScrollForward}
-        className="absolute left-1 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-gray-200 bg-gray-0 text-gray-700 shadow-sm transition hover:border-gray-400 hover:text-gray-1000 disabled:pointer-events-none disabled:opacity-25 dark:border-gray-300 dark:bg-gray-50"
-      >
-        <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-      </button>
+      <div className="hidden min-w-0 items-center gap-2 sm:flex">
+        <button
+          type="button"
+          aria-label="مشاهده بخش‌های قبلی"
+          onClick={() => scrollMenu('backward')}
+          disabled={!canScrollBackward}
+          className={arrowClass}
+        >
+          <ChevronRight className="h-4 w-4" aria-hidden="true" />
+        </button>
+
+        <div
+          ref={scrollContainerRef}
+          onScroll={updateScrollControls}
+          className="min-w-0 flex-1 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          <div className="flex w-max min-w-full items-center gap-1.5">
+            {menuItems.map((tab, index) => (
+              <a
+                key={tab.value}
+                href={`#${tab.value}`}
+                data-form-nav={tab.value}
+                aria-current={
+                  activeSection === tab.value ? 'location' : undefined
+                }
+                onClick={(event) => {
+                  event.preventDefault();
+                  scrollToSection(tab.value);
+                }}
+                className={cn(
+                  'inline-flex min-h-[36px] cursor-pointer items-center gap-2 whitespace-nowrap rounded-lg border border-transparent px-3 py-2 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-1000 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary',
+                  activeSection === tab.value &&
+                    '!border-primary-light !bg-primary-lighter !font-semibold !text-primary-dark'
+                )}
+              >
+                <span aria-hidden="true" className="text-[10px] opacity-60">
+                  {number(index + 1)}
+                </span>
+                {tab.label}
+              </a>
+            ))}
+          </div>
+        </div>
+
+        <button
+          type="button"
+          aria-label="مشاهده بخش‌های بعدی"
+          onClick={() => scrollMenu('forward')}
+          disabled={!canScrollForward}
+          className={arrowClass}
+        >
+          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+        </button>
+      </div>
     </nav>
   );
 }

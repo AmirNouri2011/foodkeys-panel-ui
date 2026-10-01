@@ -490,8 +490,7 @@
 //       </div>
 //   );
 // }
-import {API_BASE_URL} from '@/config/api.config';
-import {STATIC_FILES_URL} from '@/config/api.config';
+import {API_BASE_URL, STATIC_FILES_URL} from '@/config/api.config';
 import {useFormContext} from 'react-hook-form';
 import {Input} from '@/components/ui/input';
 import {Checkbox} from '@/components/ui/checkbox';
@@ -505,6 +504,10 @@ import Upload from '@/components/ui/upload';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
 import useAxiosPrivate from '@/hooks/use-axios-private';
+import { useCompanyUploadValidation } from '@/hooks/use-company-upload-validation';
+import { uploadNumber, validateUploadFile } from '@/utils/file-upload-validation';
+import FileUploadGuidelines from '@/components/ui/file-upload-guidelines';
+import { isAxiosError } from 'axios';
 
 const Select = dynamic(() => import('@/components/ui/select'), {
     ssr: false,
@@ -566,7 +569,7 @@ export default function CompanyGallery({
                 throw new Error('Failed to upload files');
             } catch (err) {
                 console.error('Error uploading files:', err);
-                toast.error(err?.response?.data?.message || 'خطا در آپلود فایل‌ها. لطفا دوباره تلاش کنید.');
+                toast.error((isAxiosError(err) && err.response?.data?.message) || 'خطا در آپلود فایل‌ها. لطفا دوباره تلاش کنید.');
                 return [];
             }
         },
@@ -655,12 +658,6 @@ export default function CompanyGallery({
             <GallerySection
                 className="col-span-2"
                 label="عکس‌های نمونه محصولات تولیدی"
-                uploadAreaContent={
-                    <>
-                        عکس‌های محصولات شرکت خود را اینجا آپلود کنید حجم عکس باید کمتر از{' '}
-                        <strong className="font-medium text-gray-900">20 مگابایت باشد</strong>
-                    </>
-                }
                 registerName="gallery.products"
                 fields={productFields}
                 uploadFile={uploadGalleryFile}
@@ -671,12 +668,6 @@ export default function CompanyGallery({
             <GallerySection
                 className="col-span-2"
                 label="عکس‌های افتخارات و گواهینامه‌ها"
-                uploadAreaContent={
-                    <>
-                        عکس‌های افتخارات و گواهینامه‌های شرکت خود را اینجا آپلود کنید حجم عکس باید کمتر از{' '}
-                        <strong className="font-medium text-gray-900">20 مگابایت باشد</strong>
-                    </>
-                }
                 registerName="gallery.certificates"
                 fields={certificateFields}
                 uploadFile={uploadGalleryFile}
@@ -687,12 +678,6 @@ export default function CompanyGallery({
             <GallerySection
                 className="col-span-2"
                 label="عکس‌های مدیران و مسئولین"
-                uploadAreaContent={
-                    <>
-                        عکس‌های مدیران و مسئولین شرکت خود را اینجا آپلود کنید حجم عکس باید کمتر از{' '}
-                        <strong className="font-medium text-gray-900">20 مگابایت باشد</strong>
-                    </>
-                }
                 registerName="gallery.contacts"
                 fields={contactFields}
                 uploadFile={uploadGalleryFile}
@@ -703,12 +688,6 @@ export default function CompanyGallery({
             <GallerySection
                 className="col-span-2"
                 label="اسلایدر شرکت"
-                uploadAreaContent={
-                    <>
-                        عکس‌های اسلایدر اصلی شرکت خود را اینجا آپلود کنید حجم عکس باید کمتر از{' '}
-                        <strong className="font-medium text-gray-900">20 مگابایت باشد</strong>
-                    </>
-                }
                 registerName="gallery.sliders"
                 fields={sliderFields}
                 uploadFile={uploadGalleryFile}
@@ -719,12 +698,6 @@ export default function CompanyGallery({
             <GallerySection
                 className="col-span-2"
                 label="عکس‌های محیط اداری"
-                uploadAreaContent={
-                    <>
-                        عکس‌های محیط اداری شرکت خود را اینجا آپلود کنید حجم عکس باید کمتر از{' '}
-                        <strong className="font-medium text-gray-900">20 مگابایت باشد</strong>
-                    </>
-                }
                 registerName="gallery.officeEnvironments"
                 fields={officeEnvironmentFields}
                 uploadFile={uploadGalleryFile}
@@ -735,12 +708,6 @@ export default function CompanyGallery({
             <GallerySection
                 className="col-span-2"
                 label="کاتالوگ‌ شرکت"
-                uploadAreaContent={
-                    <>
-                        کاتالوگ‌های شرکت خود را اینجا آپلود کنید حجم فایل باید کمتر از{' '}
-                        <strong className="font-medium text-gray-900">20 مگابایت باشد</strong>
-                    </>
-                }
                 registerName="gallery.catalogs"
                 fields={catalogFields}
                 uploadFile={uploadGalleryFile}
@@ -750,12 +717,6 @@ export default function CompanyGallery({
             <GallerySection
                 className="col-span-2"
                 label="ویدیو‌های شرکت"
-                uploadAreaContent={
-                    <>
-                        طبق محدودیت فعلی سرور، فرمت فایل باید JPG، PNG، PDF یا WebP و حجم آن کمتر از{' '}
-                        <strong className="font-medium text-gray-900">۲۰ مگابایت باشد</strong>
-                    </>
-                }
                 registerName="gallery.videos"
                 fields={videoFields}
                 uploadFile={uploadGalleryFile}
@@ -766,12 +727,6 @@ export default function CompanyGallery({
             <GallerySection
                 className="col-span-2"
                 label="اسناد دیگر شرکت"
-                uploadAreaContent={
-                    <>
-                        اسناد دیگر شرکت خود را اینجا آپلود کنید حجم فایل باید کمتر از{' '}
-                        <strong className="font-medium text-gray-900">20 مگابایت باشد</strong>
-                    </>
-                }
                 registerName="gallery.documents"
                 fields={documentFields}
                 uploadFile={uploadGalleryFile}
@@ -785,7 +740,6 @@ export default function CompanyGallery({
 function GallerySection({
                             className,
                             label,
-                            uploadAreaContent,
                             registerName,
                             fields,
                             uploadFile,
@@ -794,7 +748,6 @@ function GallerySection({
                         }: {
     className?: string;
     label?: React.ReactNode;
-    uploadAreaContent?: React.ReactNode;
     registerName: string;
     fields: { name: string; label: string; type: string }[];
     uploadFile: (files: File[], fileServiceType: string) => Promise<UploadedFileDTO[]>;
@@ -802,6 +755,7 @@ function GallerySection({
     initialFiles?: any[];
 }) {
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const uploadValidation = useCompanyUploadValidation(fileServiceType);
     const {register, setValue, unregister, formState: {errors, isSubmitted}} = useFormContext();
     const [galleryItems, setGalleryItems] = useState<GalleryItemData[]>([]);
     const [isUploading, setIsUploading] = useState(false);
@@ -884,15 +838,23 @@ function GallerySection({
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files || []);
         if (!files.length) return;
+        if (!uploadValidation.ready || !uploadValidation.validation) return;
 
         setIsUploading(true);
         try {
-            const valid = files.filter(f => ['image/jpeg', 'image/png', 'application/pdf', 'image/webp'].includes(f.type) && f.size <= 20 * 1024 * 1024);
-            if (!valid.length) {
-                toast.error('فرمت یا حجم فایل‌ها اشتباه است.');
+            const validation = uploadValidation.validation;
+            if (validation.maxFiles && files.length > validation.maxFiles) {
+                toast.error(`در هر بار آپلود حداکثر ${uploadNumber(validation.maxFiles)} فایل انتخاب کنید.`);
                 return;
             }
-            const uploaded = await uploadFile(valid, fileServiceType);
+            for (const file of files) {
+                const validationError = await validateUploadFile(file, validation);
+                if (validationError) {
+                    toast.error(`${file.name}: ${validationError}`);
+                    return;
+                }
+            }
+            const uploaded = await uploadFile(files, fileServiceType);
             if (uploaded.length) {
                 const newItems = uploaded.map((file, i) => ({
                     id: file.id,
@@ -938,21 +900,28 @@ function GallerySection({
             <Upload
                 label={label}
                 ref={fileInputRef}
-                accept="image/jpeg,image/png,application/pdf,image/webp"
+                accept={uploadValidation.accept || ''}
+                aria-describedby={`${fileServiceType}-upload-rules`}
                 multiple
                 onChange={handleFileUpload}
-                disabled={isUploading}
+                disabled={isUploading || !uploadValidation.ready}
+                className="min-h-[180px] px-5 py-6 md:ps-5"
+                iconClassName="h-28 w-28 shrink-0"
+                contentClassName="w-full max-w-2xl gap-6 sm:flex-row"
+                placeholderText={<div className="min-w-0 w-full flex-1 text-start">
+                    <p className="text-sm font-semibold text-gray-800">برای انتخاب فایل کلیک کنید</p>
+                    <FileUploadGuidelines id={`${fileServiceType}-upload-rules`} state={uploadValidation} className="border-0 bg-transparent px-0 py-0" />
+                </div>}
             />
-            <p className="pt-3 text-sm text-gray-500">{uploadAreaContent}</p>
 
             {isUploading && <div className="mt-4 p-4 bg-blue-50 text-blue-700 rounded-md">در حال آپلود فایل‌ها...</div>}
 
             {!!galleryItems.length && (
                 <div className="mt-6 space-y-6">
                     {galleryItems.map((item, idx) => (
-                        <div key={item.id || item.uploadedFileId || idx}
-                             className="flex flex-col md:flex-row items-start border rounded-lg p-4 gap-4">
-                            <div className="flex w-full flex-col items-center md:w-1/5">
+                        <div key={String(item.id || item.uploadedFileId || idx)}
+                             className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-5 rounded-xl border border-gray-200 bg-gray-0 p-5 md:grid-cols-[7rem_minmax(0,1fr)_auto]">
+                            <div className="flex min-w-0 flex-col items-start md:items-center">
                                 {item.filePath && /\.(jpe?g|png|webp)$/i.test(item.originalFileName || item.fileName || item.filePath || '') ? (
                                     <div className="relative h-24 w-24 overflow-hidden rounded-lg border">
                                         <Image src={`${STATIC_FILES_URL}${item.filePath}`} alt={item.originalFileName || item.fileName || `فایل ${idx + 1}`}
@@ -969,12 +938,12 @@ function GallerySection({
                                         className="mt-2 w-28 truncate text-center text-xs text-gray-500"
                                         title={item.originalFileName || item.fileName}
                                     >
-                                        {item.originalFileName || item.fileName}
+                                        <bdi>{item.originalFileName || item.fileName}</bdi>
                                     </p>
                                 )}
                             </div>
 
-                            <div className="w-full md:w-3/4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="col-span-2 grid min-w-0 grid-cols-1 items-start gap-4 sm:grid-cols-2 md:col-span-1 md:col-start-2 md:row-start-1">
                                 {fields.map(f => (
                                     f.type === 'checkbox' ? (
                                         <Checkbox
@@ -992,7 +961,9 @@ function GallerySection({
                                         <Input
                                             key={`${idx}-${f.name}`}
                                             label={f.label}
-                                            type={f.type}
+                                            type={f.type === 'email' ? 'email' : 'text'}
+                                            inputMode={f.name === 'phoneNumbers' ? 'numeric' : undefined}
+                                            maxLength={f.name === 'phoneNumbers' ? 11 : undefined}
                                             // register this field with RHF
                                             {...register(`${registerName}[${idx}].${f.name}`)}
                                             // keep it controlled if you like
@@ -1009,16 +980,18 @@ function GallerySection({
                                         />
                                     )
                                 ))}
-                                <div className="flex items-center">
-                                    <span className="text-sm text-gray-500">اولویت: {idx + 1}</span>
+                                <div className="col-span-full flex items-center border-t border-gray-100 pt-3">
+                                    <span className="rounded-md bg-gray-100 px-2.5 py-1 text-xs text-gray-600">اولویت: {new Intl.NumberFormat('fa-IR').format(idx + 1)}</span>
                                     <input type="hidden" {...register(`${registerName}[${idx}].priority`)}
                                            value={idx + 1}/>
                                 </div>
                             </div>
 
-                            <div className="w-full md:w-1/12 flex justify-center md:justify-end">
+                            <div className="col-start-2 row-start-1 flex justify-end md:col-start-3">
                                 <button type="button" onClick={() => handleItemRemove(idx)}
-                                        className="p-2 bg-red-50 rounded-full text-red-500 hover:bg-red-100 transition">
+                                        aria-label={`حذف فایل ${item.originalFileName || item.fileName || idx + 1}`}
+                                        title="حذف فایل"
+                                        className="flex h-10 w-10 items-center justify-center rounded-lg border border-red-light bg-red-lighter text-red-dark transition-colors hover:bg-red-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red focus-visible:ring-offset-2">
                                     <TrashIcon className="h-5 w-5"/>
                                 </button>
                             </div>

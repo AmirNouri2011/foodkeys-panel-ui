@@ -314,7 +314,7 @@ export default function SelectBox<OptionType extends SelectOption>({
   const emptyValue = !isNumber(value) && isEmpty(value);
 
   return (
-    <div ref={refs.setReference} className={cn('grid', className)}>
+    <div ref={refs.setReference} className={cn('grid min-w-0 grid-cols-1', className)}>
       <Listbox value={value} disabled={disabled} {...props}>
         {({ open }) => (
           <>
@@ -333,10 +333,11 @@ export default function SelectBox<OptionType extends SelectOption>({
               </Listbox.Label>
             )}
 
-            <div ref={ref} className="h-full">
+            <div ref={ref} className="h-full min-w-0">
               <Listbox.Button
                 className={cn(
                   selectClasses.base,
+                  'min-w-0 max-w-full',
                   selectFieldClasses.base,
                   variantStyle.base,
                   variantStyle.color[color],
@@ -365,7 +366,7 @@ export default function SelectBox<OptionType extends SelectOption>({
                 )}
                 <div
                   className={cn(
-                    'block w-full truncate text-left rtl:text-right',
+                    'block min-w-0 flex-1 truncate text-left rtl:text-right',
                     emptyValue && 'text-gray-500 dark:text-gray-300',
                     // @ts-ignore
                     prefix && selectFieldClasses.prefixStartPadding.size[size],
@@ -386,7 +387,7 @@ export default function SelectBox<OptionType extends SelectOption>({
                 {suffix && (
                   <span
                     className={cn(
-                      'whitespace-nowrap leading-normal',
+                      'shrink-0 whitespace-nowrap leading-normal',
                       suffixClassName
                     )}
                   >

@@ -40,6 +40,9 @@ export const API_BASE_URL = normalizeApiBaseUrl(
 /** Server origin without the panel API path */
 export const BASE_URL = API_BASE_URL.replace(/\/api\/v1\/client\/panel$/, '');
 
+/** Categorized products use the public API path, with the authenticated client. */
+export const PRODUCT_API_URL = `${BASE_URL}/api/v1/product`;
+
 /** Static files origin (images, documents, etc.) */
 export const STATIC_FILES_URL = normalizeOriginUrl(
   process.env.NEXT_PUBLIC_STATIC_FILES_URL,
@@ -97,6 +100,7 @@ export const API_ENDPOINTS = {
 
 const apiConfig = {
   API_BASE_URL,
+  PRODUCT_API_URL,
   BASE_URL,
   STATIC_FILES_URL,
   CLIENT_WEBSITE_URL,

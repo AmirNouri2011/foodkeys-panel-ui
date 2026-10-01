@@ -88,7 +88,7 @@ export interface UploadProps
     'accept' | 'children'
   > {
   /** Specify type of the files */
-  accept: 'img' | 'pdf' | 'csv' | 'imgAndPdf' | 'all';
+  accept: string;
   /** Pass multiple files */
   multiple?: boolean;
   /** Whether disable upload */
@@ -113,6 +113,8 @@ export interface UploadProps
   className?: string;
   /** Pass iconClassName to style the upload icon */
   iconClassName?: string;
+  /** Style the icon and placeholder layout inside the upload area. */
+  contentClassName?: string;
   /** Pass label className to style label */
   labelClassName?: string;
 }
@@ -137,6 +139,7 @@ function Upload(
     className,
     wrapperClassName,
     iconClassName = '@3xl:w-44 @3xl:h-44 w-28 shrink-0 @2xl:w-36',
+    contentClassName,
     labelClassName,
     ...props
   }: React.PropsWithChildren<UploadProps>,
@@ -164,12 +167,12 @@ function Upload(
           ref={ref}
           title=""
           type="file"
-          accept={acceptedFileType[accept]}
+          accept={acceptedFileType[accept as keyof typeof acceptedFileType] || accept}
           className="absolute top-0 h-full w-full opacity-0 disabled:cursor-not-allowed"
           {...props}
           {...dropzoneInputProps}
         />
-        <div className="flex flex-col items-center @2xl:flex-row">
+        <div className={cn('flex flex-col items-center @2xl:flex-row', contentClassName)}>
           <UploadIcon
             className={cn(
               variant !== 'outline' && !props.disabled

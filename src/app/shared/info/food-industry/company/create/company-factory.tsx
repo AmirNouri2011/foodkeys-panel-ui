@@ -161,9 +161,13 @@ export default function CompanyFactory({
             تلفن‌های ثابت کارخانه*
           </label>
           {factoryTels.map((phone, index) => (
-              <div key={index} className="flex items-center gap-2 space-x-2">
+              <div
+                  key={index}
+                  className="grid grid-cols-[minmax(0,1fr)_2.5rem] items-start gap-2"
+              >
                 <Input
                     type="tel"
+                    dir="ltr"
                     inputMode="numeric"
                     maxLength={11}
                     value={phone}
@@ -173,11 +177,15 @@ export default function CompanyFactory({
                       newPhones[index] = e.target.value;
                       setFactoryTels(newPhones);
                     }}
-                    className="flex-grow"
+                    className="min-w-0"
+                    inputClassName="text-left"
                     error={(errors.factoryTels as any)?.[index]?.telNumber?.message}
                     helperText="(مثال: 02112345678)"
                 />
                 <ActionIcon
+                    type="button"
+                    aria-label={`حذف تلفن کارخانه ${index + 1}`}
+                    className="h-10 w-10 shrink-0 self-start"
                     onClick={() =>
                         setFactoryTels(factoryTels.filter((_, i) => i !== index))
                     }
@@ -203,9 +211,13 @@ export default function CompanyFactory({
             فکس ثابت کارخانه
           </label>
           {factoryFaxes.map((fax, index) => (
-              <div key={index} className="flex items-center gap-2 space-x-2">
+              <div
+                  key={index}
+                  className="grid grid-cols-[minmax(0,1fr)_2.5rem] items-start gap-2"
+              >
                 <Input
                     type="tel"
+                    dir="ltr"
                     inputMode="numeric"
                     maxLength={11}
                     value={fax}
@@ -215,11 +227,15 @@ export default function CompanyFactory({
                       newFaxes[index] = e.target.value;
                       setFactoryFaxes(newFaxes);
                     }}
-                    className="flex-grow"
+                    className="min-w-0"
+                    inputClassName="text-left"
                     error={(errors.factoryFaxes as any)?.[index]?.telNumber?.message}
                     helperText="(مثال: 02112345678)"
                 />
                 <ActionIcon
+                    type="button"
+                    aria-label={`حذف فکس کارخانه ${index + 1}`}
+                    className="h-10 w-10 shrink-0 self-start"
                     onClick={() =>
                         setFactoryFaxes(factoryFaxes.filter((_, i) => i !== index))
                     }

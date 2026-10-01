@@ -207,13 +207,13 @@
 //   },
 // ];
 import { z } from 'zod';
+import { productsToForm } from './product-api';
 import {
   optionalEmailArraySchema,
   optionalEmailSchema,
   optionalLandlineSchema,
   optionalMobilePhoneSchema,
   optionalDigitsSchema,
-  optionalNumberSchema,
   optionalPostalCodeSchema,
   optionalWebsiteSchema,
   requiredLandlineSchema,
@@ -230,8 +230,10 @@ const pictureSchema = z.object({
 
 const productSchema = z.object({
     id: z.number().nullable().optional(),
-    name: z.string().min(1, { message: validationMessages.productName }),
-    categoryType: z.string().min(1, { message: validationMessages.productCategory }),
+    _categoryKey: z.string().optional(),
+    _productPictures: z.array(z.any()).optional(),
+    name: z.string().trim().min(1, { message: validationMessages.productName }),
+    categoryType: z.string().trim().min(1, { message: validationMessages.productCategory }),
     otherTypeName: z.string().optional(),
     description: z.string().optional(),
     pictures: z.any().optional().nullable(),
@@ -412,9 +414,17 @@ const companyTypeSchema = z.object({
     value: z.string(),
 });
 const companyBrandSchema = z.object({
-    name: z.string(),
-    nameEn: z.string(),
-    brandImage: z.string().optional()
+    name: z.string().trim(),
+    nameEn: z.string().trim(),
+    brandImage: z.string().trim().optional()
+}).superRefine((brand, ctx) => {
+    if (!brand.name && (brand.nameEn || brand.brandImage)) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['name'],
+            message: 'نام تجاری را وارد کنید',
+        });
+    }
 });
 
 const requiredSubcategorySchema = z
@@ -449,8 +459,8 @@ export const companyFormSchema = z.object({
     answerName: z.string().optional(),
     history: z.string().optional(),
     visit: z.number().optional(),
-    buildingArea: optionalNumberSchema(),
-    landArea: optionalNumberSchema(),
+    buildingArea: z.string().optional(),
+    landArea: z.string().optional(),
     holding: z.string().optional(),
     description: z.string().optional(),
     advertisingSlogan: z.string().optional(),
@@ -564,6 +574,19 @@ export const companyFormSchema = z.object({
             message: 'ثبت حداقل یک محصول یا خدمت الزامی است',
         });
     }
+    if (data.productAvailability === '2') {
+        (['outSourcedProducts'] as const).forEach(field => {
+            data[field]?.forEach((product, index) => {
+                if (!Array.isArray(product.pictures) || !product.pictures.length) {
+                    ctx.addIssue({
+                        code: z.ZodIssueCode.custom,
+                        path: [field, index, 'pictures'],
+                        message: 'یک تصویر برای دسته‌بندی انتخاب کنید',
+                    });
+                }
+            });
+        });
+    }
 });
 
 export type CreateCompanyInput = z.infer<typeof companyFormSchema>;
@@ -579,8 +602,8 @@ export function defaultValues(company?: CreateCompanyInput | null) {
         owner: company?.owner ?? '',
         answerName: company?.answerName ?? '',
         history: company?.history ?? '',
-        buildingArea: company?.buildingArea ?? '',
-        landArea: company?.landArea ?? '',
+        buildingArea: String(company?.buildingArea ?? ''),
+        landArea: String(company?.landArea ?? ''),
         holding: company?.holding ?? '',
         description: company?.description ?? '',
         advertisingSlogan: company?.advertisingSlogan ?? '',
@@ -598,8 +621,8 @@ export function defaultValues(company?: CreateCompanyInput | null) {
         tags: company?.tags ?? '',
         companyKeyWords: company?.companyKeyWords ?? [],
         companyTags: company?.companyTags ?? [],
-        products: company?.products ?? [],
-        outSourcedProducts: company?.outSourcedProducts ?? [],
+        products: productsToForm(company?.products ?? []),
+        outSourcedProducts: productsToForm(company?.outSourcedProducts ?? [], true),
         primaryBrand: company?.primaryBrand ?? '',
         mainBrandEn: company?.mainBrandEn ?? '',
         factoryCity: company?.location?.factoryCity ?? '',

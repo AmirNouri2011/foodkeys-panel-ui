@@ -1,0 +1,15 @@
+/* Match the Hydrogen sidebar palette, scoped to products and its portal modal. */
+.theme {
+  --primary-default: 40 93 67;
+  --primary-dark: 35 76 56;
+  --primary-light: 52 120 83;
+  --primary-lighter: 234 242 233;
+}
+
+:global(.dark) .theme,
+:global([data-theme='dark']) .theme {
+  --primary-default: 52 120 83;
+  --primary-dark: 40 93 67;
+  --primary-light: 121 171 139;
+  --primary-lighter: 37 57 43;
+}

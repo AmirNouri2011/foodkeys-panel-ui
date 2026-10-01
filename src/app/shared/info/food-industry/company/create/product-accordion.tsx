@@ -1,980 +1,474 @@
-// import { useState, useEffect, useRef, useCallback } from 'react';
-// import { useFormContext, Controller } from 'react-hook-form';
-// import { Input } from '@/components/ui/input';
-// import { Textarea } from '@/components/ui/textarea';
-// import { PiTagBold } from 'react-icons/pi';
-// import { Text, Button } from 'rizzui';
-// import TrashIcon from '@/components/icons/trash';
-// import Image from 'next/image';
-// import dynamic from 'next/dynamic';
-// import Upload from '@/components/ui/upload';
-// import useAxiosPrivate from '@/hooks/use-axios-private';
-// import toast from 'react-hot-toast';
-//
-// const Swiper = dynamic(() => import('swiper/react').then((mod) => mod.Swiper), { ssr: false });
-// const SwiperSlide = dynamic(() => import('swiper/react').then((mod) => mod.SwiperSlide), { ssr: false });
-//
-// // Interface for uploaded file response
-// interface UploadedFileDTO {
-//     id: string;
-//     fileName: string;
-//     filePath: string;
-// }
-//
-// // Interface for MultipleFiles component props
-// interface MultipleFilesProps {
-//     className?: string;
-//     label: React.ReactNode;
-//     registerName: string;
-//     productIndex: number;
-//     dataObjectName: string;
-// }
-//
-// // Updated MultipleFiles component with proper image upload handling
-// const MultipleFiles: React.FC<MultipleFilesProps> = ({
-//                                                          className,
-//                                                          label,
-//                                                          registerName,
-//                                                          productIndex,
-//                                                          dataObjectName,
-//                                                      }) => {
-//     const { setValue, watch } = useFormContext();
-//     const multiRef = useRef<HTMLInputElement>(null);
-//     const _axios = useAxiosPrivate();
-//     const [isUploading, setIsUploading] = useState(false);
-//
-//     // Watch the pictures array for this specific product (array of file IDs)
-//     const pictureIds = watch(registerName) || [];
-//
-//     // Watch uploaded file details for preview
-//     const uploadedFiles = watch(`${dataObjectName}.${productIndex}.uploadedFiles`) || [];
-//
-//     // Function to upload product images
-//     const uploadProductImages = async (files: File[]) => {
-//         setIsUploading(true);
-//
-//         try {
-//             const formData = new FormData();
-//             files.forEach((file) => formData.append('files', file));
-//             formData.append('fileServiceType', 'PRODUCT_PICTURE');
-//
-//             const response = await _axios.post(
-//                 `${API_BASE_URL}/file`,
-//                 formData,
-//                 {
-//                     headers: {
-//                         'Content-Type': 'multipart/form-data',
-//                     },
-//                 }
-//             );
-//
-//             if (response.data.status === 'SUCCESS' && response.data.data && response.data.data.length > 0) {
-//                 const uploadedFileData = response.data.data;
-//
-//                 // Update the pictures field with file IDs
-//                 const newFileIds = uploadedFileData.map((file: UploadedFileDTO) => file.id);
-//                 setValue(registerName, [...pictureIds, ...newFileIds]);
-//
-//                 // Store file details for preview purposes
-//                 setValue(`${dataObjectName}.${productIndex}.uploadedFiles`, [...uploadedFiles, ...uploadedFileData]);
-//
-//                 toast.success('تصاویر محصول با موفقیت آپلود شدند');
-//                 return uploadedFileData;
-//             } else {
-//                 throw new Error('Upload failed');
-//             }
-//         } catch (error) {
-//             console.error('Error uploading product images:', error);
-//             toast.error('خطا در آپلود تصاویر محصول');
-//             return [];
-//         } finally {
-//             setIsUploading(false);
-//         }
-//     };
-//
-//     const handleMultiImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-//         const uploadedFiles = Array.from(event.target.files || []);
-//         const imageFiles = uploadedFiles.filter((file) =>
-//             file.type.includes('image')
-//         );
-//
-//         // Validate file size (2MB max)
-//         const validFiles = imageFiles.filter(file => {
-//             if (file.size > 2 * 1024 * 1024) {
-//                 toast.error(`فایل ${file.name} بیشتر از 2 مگابایت است`);
-//                 return false;
-//             }
-//             return true;
-//         });
-//
-//         if (validFiles.length > 0) {
-//             await uploadProductImages(validFiles);
-//         }
-//     };
-//
-//     const handleMultiImageDelete = (index: number) => {
-//         const deletedFileId = pictureIds[index];
-//         const deletedFileData = uploadedFiles[index];
-//
-//         // Remove from pictures array (file IDs)
-//         const updatedFileIds = pictureIds.filter((_: string, i: number) => i !== index);
-//         setValue(registerName, updatedFileIds);
-//
-//         // Remove from uploaded files data
-//         const updatedFileData = uploadedFiles.filter((_: any, i: number) => i !== index);
-//         setValue(`${dataObjectName}.${productIndex}.uploadedFiles`, updatedFileData);
-//
-//         if (multiRef.current) {
-//             multiRef.current.value = '';
-//         }
-//
-//         toast.success('تصویر حذف شد');
-//     };
-//
-//     const getImageSrc = useCallback((file: any): string => {
-//         if (file instanceof File || file instanceof Blob) {
-//             return URL.createObjectURL(file);
-//         } else if (file && file.filePath) {
-//             return `${STATIC_FILES_URL}${file.filePath}`;
-//         } else if (file && file.url) {
-//             return file.url;
-//         } else if (typeof file === 'string') {
-//             return file;
-//         }
-//         return '';
-//     }, []);
-//
-//     return (
-//         <div className={className}>
-//             <Upload
-//                 label={label}
-//                 ref={multiRef}
-//                 accept="image/*"
-//                 multiple
-//                 onChange={handleMultiImageUpload}
-//                 disabled={isUploading}
-//             />
-//             <p className="pt-3 text-sm text-gray-500">
-//                 عکس محصول خود را اینجا آپلود کنید. حجم عکس باید کمتر از{' '}
-//                 <strong className="font-medium text-gray-900">2 مگابایت باشد</strong>
-//             </p>
-//
-//             {isUploading && (
-//                 <div className="mt-4 p-4 bg-blue-50 text-blue-700 rounded-md">
-//                     در حال آپلود تصاویر... لطفا صبر کنید
-//                 </div>
-//             )}
-//
-//             {uploadedFiles.length > 0 && (
-//                 <div className="mt-4">
-//                     <Swiper
-//                         spaceBetween={12}
-//                         slidesPerView={3}
-//                         breakpoints={{
-//                             640: { slidesPerView: 3 },
-//                             768: { slidesPerView: 4 },
-//                             1024: { slidesPerView: 5 },
-//                         }}
-//                     >
-//                         {uploadedFiles.map((file: any, index: number) => (
-//                             <SwiperSlide
-//                                 key={file?.id || `img-${productIndex}-${index}`}
-//                             >
-//                                 <div className="relative aspect-square overflow-hidden rounded-lg border border-gray-200 bg-gray-50 flex items-center justify-center group">
-//                                     <Image
-//                                         src={getImageSrc(file)}
-//                                         alt={file?.fileName || 'عکس محصول'}
-//                                         width={200}
-//                                         height={200}
-//                                         className="object-contain w-full h-full transition-all duration-300 group-hover:blur-[2px] group-hover:scale-105"
-//                                         unoptimized
-//                                     />
-//                                     <button
-//                                         onClick={() => handleMultiImageDelete(index)}
-//                                         type="button"
-//                                         className="absolute right-2 top-2 rounded-full bg-gray-0/70 p-1.5 text-gray-700 shadow-sm transition-colors hover:bg-red-500 hover:text-white opacity-0 group-hover:opacity-100 dark:bg-gray-100/70 dark:text-gray-600"
-//                                         aria-label="حذف تصویر"
-//                                     >
-//                                         <TrashIcon className="h-3.5 w-3.5" />
-//                                     </button>
-//                                 </div>
-//                             </SwiperSlide>
-//                         ))}
-//                     </Swiper>
-//                 </div>
-//             )}
-//         </div>
-//     );
-// };
-//
-// interface ProductAccordionProps {
-//     products: any[];
-//     append: Function;
-//     remove: Function;
-//     update: Function;
-//     handleImageSelection?: Function;
-//     dataObjectName: string;
-// }
-//
-// export default function ProductAccordion({
-//                                              products,
-//                                              append,
-//                                              remove,
-//                                              update,
-//                                              handleImageSelection,
-//                                              dataObjectName,
-//                                          }: ProductAccordionProps) {
-//     const { control, watch, register, setValue } = useFormContext();
-//     const [openIndex, setOpenIndex] = useState<number | null>(null);
-//
-//     const toggleAccordion = (index: number) => {
-//         setOpenIndex(openIndex === index ? null : index);
-//     };
-//
-//     return (
-//         <div className="w-full">
-//             <div className="w-full overflow-hidden rounded-xl border border-gray-200 bg-gray-0 shadow-sm dark:border-gray-300 dark:bg-gray-50">
-//                 {products.length === 0 ? (
-//                     <div className="flex flex-col items-center justify-center p-8 text-center">
-//                         <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-//                             <PiTagBold className="h-8 w-8 text-gray-400" />
-//                         </div>
-//                         <Text className="text-lg font-medium mb-2">هیچ محصولی ثبت نشده است</Text>
-//                         <Text className="text-sm text-gray-500 mb-6">برای شروع، دکمه &ldquo;افزودن محصول جدید&rdquo; را کلیک کنید</Text>
-//                     </div>
-//                 ) : (
-//                     products.map((field, index) => (
-//                         <div key={field.fieldId || field.id || `product-${index}`} className="border-b border-gray-200 last:border-b-0 dark:border-gray-300">
-//                             {/* Hidden fields for form registration */}
-//                             <input
-//                                 type="hidden"
-//                                 {...register(`${dataObjectName}.${index}.id`)}
-//                                 defaultValue={field.id}
-//                             />
-//
-//                             <button
-//                                 className={`flex w-full items-center justify-between p-5 transition duration-200 ${
-//                                     openIndex === index ? 'bg-gray-50' : 'hover:bg-gray-50'
-//                                 } focus:outline-none`}
-//                                 onClick={() => toggleAccordion(index)}
-//                                 aria-expanded={openIndex === index}
-//                                 type="button"
-//                             >
-//                                 <div className="flex items-center gap-4">
-//                                     <div className={`flex h-12 w-12 items-center justify-center rounded-lg ${
-//                                         openIndex === index ? 'bg-primary-50 text-primary-600' : 'bg-gray-100 text-gray-500'
-//                                     } transition-colors duration-200`}>
-//                                         <PiTagBold className="h-5 w-5" />
-//                                     </div>
-//                                     <div className="text-right">
-//                                         <h3 className={`text-base font-medium transition-colors duration-200 ${
-//                                             openIndex === index ? 'text-primary-600' : 'text-gray-800'
-//                                         }`}>
-//                                             {watch(`${dataObjectName}.${index}.name`) || 'محصول جدید'}
-//                                         </h3>
-//                                         <p className="text-sm text-gray-500 mt-1">
-//                                             {watch(`${dataObjectName}.${index}.categoryType`) || 'بدون دسته‌بندی'}
-//                                         </p>
-//                                     </div>
-//                                 </div>
-//                                 <div className="flex items-center gap-3">
-//                                     {watch(`${dataObjectName}.${index}.showProduct`) && (
-//                                         <span className="inline-flex items-center rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700">
-//                                             نمایش فعال
-//                                         </span>
-//                                     )}
-//                                     <div className={`transition-transform duration-300 ${
-//                                         openIndex === index ? 'rotate-180' : ''
-//                                     }`}>
-//                                         <svg
-//                                             xmlns="http://www.w3.org/2000/svg"
-//                                             width="20"
-//                                             height="20"
-//                                             viewBox="0 0 24 24"
-//                                             fill="none"
-//                                             stroke="currentColor"
-//                                             strokeWidth="2"
-//                                             strokeLinecap="round"
-//                                             strokeLinejoin="round"
-//                                             className="text-gray-400"
-//                                         >
-//                                             <polyline points="6 9 12 15 18 9"></polyline>
-//                                         </svg>
-//                                     </div>
-//                                 </div>
-//                             </button>
-//
-//                             <div
-//                                 className={`transition-all duration-300 ease-in-out overflow-hidden ${
-//                                     openIndex === index ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
-//                                 }`}
-//                             >
-//                                 <div className="border-t border-gray-200 bg-gray-0 p-6 dark:border-gray-300 dark:bg-gray-100">
-//                                     <div className="grid grid-cols-12 gap-x-6 gap-y-6">
-//                                         <Controller
-//                                             name={`${dataObjectName}.${index}.name`}
-//                                             control={control}
-//                                             defaultValue={field.name || ''}
-//                                             rules={{ required: 'نام محصول الزامی است' }}
-//                                             render={({ field: { onChange, value }, fieldState: { error } }) => (
-//                                                 <Input
-//                                                     label="عنوان محصول *"
-//                                                     inputClassName="border-2 focus:border-primary-500"
-//                                                     size="lg"
-//                                                     className="col-span-12 md:col-span-6"
-//                                                     value={value}
-//                                                     onChange={onChange}
-//                                                     placeholder="نام محصول را وارد کنید"
-//                                                     error={error?.message}
-//                                                 />
-//                                             )}
-//                                         />
-//                                         <Controller
-//                                             name={`${dataObjectName}.${index}.categoryType`}
-//                                             control={control}
-//                                             defaultValue={field.categoryType || ''}
-//                                             rules={{ required: 'دسته‌بندی محصول الزامی است' }}
-//                                             render={({ field: { onChange, value }, fieldState: { error } }) => (
-//                                                 <Input
-//                                                     label="دسته بندی محصول *"
-//                                                     inputClassName="border-2 focus:border-primary-500"
-//                                                     size="lg"
-//                                                     className="col-span-12 md:col-span-6"
-//                                                     value={value}
-//                                                     onChange={onChange}
-//                                                     placeholder="مثال: الکترونیکی، غذایی، ..."
-//                                                     error={error?.message}
-//                                                 />
-//                                             )}
-//                                         />
-//                                         <Controller
-//                                             name={`${dataObjectName}.${index}.description`}
-//                                             control={control}
-//                                             defaultValue={field.description || ''}
-//                                             render={({ field: { onChange, value } }) => (
-//                                                 <Textarea
-//                                                     label="توضیحات محصول"
-//                                                     className="col-span-12"
-//                                                     rows={4}
-//                                                     value={value}
-//                                                     onChange={onChange}
-//                                                     placeholder="توضیحات کاملی درباره این محصول بنویسید..."
-//                                                 />
-//                                             )}
-//                                         />
-//                                         <Controller
-//                                             name={`${dataObjectName}.${index}.showProduct`}
-//                                             control={control}
-//                                             defaultValue={field.showProduct || false}
-//                                             render={({ field: { onChange, value } }) => (
-//                                                 <div className="col-span-12">
-//                                                     <div className="flex items-center justify-between rounded-lg border border-gray-200 p-4 dark:border-gray-300">
-//                                                         <div className="flex flex-row items-center gap-3">
-//                                                             <Text className="font-medium text-gray-800">نمایش محصول</Text>
-//                                                             <Text className="text-sm text-gray-500">
-//                                                                 {value ?
-//                                                                     'این محصول در صفحه اصلی نمایش داده خواهد شد' :
-//                                                                     'این محصول در صفحه اصلی نمایش داده نخواهد شد'}
-//                                                             </Text>
-//                                                         </div>
-//                                                         <label className="relative inline-flex cursor-pointer items-center">
-//                                                             <input
-//                                                                 type="checkbox"
-//                                                                 className="peer sr-only"
-//                                                                 checked={value || false}
-//                                                                 onChange={(e) => onChange(e.target.checked)}
-//                                                             />
-//                                                             <div className="h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-gray-0 after:transition-all after:content-[''] peer-checked:bg-primary-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:ring-2 peer-focus:ring-primary-300 dark:bg-gray-300 dark:after:bg-gray-700"></div>
-//                                                         </label>
-//                                                     </div>
-//                                                 </div>
-//                                             )}
-//                                         />
-//                                         <Controller
-//                                             name={`${dataObjectName}.${index}.outsourced`}
-//                                             control={control}
-//                                             defaultValue={dataObjectName === 'outSourcedProducts'}
-//                                             render={({ field }) => (
-//                                                 <input type="hidden" {...field} />
-//                                             )}
-//                                         />
-//
-//                                         {/* Pictures field - stores array of file IDs */}
-//                                         <input
-//                                             type="hidden"
-//                                             {...register(`${dataObjectName}.${index}.pictures`)}
-//                                         />
-//
-//                                         {/* Uploaded files data field - for preview purposes */}
-//                                         <input
-//                                             type="hidden"
-//                                             {...register(`${dataObjectName}.${index}.uploadedFiles`)}
-//                                         />
-//
-//                                         <MultipleFiles
-//                                             className="col-span-12"
-//                                             label={
-//                                                 <div className="flex items-center gap-2">
-//                                                     <span>تصویر محصول</span>
-//                                                     <span className="text-xs text-gray-500">(حداقل یک تصویر اضافه کنید)</span>
-//                                                 </div>
-//                                             }
-//                                             registerName={`${dataObjectName}.${index}.pictures`}
-//                                             productIndex={index}
-//                                             dataObjectName={dataObjectName}
-//                                         />
-//                                         <div className="col-span-12 mt-4 flex flex-wrap justify-end gap-4 border-t border-gray-200 pt-4 dark:border-gray-300">
-//                                             <Button
-//                                                 size="lg"
-//                                                 variant="outline"
-//                                                 className="flex items-center"
-//                                                 onClick={() => remove(index)}
-//                                                 type="button"
-//                                             >
-//                                                 <TrashIcon className="me-2 h-4 w-4" />
-//                                                 حذف محصول
-//                                             </Button>
-//                                         </div>
-//                                     </div>
-//                                 </div>
-//                             </div>
-//                         </div>
-//                     ))
-//                 )}
-//             </div>
-//
-//             <Button
-//                 variant="solid"
-//                 color="primary"
-//                 onClick={() =>
-//                     append({
-//                         name: '',
-//                         categoryType: '',
-//                         description: '',
-//                         outsourced: dataObjectName === 'outSourcedProducts',
-//                         showProduct: false,
-//                         pictures: [], // Array of file IDs
-//                         uploadedFiles: [], // Array of file data for preview
-//                     })
-//                 }
-//                 className="mt-6 flex items-center justify-center w-full sm:w-auto"
-//                 type="button"
-//             >
-//                 <svg
-//                     xmlns="http://www.w3.org/2000/svg"
-//                     width="20"
-//                     height="20"
-//                     viewBox="0 0 24 24"
-//                     fill="none"
-//                     stroke="currentColor"
-//                     strokeWidth="2"
-//                     strokeLinecap="round"
-//                     strokeLinejoin="round"
-//                     className="me-2"
-//                 >
-//                     <line x1="12" y1="5" x2="12" y2="19"></line>
-//                     <line x1="5" y1="12" x2="19" y2="12"></line>
-//                 </svg>
-//                 افزودن محصول جدید
-//             </Button>
-//         </div>
-//     );
-// }
-
-import { API_BASE_URL } from '@/config/api.config';
-import { STATIC_FILES_URL } from '@/config/api.config';
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { useFormContext, Controller } from 'react-hook-form';
+import { useEffect, useRef, useState } from 'react';
+import { Controller, useFormContext } from 'react-hook-form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { PiTagBold } from 'react-icons/pi';
-import { Text, Button } from 'rizzui';
-import TrashIcon from '@/components/icons/trash';
-import Image from 'next/image';
-import dynamic from 'next/dynamic';
-import Upload from '@/components/ui/upload';
-import useAxiosPrivate from '@/hooks/use-axios-private';
+import { Button } from 'rizzui';
+import { Plus, Trash2, Layers3, ImagePlus } from 'lucide-react';
 import toast from 'react-hot-toast';
+import useAxiosPrivate from '@/hooks/use-axios-private';
+import { API_BASE_URL, STATIC_FILES_URL } from '@/config/api.config';
+import { groupProducts, GroupedProduct } from './product-groups';
+import { useCompanyUploadValidation } from '@/hooks/use-company-upload-validation';
+import { validateUploadFile } from '@/utils/file-upload-validation';
+import FileUploadGuidelines from '@/components/ui/file-upload-guidelines';
+import Image from 'next/image';
 
-const Swiper = dynamic(() => import('swiper/react').then((mod) => mod.Swiper), { ssr: false });
-const SwiperSlide = dynamic(() => import('swiper/react').then((mod) => mod.SwiperSlide), { ssr: false });
-
-// Interface for uploaded file response (matches your backend FileDTO)
-interface UploadedFileDTO {
-    id: string;
-    fileName: string;
-    originalFileName: string;
-    filePath: string;
-    fileSize: number;
-    contentType: string;
-    fileCategory: string;
-    permanent: boolean;
-    createdAt?: string;
-    updatedAt?: string;
-}
-
-// Interface for MultipleFiles component props
-interface MultipleFilesProps {
-    className?: string;
-    label: React.ReactNode;
-    registerName: string;
-    productIndex: number;
-    dataObjectName: string;
-}
-
-// Updated MultipleFiles component with proper image upload handling
-const MultipleFiles: React.FC<MultipleFilesProps> = ({
-                                                         className,
-                                                         label,
-                                                         registerName,
-                                                         productIndex,
-                                                         dataObjectName,
-                                                     }) => {
-    const { setValue, watch } = useFormContext();
-    const multiRef = useRef<HTMLInputElement>(null);
-    const _axios = useAxiosPrivate();
-    const [isUploading, setIsUploading] = useState(false);
-
-    // Watch the pictures array for this specific product (array of file objects)
-    const pictures = watch(registerName) || [];
-
-    // Function to upload product images
-    const uploadProductImages = async (files: File[]) => {
-        setIsUploading(true);
-
-        try {
-            const formData = new FormData();
-            files.forEach((file) => formData.append('files', file));
-            formData.append('fileServiceType', 'PRODUCT_PICTURE');
-
-            const response = await _axios.post(
-                `${API_BASE_URL}/file`,
-                formData,
-                {
-                    headers: {
-                        'Content-Type': 'multipart/form-data',
-                    },
-                }
-            );
-
-            if (response.data.status === 'SUCCESS' && response.data.data && response.data.data.length > 0) {
-                const uploadedFileData = response.data.data;
-
-                // Create FileDTO-like objects from the response
-                const fileDTOs = uploadedFileData.map((file: any) => ({
-                    id: file.id,
-                    fileName: file.fileName,
-                    originalFileName: file.originalFileName || file.fileName,
-                    filePath: file.filePath,
-                    fileSize: file.fileSize || 0,
-                    contentType: file.contentType || 'image/*',
-                    fileCategory: 'PRODUCT_IMAGE',
-                    permanent: file.permanent || false,
-                    createdAt: file.createdAt,
-                    updatedAt: file.updatedAt
-                }));
-
-                // Update the pictures field with complete file objects
-                setValue(registerName, [...pictures, ...fileDTOs]);
-
-                toast.success('تصاویر محصول با موفقیت آپلود شدند');
-                return fileDTOs;
-            } else {
-                throw new Error('Upload failed');
-            }
-        } catch (error) {
-            console.error('Error uploading product images:', error);
-            toast.error('خطا در آپلود تصاویر محصول');
-            return [];
-        } finally {
-            setIsUploading(false);
-        }
-    };
-
-    const handleMultiImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const uploadedFiles = Array.from(event.target.files || []);
-        const imageFiles = uploadedFiles.filter((file) =>
-            file.type.includes('image')
-        );
-
-        // Validate file size (2MB max)
-        const validFiles = imageFiles.filter(file => {
-            if (file.size > 2 * 1024 * 1024) {
-                toast.error(`فایل ${file.name} بیشتر از 2 مگابایت است`);
-                return false;
-            }
-            return true;
-        });
-
-        if (validFiles.length > 0) {
-            await uploadProductImages(validFiles);
-        }
-    };
-
-    const handleMultiImageDelete = (index: number) => {
-        const deletedFile = pictures[index];
-
-        // Remove from pictures array (file objects)
-        const updatedFiles = pictures.filter((_: any, i: number) => i !== index);
-        setValue(registerName, updatedFiles);
-
-        if (multiRef.current) {
-            multiRef.current.value = '';
-        }
-
-        toast.success('تصویر حذف شد');
-    };
-
-    const getImageSrc = useCallback((file: any): string => {
-        if (file instanceof File || file instanceof Blob) {
-            return URL.createObjectURL(file);
-        } else if (file && file.filePath) {
-            return `${STATIC_FILES_URL}${file.filePath}`;
-        } else if (file && file.url) {
-            return file.url;
-        } else if (typeof file === 'string') {
-            return file;
-        }
-        return '';
-    }, []);
-
-    return (
-        <div className={className}>
-            <Upload
-                label={label}
-                ref={multiRef}
-                accept="image/*"
-                multiple
-                onChange={handleMultiImageUpload}
-                disabled={isUploading}
-            />
-            <p className="pt-3 text-sm text-gray-500">
-                عکس محصول خود را اینجا آپلود کنید. حجم عکس باید کمتر از{' '}
-                <strong className="font-medium text-gray-900">2 مگابایت باشد</strong>
-            </p>
-
-            {isUploading && (
-                <div className="mt-4 p-4 bg-blue-50 text-blue-700 rounded-md">
-                    در حال آپلود تصاویر... لطفا صبر کنید
-                </div>
-            )}
-
-            {pictures.length > 0 && (
-                <div className="mt-4">
-                    <Swiper
-                        spaceBetween={12}
-                        slidesPerView={3}
-                        breakpoints={{
-                            640: { slidesPerView: 3 },
-                            768: { slidesPerView: 4 },
-                            1024: { slidesPerView: 5 },
-                        }}
-                    >
-                        {pictures.map((file: any, index: number) => (
-                            <SwiperSlide
-                                key={file?.id || `img-${productIndex}-${index}`}
-                            >
-                                <div>
-                                    <div className="group relative flex aspect-square items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
-                                        <Image
-                                            src={getImageSrc(file)}
-                                            alt={file?.originalFileName || file?.fileName || 'عکس محصول'}
-                                            width={200}
-                                            height={200}
-                                            className="h-full w-full object-contain transition-all duration-300 group-hover:scale-105 group-hover:blur-[2px]"
-                                            unoptimized
-                                        />
-                                        <button
-                                            onClick={() => handleMultiImageDelete(index)}
-                                            type="button"
-                                            className="absolute right-2 top-2 rounded-full bg-gray-0/70 p-1.5 text-gray-700 opacity-0 shadow-sm transition-colors hover:bg-red-500 hover:text-white group-hover:opacity-100 dark:bg-gray-100/70 dark:text-gray-600"
-                                            aria-label="حذف تصویر"
-                                        >
-                                            <TrashIcon className="h-3.5 w-3.5" />
-                                        </button>
-                                    </div>
-                                    {(file?.originalFileName || file?.fileName) && (
-                                        <p
-                                            className="mt-1 truncate text-center text-xs text-gray-500"
-                                            title={file?.originalFileName || file?.fileName}
-                                        >
-                                            {file?.originalFileName || file?.fileName}
-                                        </p>
-                                    )}
-                                </div>
-                            </SwiperSlide>
-                        ))}
-                    </Swiper>
-                </div>
-            )}
-        </div>
-    );
-};
-
-interface ProductAccordionProps {
-    products: any[];
-    append: Function;
-    remove: Function;
-    update: Function;
-    handleImageSelection?: Function;
-    dataObjectName: string;
+interface Props {
+  products: GroupedProduct[];
+  append: (product: GroupedProduct) => void;
+  insert: (index: number, product: GroupedProduct) => void;
+  remove: (indices: number | number[]) => void;
+  dataObjectName: string;
+  onUploadingChange: (uploading: boolean) => void;
 }
 
 export default function ProductAccordion({
-                                             products,
-                                             append,
-                                             remove,
-                                             update,
-                                             handleImageSelection,
-                                             dataObjectName,
-                                         }: ProductAccordionProps) {
-    const { control, watch, register, setValue } = useFormContext();
-    const [openIndex, setOpenIndex] = useState<number | null>(null);
+  products,
+  append,
+  insert,
+  remove,
+  dataObjectName,
+  onUploadingChange,
+}: Props) {
+  const {
+    control,
+    watch,
+    setValue,
+    getValues,
+    clearErrors,
+    formState: { errors },
+  } = useFormContext();
+  const axios = useAxiosPrivate();
+  const uploadValidation = useCompanyUploadValidation('PRODUCT_PICTURE');
+  const values: GroupedProduct[] = watch(dataObjectName) || [];
+  const groups = groupProducts(
+    values.map((p, i) => ({ ...p, fieldId: products[i]?.fieldId }))
+  );
+  const [openKey, setOpenKey] = useState<string | null>(null);
+  const [uploading, setUploading] = useState<string | null>(null);
+  const [deleteKey, setDeleteKey] = useState<string | null>(null);
 
-    const toggleAccordion = (index: number) => {
-        setOpenIndex(openIndex === index ? null : index);
-    };
+  const setShared = (key: string, property: string, value: unknown) => {
+    const current = getValues(dataObjectName) as GroupedProduct[];
+    const group = groupProducts(
+      current.map((p, i) => ({ ...p, fieldId: products[i]?.fieldId }))
+    ).find((g) => g.key === key);
+    group?.indices.forEach((index) => {
+      setValue(`${dataObjectName}.${index}._categoryKey`, key);
+      setValue(`${dataObjectName}.${index}.${property}`, value, {
+        shouldDirty: true,
+      });
+      clearErrors(`${dataObjectName}.${index}.${property}`);
+    });
+  };
 
-    return (
-        <div className="w-full">
-            <div className="w-full overflow-hidden rounded-xl border border-gray-200 bg-gray-0 shadow-sm dark:border-gray-300 dark:bg-gray-50">
-                {products.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center p-8 text-center">
-                        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                            <PiTagBold className="h-8 w-8 text-gray-400" />
-                        </div>
-                        <Text className="text-lg font-medium mb-2">هیچ محصولی ثبت نشده است</Text>
-                        <Text className="text-sm text-gray-500 mb-6">برای شروع، دکمه &ldquo;افزودن محصول جدید&rdquo; را کلیک کنید</Text>
-                    </div>
-                ) : (
-                    products.map((field, index) => (
-                        <div key={field.fieldId || field.id || `product-${index}`} className="border-b border-gray-200 last:border-b-0 dark:border-gray-300">
-                            {/* Hidden fields for form registration */}
-                            <input
-                                type="hidden"
-                                {...register(`${dataObjectName}.${index}.id`)}
-                                defaultValue={field.id}
-                            />
+  const upload = async (key: string, file?: File) => {
+    if (!file) return;
+    if (!uploadValidation.ready || !uploadValidation.validation) return;
+    setUploading(key);
+    onUploadingChange(true);
+    try {
+      const validationError = await validateUploadFile(file, uploadValidation.validation);
+      if (validationError) { toast.error(validationError); return; }
+      const body = new FormData();
+      body.append('files', file);
+      body.append('fileServiceType', 'PRODUCT_PICTURE');
+      const response = await axios.post(`${API_BASE_URL}/file`, body, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      const image = response.data?.data?.[0];
+      if (response.data?.status !== 'SUCCESS' || !image?.id)
+        throw new Error('Upload failed');
+      setShared(key, 'pictures', [image]);
+      toast.success('تصویر دسته‌بندی ثبت شد');
+    } catch {
+      toast.error('آپلود تصویر انجام نشد؛ دوباره تلاش کنید.');
+    } finally {
+      setUploading(null);
+      onUploadingChange(false);
+    }
+  };
 
-                            <button
-                                className={`flex w-full items-center justify-between p-5 transition duration-200 ${
-                                    openIndex === index ? 'bg-gray-50 dark:bg-gray-100' : 'hover:bg-gray-50 dark:hover:bg-gray-100'
-                                } focus:outline-none`}
-                                onClick={() => toggleAccordion(index)}
-                                aria-expanded={openIndex === index}
-                                type="button"
-                            >
-                                <div className="flex items-center gap-4">
-                                    <div className={`flex h-12 w-12 items-center justify-center rounded-lg ${
-                                        openIndex === index ? 'bg-primary-50 text-primary-600' : 'bg-gray-100 text-gray-500'
-                                    } transition-colors duration-200`}>
-                                        <PiTagBold className="h-5 w-5" />
-                                    </div>
-                                    <div className="text-right">
-                                        <h3 className={`text-base font-medium transition-colors duration-200 ${
-                                            openIndex === index ? 'text-primary-600' : 'text-gray-800'
-                                        }`}>
-                                            {watch(`${dataObjectName}.${index}.name`) || 'محصول جدید'}
-                                        </h3>
-                                        <p className="text-sm text-gray-500 mt-1">
-                                            {watch(`${dataObjectName}.${index}.categoryType`) || 'بدون دسته‌بندی'}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    {watch(`${dataObjectName}.${index}.showProduct`) && (
-                                        <span className="inline-flex items-center rounded-full bg-green-50 px-2.5 py-0.5 text-xs font-medium text-green-700">
-                                            نمایش فعال
-                                        </span>
-                                    )}
-                                    <div className={`transition-transform duration-300 ${
-                                        openIndex === index ? 'rotate-180' : ''
-                                    }`}>
-                                        <svg
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            width="20"
-                                            height="20"
-                                            viewBox="0 0 24 24"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            strokeWidth="2"
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            className="text-gray-400"
-                                        >
-                                            <polyline points="6 9 12 15 18 9"></polyline>
-                                        </svg>
-                                    </div>
-                                </div>
-                            </button>
+  const editorHeading = useRef<HTMLDivElement>(null);
+  const errorKeys = groups
+    .filter((group) =>
+      group.indices.some((index) => (errors[dataObjectName] as any)?.[index])
+    )
+    .map((group) => group.key);
+  const errorSignature = JSON.stringify(errorKeys);
+  useEffect(() => {
+    const keys: string[] = JSON.parse(errorSignature);
+    if (keys.length) setOpenKey(keys[0]);
+  }, [errorSignature]);
+  const selected = groups.find((group) => group.key === openKey) || groups[0];
+  useEffect(() => {
+    editorHeading.current?.scrollIntoView({ block: 'nearest' });
+  }, [selected?.key]);
+  const addCategory = () => {
+    const key = crypto.randomUUID();
+    append({
+      id: values[0]?.id ?? null,
+      showProduct: values[0]?.showProduct ?? true,
+      _productPictures: values[0]?._productPictures,
+      _categoryKey: key,
+      categoryType: '',
+      name: '',
+      description: '',
+      pictures: [],
+      outsourced: dataObjectName === 'outSourcedProducts',
+    });
+    setOpenKey(key);
+    setDeleteKey(null);
+  };
+  const imageSrc = (picture: any) =>
+    picture?.url ||
+    (picture?.filePath
+      ? (/^https?:\/\//i.test(picture.filePath) ? picture.filePath : `${STATIC_FILES_URL}${picture.filePath}`)
+      : '');
 
-                            <div
-                                className={`transition-all duration-300 ease-in-out overflow-hidden ${
-                                    openIndex === index ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
-                                }`}
-                            >
-                                <div className="border-t border-gray-200 bg-gray-0 p-6 dark:border-gray-300 dark:bg-gray-100">
-                                    <div className="grid grid-cols-12 gap-x-6 gap-y-6">
-                                        <Controller
-                                            name={`${dataObjectName}.${index}.name`}
-                                            control={control}
-                                            defaultValue={field.name || ''}
-                                            rules={{ required: 'نام محصول الزامی است' }}
-                                            render={({ field: { onChange, value }, fieldState: { error } }) => (
-                                                <Input
-                                                    label="عنوان محصول *"
-                                                    inputClassName="border-2 focus:border-primary-500"
-                                                    size="lg"
-                                                    className="col-span-12 md:col-span-6"
-                                                    value={value}
-                                                    onChange={onChange}
-                                                    placeholder="نام محصول را وارد کنید"
-                                                    error={error?.message}
-                                                />
-                                            )}
-                                        />
-                                        <Controller
-                                            name={`${dataObjectName}.${index}.categoryType`}
-                                            control={control}
-                                            defaultValue={field.categoryType || ''}
-                                            rules={{ required: 'دسته‌بندی محصول الزامی است' }}
-                                            render={({ field: { onChange, value }, fieldState: { error } }) => (
-                                                <Input
-                                                    label="دسته بندی محصول *"
-                                                    inputClassName="border-2 focus:border-primary-500"
-                                                    size="lg"
-                                                    className="col-span-12 md:col-span-6"
-                                                    value={value}
-                                                    onChange={onChange}
-                                                    placeholder="مثال: الکترونیکی، غذایی، ..."
-                                                    error={error?.message}
-                                                />
-                                            )}
-                                        />
-                                        <Controller
-                                            name={`${dataObjectName}.${index}.description`}
-                                            control={control}
-                                            defaultValue={field.description || ''}
-                                            render={({ field: { onChange, value } }) => (
-                                                <Textarea
-                                                    label="توضیحات محصول"
-                                                    className="col-span-12"
-                                                    rows={4}
-                                                    value={value}
-                                                    onChange={onChange}
-                                                    placeholder="توضیحات کاملی درباره این محصول بنویسید..."
-                                                />
-                                            )}
-                                        />
-                                        <Controller
-                                            name={`${dataObjectName}.${index}.showProduct`}
-                                            control={control}
-                                            defaultValue={field.showProduct || false}
-                                            render={({ field: { onChange, value } }) => (
-                                                <div className="col-span-12">
-                                                    <div className="flex items-center justify-between rounded-lg border border-gray-200 p-4 dark:border-gray-300">
-                                                        <div className="flex flex-row items-center gap-3">
-                                                            <Text className="font-medium text-gray-800">نمایش محصول</Text>
-                                                            <Text className="text-sm text-gray-500">
-                                                                {value ?
-                                                                    'این محصول در صفحه اصلی نمایش داده خواهد شد' :
-                                                                    'این محصول در صفحه اصلی نمایش داده نخواهد شد'}
-                                                            </Text>
-                                                        </div>
-                                                        <label className="relative inline-flex cursor-pointer items-center">
-                                                            <input
-                                                                type="checkbox"
-                                                                className="peer sr-only"
-                                                                checked={value || false}
-                                                                onChange={(e) => onChange(e.target.checked)}
-                                                            />
-                                                            <div className="h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-gray-0 after:transition-all after:content-[''] peer-checked:bg-primary-500 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:ring-2 peer-focus:ring-primary-300 dark:bg-gray-300 dark:after:bg-gray-700"></div>
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        />
-                                        <Controller
-                                            name={`${dataObjectName}.${index}.outsourced`}
-                                            control={control}
-                                            defaultValue={dataObjectName === 'outSourcedProducts'}
-                                            render={({ field }) => (
-                                                <input type="hidden" {...field} />
-                                            )}
-                                        />
-
-                                        {/* Pictures field - stores array of complete file objects */}
-                                        <input
-                                            type="hidden"
-                                            {...register(`${dataObjectName}.${index}.pictures`)}
-                                        />
-
-                                        <MultipleFiles
-                                            className="col-span-12"
-                                            label={
-                                                <div className="flex items-center gap-2">
-                                                    <span>تصویر محصول</span>
-                                                    <span className="text-xs text-gray-500">(حداقل یک تصویر اضافه کنید)</span>
-                                                </div>
-                                            }
-                                            registerName={`${dataObjectName}.${index}.pictures`}
-                                            productIndex={index}
-                                            dataObjectName={dataObjectName}
-                                        />
-                                        <div className="col-span-12 mt-4 flex flex-wrap justify-end gap-4 border-t border-gray-200 pt-4 dark:border-gray-300">
-                                            <Button
-                                                size="lg"
-                                                variant="outline"
-                                                className="flex items-center"
-                                                onClick={() => remove(index)}
-                                                type="button"
-                                            >
-                                                <TrashIcon className="me-2 h-4 w-4" />
-                                                حذف محصول
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    ))
-                )}
-            </div>
-
-            <Button
-                variant="solid"
-                color="primary"
-                onClick={() =>
-                    append({
-                        id: null,
-                        name: '',
-                        categoryType: '',
-                        description: '',
-                        outsourced: dataObjectName === 'outSourcedProducts',
-                        showProduct: false,
-                        pictures: [], // Array of complete file objects (FileDTO-like)
-                    })
-                }
-                className="mt-6 flex items-center justify-center w-full sm:w-auto"
-                type="button"
-            >
-                <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="me-2"
-                >
-                    <line x1="12" y1="5" x2="12" y2="19"></line>
-                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                </svg>
-                افزودن محصول جدید
-            </Button>
+  return (
+    <div className="grid min-h-[380px] grid-cols-1 md:grid-cols-[220px_minmax(0,1fr)]">
+      <aside className="sticky top-0 z-10 min-w-0 self-start border-b bg-gray-50 p-4 md:border-b-0 md:border-l">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <h4 className="text-sm font-semibold">دسته‌بندی‌ها</h4>
+          <span className="rounded-full bg-white px-2 py-0.5 text-xs text-gray-500">
+            {groups.length.toLocaleString('fa-IR')}
+          </span>
         </div>
-    );
+        <Button
+          type="button"
+          color="primary"
+          variant="outline"
+          disabled={!!uploading}
+          onClick={addCategory}
+          className="mb-4 w-full bg-white"
+        >
+          <Plus className="me-2 h-4 w-4" />
+          افزودن دسته‌بندی
+        </Button>
+        <nav
+          aria-label="انتخاب دسته‌بندی محصولات"
+          className="flex gap-2 overflow-x-auto pb-1 md:max-h-[50dvh] md:flex-col md:overflow-y-auto md:overflow-x-hidden"
+        >
+          {groups.map((group, index) => (
+            <div
+              key={group.key}
+              className={`min-w-[190px] shrink-0 rounded-xl border p-2 transition md:min-w-0 ${
+                selected?.key === group.key
+                  ? 'border-primary bg-white shadow-sm'
+                  : 'border-gray-200 bg-white/60'
+              }`}
+            >
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  aria-current={
+                    selected?.key === group.key ? 'true' : undefined
+                  }
+                  disabled={!!uploading}
+                  onClick={() => {
+                    setOpenKey(group.key);
+                    setDeleteKey(null);
+                  }}
+                  className="flex min-w-0 flex-1 items-center gap-2 rounded-lg p-1 text-right focus-visible:ring-2 focus-visible:ring-primary"
+                >
+                  <Layers3 className="h-4 w-4 shrink-0 text-primary" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold">
+                      {group.name ||
+                        `دسته‌بندی جدید ${(index + 1).toLocaleString('fa-IR')}`}
+                    </span>
+                    <span className="mt-1 block text-xs text-gray-500">
+                      {group.indices.length.toLocaleString('fa-IR')} محصول
+                    </span>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  aria-label={`حذف دسته‌بندی ${group.name || index + 1}`}
+                  title="حذف دسته‌بندی"
+                  disabled={!!uploading}
+                  onClick={() => setDeleteKey(group.key)}
+                  className="shrink-0 rounded-lg bg-red-lighter/40 p-2 text-red-dark transition hover:bg-red-lighter focus-visible:ring-2 focus-visible:ring-red disabled:opacity-50"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+              {deleteKey === group.key && (
+                <div className="mt-3 border-t border-red-lighter pt-3">
+                  <p className="mb-3 text-xs leading-6 text-red-dark">
+                    این دسته و {group.indices.length.toLocaleString('fa-IR')}{' '}
+                    محصول آن حذف شوند؟
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      color="danger"
+                      disabled={!!uploading}
+                      onClick={() => {
+                        remove(group.indices);
+                        setDeleteKey(null);
+                        if (selected?.key === group.key) setOpenKey(null);
+                      }}
+                    >
+                      حذف
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setDeleteKey(null)}
+                    >
+                      انصراف
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </nav>
+        <p className="mt-4 hidden text-xs leading-6 text-gray-500 md:block">
+          برای ویرایش هر دسته، نام آن را انتخاب کنید.
+        </p>
+      </aside>
+      <div className="min-w-0 p-4 sm:p-6">
+        {!selected ? (
+          <div className="flex min-h-[320px] flex-col items-center justify-center text-center">
+            <span className="mb-4 rounded-2xl bg-primary-lighter p-4 text-primary">
+              <Layers3 className="h-8 w-8" />
+            </span>
+            <h4 className="text-lg font-semibold">
+              محصولاتتان را دسته‌بندی کنید
+            </h4>
+            <p className="mt-2 max-w-sm text-sm leading-7 text-gray-500">
+              مثلاً یک دسته با نام «لبنیات» بسازید و شیر، ماست و پنیر را به آن
+              اضافه کنید.
+            </p>
+            <Button
+              type="button"
+              color="primary"
+              className="mt-5"
+              onClick={addCategory}
+            >
+              <Plus className="me-2 h-4 w-4" />
+              ساخت اولین دسته‌بندی
+            </Button>
+          </div>
+        ) : (
+          <div key={selected.key} className="space-y-6">
+            <section aria-label="اطلاعات دسته‌بندی">
+              <div ref={editorHeading} className="mb-4 flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-lighter text-xs font-semibold text-primary">
+                  ۱
+                </span>
+                <h4 className="font-semibold">نام و تصویر دسته‌بندی</h4>
+              </div>
+              <div className="grid items-start gap-4 sm:grid-cols-[minmax(0,1fr)_160px]">
+                <div>
+                  <Controller
+                    name={`${dataObjectName}.${selected.indices[0]}.categoryType`}
+                    control={control}
+                    render={({ field, fieldState }) => (
+                      <Input
+                        name={field.name}
+                        ref={field.ref}
+                        label="نام دسته‌بندی *"
+                        placeholder="مثلاً لبنیات"
+                        value={field.value || ''}
+                        onBlur={field.onBlur}
+                        onChange={(e) =>
+                          setShared(
+                            selected.key,
+                            'categoryType',
+                            e.target.value
+                          )
+                        }
+                        error={fieldState.error?.message}
+                      />
+                    )}
+                  />
+                  <p className="mt-2 text-xs leading-6 text-gray-500">
+                    محصولات مشابه را در یک دسته قرار دهید.
+                  </p>
+                </div>
+                <div>
+                  <p className="mb-2 text-sm font-medium">
+                    تصویر دسته‌بندی {dataObjectName === 'products' ? '(اختیاری)' : '*'}
+                  </p>
+                  <label
+                    className={`relative flex min-h-[100px] cursor-pointer items-center justify-center gap-3 overflow-hidden rounded-xl border border-dashed bg-gray-50 p-3 text-center transition focus-within:ring-2 focus-within:ring-primary hover:border-primary ${
+                      uploading || !uploadValidation.ready ? 'pointer-events-none opacity-60' : ''
+                    }`}
+                  >
+                    {imageSrc(selected.pictures[0]) ? (
+                      <Image
+                        src={imageSrc(selected.pictures[0])}
+                        alt={`تصویر ${selected.name}`}
+                        width={80}
+                        height={80}
+                        unoptimized
+                        className="h-20 w-20 rounded-lg object-cover"
+                      />
+                    ) : (
+                      <span>
+                        <ImagePlus className="mx-auto mb-2 h-6 w-6 text-gray-400" />
+                        <span className="text-xs font-medium">
+                          انتخاب تصویر
+                        </span>
+                      </span>
+                    )}
+                    <input
+                      aria-label="انتخاب تصویر دسته‌بندی"
+                      type="file"
+                      accept={uploadValidation.accept}
+                      aria-describedby="product-category-upload-rules"
+                      className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                      disabled={!!uploading || !uploadValidation.ready}
+                      onChange={(e) => {
+                        void upload(selected.key, e.target.files?.[0]);
+                        e.target.value = '';
+                      }}
+                    />
+                  </label>
+                  {selected.pictures.length > 0 && (
+                    <button
+                      type="button"
+                      disabled={!!uploading}
+                      onClick={() => setShared(selected.key, 'pictures', [])}
+                      className="mt-2 flex w-full items-center justify-center gap-1 rounded-lg bg-red-lighter/40 px-3 py-2 text-xs font-medium text-red-dark hover:bg-red-lighter disabled:opacity-50"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      حذف تصویر دسته‌بندی
+                    </button>
+                  )}
+                  <p className="mt-2 text-xs leading-5 text-gray-500">
+                    {uploading
+                      ? 'در حال بارگذاری…'
+                      : selected.pictures.length
+                      ? 'برای تغییر تصویر کلیک کنید'
+                      : dataObjectName === 'products'
+                      ? 'در صورت تمایل تصویر اضافه کنید'
+                      : 'یک تصویر برای تمام محصولات این دسته انتخاب کنید'}
+                  </p>
+                  {dataObjectName !== 'products' && (
+                    <FileUploadGuidelines id="product-category-upload-rules" state={uploadValidation} />
+                  )}
+                  {(errors[dataObjectName] as any)?.[selected.indices[0]]
+                    ?.pictures?.message && (
+                    <p className="mt-1 text-xs text-red-dark">
+                      {
+                        (errors[dataObjectName] as any)[selected.indices[0]]
+                          .pictures.message
+                      }
+                    </p>
+                  )}
+                </div>
+              </div>
+              {dataObjectName === 'products' && (
+                <FileUploadGuidelines id="product-category-upload-rules" state={uploadValidation} compact />
+              )}
+            </section>
+            <section aria-label="محصولات دسته‌بندی" className="border-t pt-5">
+              <div className="mb-1 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-lighter text-xs font-semibold text-primary">
+                    ۲
+                  </span>
+                  <h4 className="font-semibold">محصولات این دسته</h4>
+                  <span className="text-xs text-gray-500">
+                    ({selected.indices.length.toLocaleString('fa-IR')})
+                  </span>
+                </div>
+              </div>
+              <p className="mb-4 text-xs leading-6 text-gray-500">
+                هر محصول یک عنوان و توضیح جداگانه دارد؛ تصویر بالا برای همه
+                محصولات این دسته استفاده می‌شود.
+              </p>
+              <div className="space-y-3">
+                {selected.indices.map((index, row) => (
+                  <div
+                    key={products[index]?.fieldId || index}
+                    className="rounded-xl border border-gray-200 p-4"
+                  >
+                    <div className="mb-3 flex items-center justify-between gap-2">
+                      <span className="text-xs font-semibold text-gray-500">
+                        محصول {(row + 1).toLocaleString('fa-IR')}
+                      </span>
+                      {selected.indices.length > 1 && (
+                        <button
+                          type="button"
+                          disabled={!!uploading}
+                          aria-label={`حذف محصول ${row + 1}`}
+                          onClick={() => remove(index)}
+                          className="flex items-center gap-1 rounded-lg bg-red-lighter/40 px-3 py-2 text-xs font-medium text-red-dark transition hover:bg-red-lighter"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          حذف
+                        </button>
+                      )}
+                    </div>
+                    <div className="grid gap-3 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+                      <Controller
+                        name={`${dataObjectName}.${index}.name`}
+                        control={control}
+                        render={({ field, fieldState }) => (
+                          <Input
+                            {...field}
+                            value={field.value || ''}
+                            label="عنوان محصول *"
+                            placeholder="مثلاً شیر کم‌چرب"
+                            error={fieldState.error?.message}
+                          />
+                        )}
+                      />
+                      <Controller
+                        name={`${dataObjectName}.${index}.description`}
+                        control={control}
+                        render={({ field }) => (
+                          <Textarea
+                            {...field}
+                            value={field.value || ''}
+                            label="توضیحات محصول"
+                            placeholder="ویژگی‌ها، نوع بسته‌بندی یا کاربرد محصول"
+                            rows={2}
+                          />
+                        )}
+                      />
+                    </div>
+                    {row === selected.indices.length - 1 && (
+                      <div className="mt-4 border-t border-gray-200 pt-2">
+                        <button
+                          type="button"
+                          disabled={!!uploading}
+                          className="inline-flex items-center gap-1.5 rounded py-2 text-sm font-medium text-primary transition hover:text-primary-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-50"
+                          onClick={() =>
+                            insert(index + 1, {
+                              id: values[index]?.id ?? null,
+                              showProduct: values[index]?.showProduct ?? true,
+                              _productPictures: values[index]?._productPictures,
+                              _categoryKey: selected.key,
+                              categoryType: selected.name,
+                              pictures: selected.pictures,
+                              name: '',
+                              description: '',
+                              outsourced:
+                                dataObjectName === 'outSourcedProducts',
+                            })
+                          }
+                        >
+                          <Plus className="h-4 w-4" />
+                          افزودن محصول
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </section>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }

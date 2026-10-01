@@ -27,8 +27,9 @@ export default function FormFooter({
 }: FormFooterProps) {
   return (
     <div
+      data-form-footer
       className={cn(
-        'sticky bottom-0 left-0 right-0 -mb-8 flex items-center justify-end gap-4 border-t border-gray-200 bg-gray-0 px-4 py-4 dark:border-gray-300 dark:bg-gray-50 md:px-5 lg:px-6 3xl:px-8 4xl:px-10',
+        'sticky bottom-0 left-0 right-0 z-[70] -mb-8 flex items-center justify-end gap-4 border-t border-gray-200 bg-gray-0 px-4 py-4 dark:border-gray-300 dark:bg-gray-50 md:px-5 lg:px-6 3xl:px-8 4xl:px-10',
         className,
         negMargin
       )}
