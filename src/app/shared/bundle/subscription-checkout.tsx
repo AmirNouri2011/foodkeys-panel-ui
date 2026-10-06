@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -22,7 +22,12 @@ import {
 import axios from 'axios';
 import axiosInstance from '@/utils/axios-instance';
 import { API_ENDPOINTS } from '@/config/api.config';
-import toast from 'react-hot-toast';
+import CompanySuccessDialog from '@/app/shared/info/company-success-dialog';
+import { routes } from '@/config/routes';
+import WalletTopUpModal from '@/components/wallet-top-up-modal';
+import { useDispatch, useSelector } from 'react-redux';
+import type { RootState } from '@/store/store';
+import { setCredit } from '@/store/walletSlice';
 import styles from './subscription-checkout.module.css';
 
 type Bundle = {
@@ -32,9 +37,11 @@ type Bundle = {
   timeDuration?: number;
   price: number;
   features: string;
-  bonusMonths: number | null;
-  active: boolean;
-  pageOrder: number;
+  bonusMonths?: number | null;
+  active?: boolean;
+  status?: string;
+  pageOrder?: number;
+  renewable?: boolean;
 };
 type BundleData = {
   bundles: Bundle[];
@@ -61,6 +68,12 @@ const errorMessage = (error: unknown, fallback: string) =>
 
 export default function SubscriptionCheckout({ id }: { id: string }) {
   const router = useRouter();
+  const dispatch = useDispatch();
+  const credit = useSelector((state: RootState) => state.wallet.credit);
+  const [creditReady, setCreditReady] = useState(false);
+  const [creditError, setCreditError] = useState('');
+  const [topUpOpen, setTopUpOpen] = useState(false);
+  const [topUpAmount, setTopUpAmount] = useState(1_000_000);
   const [data, setData] = useState<BundleData | null>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -74,9 +87,48 @@ export default function SubscriptionCheckout({ id }: { id: string }) {
   const [discountError, setDiscountError] = useState('');
   const [checking, setChecking] = useState(false);
   const [paying, setPaying] = useState(false);
+  const [purchased, setPurchased] = useState(false);
   const [paymentError, setPaymentError] = useState('');
   const requestVersion = useRef(0);
   const paymentLock = useRef(false);
+
+  const refreshCredit = useCallback(
+    async (signal?: AbortSignal) => {
+      setCreditReady(false);
+      setCreditError('');
+      try {
+        const response = await axiosInstance.get('/user/credit', { signal });
+        const value = response.data.data;
+        const balance = Number(value);
+        if (
+          response.data.status !== 'SUCCESS' ||
+          value === null ||
+          value === undefined ||
+          value === '' ||
+          !Number.isFinite(balance)
+        )
+          throw new Error('invalid wallet balance');
+        if (signal?.aborted) return;
+        dispatch(setCredit(balance));
+        setCreditReady(true);
+      } catch {
+        if (!signal?.aborted)
+          setCreditError('دریافت موجودی کیف پول انجام نشد. دوباره تلاش کنید.');
+      }
+    },
+    [dispatch]
+  );
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const refresh = () => void refreshCredit(controller.signal);
+    refresh();
+    window.addEventListener('focus', refresh);
+    return () => {
+      controller.abort();
+      window.removeEventListener('focus', refresh);
+    };
+  }, [refreshCredit]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -94,10 +146,12 @@ export default function SubscriptionCheckout({ id }: { id: string }) {
           throw new Error('invalid response');
         const result: BundleData = response.data.data;
         const bundles = (result.bundles || [])
-          .filter((plan) => plan.active !== false)
-          .sort((a, b) => a.pageOrder - b.pageOrder);
+          .filter((plan) => plan.active !== false && plan.status !== 'INACTIVE')
+          .sort((a, b) => (a.pageOrder ?? 0) - (b.pageOrder ?? 0));
         setData({ ...result, bundles });
-        setSelectedId(bundles[0]?.id ?? null);
+        setSelectedId(
+          bundles.find((plan) => plan.renewable !== false)?.id ?? null
+        );
       })
       .catch((error) => {
         if (!controller.signal.aborted)
@@ -118,9 +172,17 @@ export default function SubscriptionCheckout({ id }: { id: string }) {
   const tax = base * 0.1;
   const discount = (base * (applied?.percent ?? 0)) / 100;
   const total = base + tax - discount;
+  const shortfall = Math.max(0, Math.ceil(total - credit));
+
+  function openTopUp() {
+    setTopUpAmount(creditReady && shortfall > 0 ? shortfall : 1_000_000);
+    setTopUpOpen(true);
+  }
 
   function selectPlan(planId: number) {
-    if (paying || selectedId === planId) return;
+    const plan = data?.bundles.find((item) => item.id === planId);
+    if (!plan || plan.renewable === false || paying || selectedId === planId)
+      return;
     requestVersion.current += 1;
     setSelectedId(planId);
     setApplied(null);
@@ -165,7 +227,19 @@ export default function SubscriptionCheckout({ id }: { id: string }) {
   }
 
   async function purchase() {
-    if (!selected || paymentLock.current || checking) return;
+    if (
+      !selected ||
+      selected.renewable === false ||
+      paymentLock.current ||
+      purchased ||
+      checking
+    )
+      return;
+    if (total > 0 && !creditReady) return;
+    if (total > 0 && shortfall > 0) {
+      openTopUp();
+      return;
+    }
     paymentLock.current = true;
     setPaying(true);
     setPaymentError('');
@@ -180,8 +254,7 @@ export default function SubscriptionCheckout({ id }: { id: string }) {
         );
         return;
       }
-      toast.success(response.data.message || 'اشتراک با موفقیت ثبت شد');
-      router.push('/bundle/subscription-list');
+      setPurchased(true);
     } catch (error) {
       setPaymentError(
         errorMessage(
@@ -197,6 +270,23 @@ export default function SubscriptionCheckout({ id }: { id: string }) {
 
   return (
     <div className={styles.page} dir="rtl">
+      <WalletTopUpModal
+        isOpen={topUpOpen}
+        initialAmount={topUpAmount}
+        onClose={() => {
+          setTopUpOpen(false);
+          void refreshCredit();
+        }}
+      />
+      <CompanySuccessDialog
+        open={purchased}
+        purchased
+        title="اشتراک شما با موفقیت خریداری شد"
+        description="از اینکه فودکیز را برای معرفی و رشد کسب‌وکارتان انتخاب کرده‌اید، سپاسگزاریم. خوشحالیم که همراه شما هستیم."
+        notice="اطلاعات شرکت شما پس از بررسی کارشناسان ما، حداکثر تا ۷۲ ساعت منتشر می‌شود. وضعیت شرکت را در صفحه کسب‌وکارهای من پیگیری کنید."
+        actionLabel="متوجه شدم؛ رفتن به کسب‌وکارهای من"
+        onContinue={() => router.replace(routes.info.dashboard)}
+      />
       <nav className={styles.breadcrumb} aria-label="مسیر صفحه">
         <Link href="/bundle/subscription-list">اشتراک‌های من</Link>
         <PiArrowLeft aria-hidden="true" />
@@ -252,8 +342,11 @@ export default function SubscriptionCheckout({ id }: { id: string }) {
       ) : !selected ? (
         <div className={styles.state}>
           <PiInfo />
-          <h2>هنوز پلنی برای این بانک ارائه نشده است</h2>
-          <p>برای مشاهده سایر اشتراک‌ها به فهرست اشتراک‌های من برگردید.</p>
+          <h2>در حال حاضر پلن قابل خرید یا تمدیدی وجود ندارد</h2>
+          <p>
+            پلن‌های نمایش‌داده‌شده برای خرید یا تمدید غیرفعال هستند. برای مشاهده
+            وضعیت اشتراک‌ها به فهرست اشتراک‌های من برگردید.
+          </p>
           <Link href="/bundle/subscription-list" className={styles.secondary}>
             مشاهده اشتراک‌ها
           </Link>
@@ -273,18 +366,21 @@ export default function SubscriptionCheckout({ id }: { id: string }) {
                 <legend className={styles.srOnly}>انتخاب پلن اشتراک</legend>
                 {data?.bundles.map((plan) => {
                   const checked = plan.id === selectedId;
+                  const unavailable = plan.renewable === false;
                   return (
                     <label
                       key={plan.id}
                       className={`${styles.plan} ${
                         checked ? styles.selected : ''
-                      }`}
+                      } ${unavailable ? styles.unavailable : ''}`}
+                      aria-disabled={unavailable}
                     >
                       <input
                         type="radio"
                         name="subscription-plan"
                         value={plan.id}
                         checked={checked}
+                        disabled={unavailable || paying}
                         onChange={() => selectPlan(plan.id)}
                         className={styles.radio}
                       />
@@ -299,6 +395,11 @@ export default function SubscriptionCheckout({ id }: { id: string }) {
                           {checked && <PiCheckBold />}
                         </span>
                       </div>
+                      {unavailable && (
+                        <span className={styles.unavailableBadge}>
+                          غیرقابل خرید یا تمدید
+                        </span>
+                      )}
                       <h3>{plan.title}</h3>
                       <div className={styles.price}>
                         {plan.price === 0 ? (
@@ -329,7 +430,9 @@ export default function SubscriptionCheckout({ id }: { id: string }) {
                         ))}
                       </ul>
                       <span className={styles.selectLabel}>
-                        {checked ? (
+                        {unavailable ? (
+                          'این پلن قابل انتخاب نیست'
+                        ) : checked ? (
                           <>
                             <PiCheckCircleFill /> پلن انتخاب‌شده
                           </>
@@ -376,8 +479,8 @@ export default function SubscriptionCheckout({ id }: { id: string }) {
                     <PiCheckCircleFill />
                   </div>
                   <p className={styles.paymentHint}>
-                    <PiInfo /> برای افزایش موجودی، از گزینه «افزایش اعتبار» در
-                    بالای پنل استفاده کنید.
+                    <PiInfo /> برای شارژ کیف پول، دکمه «افزایش اعتبار» در خلاصه
+                    سفارش همین صفحه را بزنید.
                   </p>
                   <div className={styles.gateways}>
                     <PiCreditCard />
@@ -407,8 +510,9 @@ export default function SubscriptionCheckout({ id }: { id: string }) {
               <details>
                 <summary>اشتراک خریداری‌شده را کجا مدیریت کنم؟</summary>
                 <p>
-                  پس از ثبت موفق، به صفحه «اشتراک‌های من» منتقل می‌شوید و
-                  می‌توانید وضعیت اشتراک خود را مشاهده کنید.
+                  پس از خرید موفق و تأیید پیام، به صفحه «کسب‌وکارهای من»
+                  می‌روید. جزئیات اشتراک نیز از صفحه «اشتراک‌های من» در دسترس
+                  است.
                 </p>
               </details>
             </section>
@@ -508,6 +612,52 @@ export default function SubscriptionCheckout({ id }: { id: string }) {
                 <span>تومان</span>
               </div>
             </div>
+            <div
+              className={styles.walletBalance}
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              <div className={styles.balanceRow}>
+                <span>موجودی کیف پول</span>
+                <strong>
+                  {creditReady
+                    ? `${number(credit)} تومان`
+                    : creditError
+                    ? 'نامشخص'
+                    : 'در حال دریافت…'}
+                </strong>
+              </div>
+              {creditError ? (
+                <>
+                  <p className={styles.error} role="alert">
+                    {creditError}
+                  </p>
+                  <button
+                    type="button"
+                    className={styles.secondary}
+                    onClick={() => void refreshCredit()}
+                  >
+                    <PiArrowClockwise /> دریافت دوباره موجودی
+                  </button>
+                </>
+              ) : creditReady && total > 0 ? (
+                <p className={shortfall > 0 ? styles.error : styles.success}>
+                  {shortfall > 0
+                    ? `برای خرید این اشتراک، ${number(
+                        shortfall
+                      )} تومان کسری اعتبار دارید.`
+                    : 'اعتبار کیف پول شما برای خرید این اشتراک کافی است.'}
+                </p>
+              ) : null}
+              <button
+                type="button"
+                className={styles.topUp}
+                onClick={openTopUp}
+                disabled={paying || purchased}
+              >
+                <PiWallet /> افزایش اعتبار
+              </button>
+            </div>
             {paymentError && (
               <p className={styles.error} role="alert">
                 {paymentError}
@@ -517,7 +667,12 @@ export default function SubscriptionCheckout({ id }: { id: string }) {
               type="button"
               className={styles.submit}
               onClick={purchase}
-              disabled={paying || checking}
+              disabled={
+                paying ||
+                checking ||
+                purchased ||
+                (total > 0 && (!creditReady || shortfall > 0))
+              }
             >
               {paying ? (
                 <>

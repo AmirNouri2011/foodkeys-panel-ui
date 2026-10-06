@@ -1,4 +1,4 @@
-import { API_BASE_URL, PRODUCT_API_URL } from '@/config/api.config';
+import { API_BASE_URL } from '@/config/api.config';
 import { GroupedProduct, groupProducts } from './product-groups';
 
 export interface ProductCategoryDTO {
@@ -10,9 +10,14 @@ export interface ProductCategoryDTO {
 
 export interface CategorizedProductDTO {
   id?: number;
+  name: string;
   showProduct: boolean;
   outsourced: boolean;
   pictures: string[];
+  categoryType: string;
+  otherTypeName: string | null;
+  uploadedFileIds: string[];
+  removedFileIds: string[];
   categories: ProductCategoryDTO[];
 }
 
@@ -34,6 +39,9 @@ export function productsToForm(products: any[] = [], outsourced = false): Groupe
         id: product.id ?? null,
         _categoryKey: `api:${product.id ?? productIndex}:${categoryIndex}`,
         _productPictures: product.pictures || [],
+        otherTypeName: product.otherTypeName ?? null,
+        uploadedFileIds: product.uploadedFileIds || [],
+        removedFileIds: product.removedFileIds || [],
         categoryType: category.name || '',
         name: item.title || '',
         description: item.description || '',
@@ -47,22 +55,29 @@ export function productsToForm(products: any[] = [], outsourced = false): Groupe
 
 /** Whitelist API fields; never send RHF IDs or UI metadata to the server. */
 export function productsToApi(rows: GroupedProduct[] = [], outsourced = false): CategorizedProductDTO[] {
-  const parents = new Map<number | 'new', GroupedProduct[]>();
+  const parents = new Map<number | string, GroupedProduct[]>();
   rows.forEach(row => {
-    const key = row.id ?? 'new';
+    const key = row.id ?? row._categoryKey ?? `new:${row.categoryType?.trim() || ''}`;
     parents.set(key, [...(parents.get(key) || []), row]);
   });
   return Array.from(parents, ([id, products]) => ({
-    ...(id !== 'new' ? { id } : {}),
+    ...(typeof id === 'number' ? { id } : {}),
+    name: products[0].categoryType?.trim() || '',
+    categoryType: products[0].categoryType?.trim() || '',
+    otherTypeName: products[0].otherTypeName ?? null,
     showProduct: products[0].showProduct ?? true,
     outsourced,
     pictures: (products[0]._productPictures || []).map(fileId).filter((id): id is string => !!id),
+    uploadedFileIds: [...new Set([
+      ...products.flatMap(row => row.uploadedFileIds || []),
+      ...groupProducts(products).flatMap(group => group.pictures.map(fileId)),
+    ].filter((id): id is string => !!id))],
+    removedFileIds: [...new Set(products.flatMap(row => row.removedFileIds || []))],
     categories: groupProducts(products).map(group => {
       const image = group.pictures[0];
       return {
         name: group.name.trim(),
         imageId: fileId(image),
-        imageUrl: typeof image === 'object' ? image?.filePath || image?.url : undefined,
         items: group.indices.map(index => ({
           title: products[index].name?.trim() || '',
           description: products[index].description || '',
@@ -93,13 +108,12 @@ export function responseEntityId(response: HttpResponse): number | undefined {
   return Number.isSafeInteger(id) && id > 0 ? id : undefined;
 }
 
-/** Create the company before POSTing products; updates remain one company PUT. */
+/** Send categorized products with the company for both creation and updates. */
 export async function saveCompanyWithProducts(
   client: HttpClient,
   company: { products?: CategorizedProductDTO[]; outSourcedProducts?: CategorizedProductDTO[]; [key: string]: any },
   companyId: string | number | undefined,
   progress: CompanyProductSaveProgress,
-  onProductCreated: (outsourced: boolean, id: number) => void = () => {},
 ) {
   const config = { headers: { 'Content-Type': 'application/json' } };
   const existingId = companyId ?? progress.companyId;
@@ -112,25 +126,10 @@ export async function saveCompanyWithProducts(
     throw new Error('شناسه شرکت ثبت‌شده در پاسخ سرور وجود ندارد؛ صفحه شرکت را دوباره باز کنید.');
   }
 
-  const response = await client.post(`${API_BASE_URL}/company`, { ...company, products: [], outSourcedProducts: [] }, config);
+  const response = await client.post(`${API_BASE_URL}/company`, company, config);
   checkResponse(response);
   progress.companyCreated = true;
   const createdCompanyId = responseEntityId(response);
-  const products = [...(company.products || []), ...(company.outSourcedProducts || [])];
-  if (!createdCompanyId && products.length) {
-    throw new Error('شرکت ثبت شد، اما شناسه شرکت برای ثبت محصولات در پاسخ سرور وجود ندارد.');
-  }
   progress.companyId = createdCompanyId;
-  for (const product of products) {
-    const result = await client.post(PRODUCT_API_URL, {
-      companyId: createdCompanyId,
-      showProduct: product.showProduct,
-      outsourced: product.outsourced,
-      categories: product.categories,
-    }, config);
-    checkResponse(result);
-    const productId = responseEntityId(result);
-    if (productId) onProductCreated(product.outsourced, productId);
-  }
   return response;
 }

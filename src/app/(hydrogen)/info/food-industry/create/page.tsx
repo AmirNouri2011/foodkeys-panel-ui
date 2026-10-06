@@ -6,7 +6,7 @@ import PageHeader from '@/app/shared/page-header';
 import CreateCompany from '@/app/shared/info/food-industry/company/create';
 
 const pageHeader = {
-  title: 'ثبت شرکت جدید',
+  title: ' بانک صنعت غذا - ثبت شرکت جدید',
   breadcrumb: [
     {
       href: routes.info.dashboard,
@@ -16,10 +16,10 @@ const pageHeader = {
       href: routes.info.foodIndustryList,
       name: 'بانک صنعت غذا',
     },
-    {
-      href: routes.info.foodIndustryList,
-      name: 'لیست شرکت‌ها',
-    },
+    // {
+    //   href: routes.info.foodIndustryList,
+    //   name: 'لیست شرکت‌ها',
+    // },
     {
       href: routes.info.foodIndustryAdd,
       name: 'ثبت شرکت جدید',

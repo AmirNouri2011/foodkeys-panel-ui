@@ -1,5 +1,7 @@
 import React from 'react';
 import { UseFormRegister, FieldErrors, Control, useFieldArray } from 'react-hook-form';
+import SchemaLocationField from '@/components/ui/schema-location-field';
+import { getLocationKind } from '@/utils/iran-locations';
 
 interface DynamicFormProps {
     schema: any;
@@ -13,6 +15,12 @@ const DynamicForm: React.FC<DynamicFormProps> = ({ schema, register, errors, con
     const renderField = (fieldName: string, fieldSchema: any, parentName?: string) => {
         const fullName = parentName ? `${parentName}.${fieldName}` : fieldName;
         const fieldType = fieldSchema.type;
+        const locationKind = fieldType === 'string' ? getLocationKind(fieldName, fieldSchema.title) : undefined;
+        if (locationKind) {
+            return <SchemaLocationField name={fullName} control={control} kind={locationKind}
+                label={fieldSchema.title || fieldName}
+                rules={{ minLength: fieldSchema.minLength, maxLength: fieldSchema.maxLength }} />;
+        }
 
         if (!fieldType && fieldSchema.properties) {
             return renderObject(fieldName, fieldSchema, parentName);

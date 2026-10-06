@@ -7,7 +7,7 @@ import { FieldHelperText } from 'rizzui';
 import { Listbox, Transition } from '@headlessui/react';
 import { ExtractProps } from '@/components/ui/table';
 import cn from '@/utils/class-names';
-import { PiCaretUpDown } from 'react-icons/pi';
+import { PiCaretDownBold, PiCheckBold } from 'react-icons/pi';
 import { FieldError } from '@/components/ui/field-error';
 import {
   type Placement,
@@ -29,8 +29,8 @@ const labelClasses = {
 };
 
 const selectClasses = {
-  base: 'flex items-center peer w-full transition duration-200',
-  disabled: '!bg-gray-100 cursor-not-allowed !border-gray-200',
+  base: 'peer relative flex w-full items-center gap-2 overflow-hidden text-start transition-all duration-200',
+  disabled: '!cursor-not-allowed !border-gray-200 !bg-gray-100 !shadow-none',
   error: '!border-red hover:!border-red focus:!border-red focus:!ring-red',
   size: {
     sm: 'px-2 py-1 text-xs h-8 leading-[32px]',
@@ -41,8 +41,8 @@ const selectClasses = {
   rounded: {
     none: 'rounded-none',
     sm: 'rounded-sm',
-    DEFAULT: 'rounded-md',
-    lg: 'rounded-lg',
+    DEFAULT: 'rounded-xl',
+    lg: 'rounded-2xl',
     pill: 'rounded-full',
   },
   variant: {
@@ -78,11 +78,12 @@ const selectClasses = {
       },
     },
     outline: {
-      base: 'bg-transparent focus:ring-[0.6px] border border-gray-300',
+      base: 'border border-gray-300 bg-gray-0 shadow-[0_1px_2px_rgba(15,23,42,0.04)] outline-none hover:bg-gray-50/60 focus:ring-2',
       color: {
         DEFAULT:
-          'hover:border-gray-1000 focus:border-gray-1000 focus:ring-gray-1000',
-        primary: 'hover:border-primary focus:border-primary focus:ring-primary',
+          'hover:border-primary/60 focus:border-primary focus:ring-primary/15',
+        primary:
+          'hover:border-primary focus:border-primary focus:ring-primary/15',
         secondary:
           'hover:border-secondary focus:border-secondary focus:ring-secondary',
         danger: 'hover:border-red focus:border-red focus:ring-red',
@@ -108,7 +109,7 @@ const selectClasses = {
 };
 
 const optionsClasses = {
-  base: 'max-h-[265px] p-2 w-full overflow-auto border border-gray-100 focus:outline-none z-40 bg-gray-0 dark:bg-gray-100 [&>ul]:outline-none [&>ul]:ring-0',
+  base: 'z-40 max-h-[265px] w-full overflow-auto border border-gray-200 bg-gray-0 p-1.5 shadow-[0_18px_45px_-14px_rgba(15,23,42,0.28)] ring-1 ring-gray-900/5 focus:outline-none dark:bg-gray-100 [&>ul]:space-y-1 [&>ul]:outline-none [&>ul]:ring-0',
   shadow: {
     sm: 'drop-shadow-md',
     DEFAULT: 'drop-shadow-lg',
@@ -118,14 +119,14 @@ const optionsClasses = {
   rounded: {
     none: 'rounded-none',
     sm: 'rounded-sm',
-    DEFAULT: 'rounded-md',
-    lg: 'rounded-lg',
+    DEFAULT: 'rounded-xl',
+    lg: 'rounded-2xl',
     pill: 'rounded-xl',
   },
 };
 
 const optionClasses = {
-  base: 'text-gray-900 relative cursor-pointer select-none text-sm dark:hover:bg-gray-50',
+  base: 'relative flex w-full cursor-pointer select-none items-center justify-between gap-3 text-gray-900 transition-colors dark:hover:bg-gray-50',
   notFound:
     'relative cursor-default select-none text-center text-gray-500 whitespace-nowrap',
   color: {
@@ -292,7 +293,7 @@ export default function SelectBox<OptionType extends SelectOption>({
   rounded = 'DEFAULT',
   variant = 'outline',
   color = 'DEFAULT',
-  suffix = <PiCaretUpDown className="h-5 w-5" />,
+  suffix,
   onFocus,
   onBlur,
   ...props
@@ -314,7 +315,10 @@ export default function SelectBox<OptionType extends SelectOption>({
   const emptyValue = !isNumber(value) && isEmpty(value);
 
   return (
-    <div ref={refs.setReference} className={cn('grid min-w-0 grid-cols-1', className)}>
+    <div
+      ref={refs.setReference}
+      className={cn('grid min-w-0 grid-cols-1', className)}
+    >
       <Listbox value={value} disabled={disabled} {...props}>
         {({ open }) => (
           <>
@@ -335,6 +339,8 @@ export default function SelectBox<OptionType extends SelectOption>({
 
             <div ref={ref} className="h-full min-w-0">
               <Listbox.Button
+                onFocus={onFocus}
+                onBlur={onBlur}
                 className={cn(
                   selectClasses.base,
                   'min-w-0 max-w-full',
@@ -347,10 +353,14 @@ export default function SelectBox<OptionType extends SelectOption>({
                   clearable && selectFieldClasses.clearable,
                   // @ts-ignore
                   prefix && selectFieldClasses.prefixStartPadding.size[size],
-                  suffix && selectFieldClasses.suffixEndPadding.size[size],
+                  suffix !== null &&
+                    selectFieldClasses.suffixEndPadding.size[size],
                   // isFocus && 'is-focus', // must have is-focus class based on onFocus event
                   disabled && selectClasses.disabled,
                   error && selectClasses.error,
+                  open &&
+                    !error &&
+                    'ring-primary/15 border-primary bg-gray-0 ring-2',
                   selectClassName
                 )}
               >
@@ -370,7 +380,8 @@ export default function SelectBox<OptionType extends SelectOption>({
                     emptyValue && 'text-gray-500 dark:text-gray-300',
                     // @ts-ignore
                     prefix && selectFieldClasses.prefixStartPadding.size[size],
-                    suffix && selectFieldClasses.suffixEndPadding.size[size]
+                    suffix !== null &&
+                      selectFieldClasses.suffixEndPadding.size[size]
                   )}
                 >
                   {emptyValue ? placeholder : displayValue(value)}
@@ -380,18 +391,19 @@ export default function SelectBox<OptionType extends SelectOption>({
                   <ClearButton
                     size={size}
                     onClick={onClear}
-                    hasSuffix={Boolean(suffix)}
+                    hasSuffix={suffix !== null}
                   />
                 )}
 
-                {suffix && (
+                {suffix !== null && (
                   <span
                     className={cn(
-                      'shrink-0 whitespace-nowrap leading-normal',
+                      'flex h-7 w-7 shrink-0 items-center justify-center whitespace-nowrap rounded-lg bg-gray-100 text-gray-600 transition-all duration-200',
+                      open && 'rotate-180 bg-primary-lighter text-primary',
                       suffixClassName
                     )}
                   >
-                    {suffix}
+                    {suffix ?? <PiCaretDownBold className="h-4 w-4" />}
                   </span>
                 )}
               </Listbox.Button>
@@ -431,7 +443,7 @@ export default function SelectBox<OptionType extends SelectOption>({
                         {...(option?.disabled && {
                           disabled: option?.disabled,
                         })}
-                        className={({ active }) =>
+                        className={({ active, selected }) =>
                           cn(
                             optionClasses.base,
                             selectClasses.base,
@@ -439,6 +451,8 @@ export default function SelectBox<OptionType extends SelectOption>({
                             optionsClasses.rounded[rounded],
                             option?.disabled && selectClasses.disabled,
                             option?.disabled && 'text-gray-500',
+                            selected &&
+                              'bg-primary-lighter/70 font-medium text-primary-dark',
                             active && optionClasses.color[color],
                             optionClassName
                           )
@@ -446,22 +460,26 @@ export default function SelectBox<OptionType extends SelectOption>({
                         value={getOptionValue(option)}
                       >
                         {({ selected }) => (
-                          <span
-                            className={cn(
+                          <>
+                            <span
+                              className={cn(
+                                'min-w-0 flex-1 truncate',
                                 // @ts-ignore
-                              suffix &&
-                                selectFieldClasses.suffixEndPadding.size[size],
-                              prefix &&
-                                selectFieldClasses.prefixStartPadding.size[
-                                  size
-                                ],
-                              {
-                                'font-medium': selected,
-                              }
+                                prefix &&
+                                  selectFieldClasses.prefixStartPadding.size[
+                                    size
+                                  ],
+                                selected && 'font-medium'
+                              )}
+                            >
+                              {getOptionDisplayValue(option)}
+                            </span>
+                            {selected && (
+                              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-white">
+                                <PiCheckBold className="h-3.5 w-3.5" />
+                              </span>
                             )}
-                          >
-                            {getOptionDisplayValue(option)}
-                          </span>
+                          </>
                         )}
                       </Listbox.Option>
                     ))

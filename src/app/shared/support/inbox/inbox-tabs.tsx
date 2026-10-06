@@ -12,6 +12,7 @@ import cn from '@/utils/class-names';
 import { useCreateQueryString } from '@/hooks/use-create-query-string';
 import MessageDetails from '@/app/shared/support/inbox/message-details';
 import { ticketStatsAtom } from '@/app/shared/support/inbox/message-list';
+import styles from './support-theme.module.css';
 
 export const supportNavItems = [
   { value: 'all-open', label: 'همه تیکت‌ها' },
@@ -40,7 +41,7 @@ export function TabList() {
       hint: 'تمام درخواست‌های ثبت‌شده',
       count: ticketStats.totalTickets || 0,
       icon: PiFiles,
-      accent: 'bg-blue-lighter text-blue-dark',
+      accent: 'bg-primary-lighter text-primary',
     },
     {
       value: 'open',
@@ -48,7 +49,7 @@ export function TabList() {
       hint: 'نیازمند پاسخ یا بررسی',
       count: ticketStats.openTickets || 0,
       icon: PiClockCountdown,
-      accent: 'bg-orange-lighter text-orange-dark',
+      accent: styles.pending,
     },
     {
       value: 'closed',
@@ -56,7 +57,7 @@ export function TabList() {
       hint: 'درخواست‌های پایان‌یافته',
       count: ticketStats.closedTickets || 0,
       icon: PiCheckCircle,
-      accent: 'bg-green-lighter text-green-dark',
+      accent: styles.answered,
     },
   ];
 
@@ -68,7 +69,7 @@ export function TabList() {
   return (
     <nav
       aria-label="فیلتر وضعیت تیکت‌ها"
-      className="grid grid-cols-1 gap-3 sm:grid-cols-3"
+      className="grid grid-cols-3 gap-2 sm:gap-3"
     >
       {navItems.map((item) => {
         const Icon = item.icon;
@@ -82,10 +83,10 @@ export function TabList() {
             disabled={isPending}
             onClick={() => selectTab(item.value)}
             className={cn(
-              'group relative overflow-hidden rounded-2xl border bg-white p-4 text-right shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md dark:bg-gray-50',
+              'group relative overflow-hidden rounded-2xl border px-2 py-3 text-right transition-colors duration-200 sm:p-4',
               isActive
-                ? 'border-primary ring-2 ring-primary/10'
-                : 'border-gray-200 hover:border-gray-300'
+                ? 'border-primary/50 bg-primary-lighter/50 ring-1 ring-primary/10'
+                : 'border-gray-200 bg-gray-0 hover:border-primary/30 hover:bg-gray-50 dark:bg-gray-50'
             )}
           >
             <span
@@ -97,22 +98,22 @@ export function TabList() {
             <span className="flex items-center gap-3">
               <span
                 className={cn(
-                  'grid h-11 w-11 flex-none place-items-center rounded-xl',
+                  'hidden h-11 w-11 flex-none place-items-center rounded-xl sm:grid',
                   item.accent
                 )}
               >
                 <Icon className="h-5 w-5" />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="flex items-center justify-between gap-2">
-                  <span className="text-sm font-semibold text-gray-900">
+                <span className="flex flex-col-reverse items-center justify-between gap-2 sm:flex-row">
+                  <span className="whitespace-nowrap text-[10px] font-semibold text-gray-900 sm:text-sm">
                     {item.label}
                   </span>
                   <span className="text-2xl font-bold tabular-nums text-gray-900">
                     {item.count.toLocaleString('fa-IR')}
                   </span>
                 </span>
-                <span className="mt-1 block truncate text-xs text-gray-500">
+                <span className="mt-1 hidden truncate text-xs text-gray-500 sm:block">
                   {item.hint}
                 </span>
               </span>

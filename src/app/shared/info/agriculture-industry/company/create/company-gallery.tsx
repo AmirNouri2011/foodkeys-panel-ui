@@ -206,8 +206,7 @@ export default function CompanyGallery({
         label="عکس‌های محیط اداری"
         uploadAreaContent={
           <>
-            عکس‌های محیط اداری شرکت خود را اینجا آپلود کنید حجم عکس باید کمتر
-            از{' '}
+            عکس‌های محیط اداری شرکت خود را اینجا آپلود کنید حجم عکس باید کمتر از{' '}
             <strong className="font-medium text-gray-900">
               20 مگابایت باشد
             </strong>
@@ -423,8 +422,7 @@ export const MultipleFiles = ({
                             ? URL.createObjectURL(file)
                             : file &&
                               file.filePath &&
-                              STATIC_FILES_URL +
-                                file.filePath
+                              STATIC_FILES_URL + file.filePath
                         }
                         alt={file.name}
                         fill

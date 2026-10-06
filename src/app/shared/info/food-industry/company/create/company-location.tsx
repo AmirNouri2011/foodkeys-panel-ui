@@ -204,6 +204,7 @@ import { Tabs, TabList, Tab, TabPanel } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import dynamic from "next/dynamic";
 import { PiWarningCircleBold } from "react-icons/pi";
+import SchemaLocationField from "@/components/ui/schema-location-field";
 
 // Dynamically import MiniMap component with no SSR
 const MiniMap = dynamic(() => import("../../../../mini-map/MiniMap"), {
@@ -218,6 +219,7 @@ const MiniMap = dynamic(() => import("../../../../mini-map/MiniMap"), {
 export default function CompanyLocation({ className }: { className?: string }) {
     const {
         register,
+        control,
         formState: { errors },
         setValue,
         watch,
@@ -294,18 +296,21 @@ export default function CompanyLocation({ className }: { className?: string }) {
                 <TabPanel>
                     <div className="grid gap-8 xl:grid-cols-2">
                         <div className="space-y-6 xl:col-span-1">
-                            <Input
+                            <SchemaLocationField
+                                name="factoryState"
+                                control={control}
+                                kind="province"
                                 label="استان کارخانه*"
-                                placeholder="استان کارخانه"
-                                {...register("factoryState")}
-                                error={errors.factoryState?.message as string}
-                                helperText="ابتدا استان را وارد کنید تا نقشه روی همان استان قرار بگیرد."
+                                rules={{ required: "استان کارخانه را انتخاب کنید" }}
+                                description="ابتدا استان را انتخاب کنید تا نقشه روی همان استان قرار بگیرد."
                             />
-                            <Input
+                            <SchemaLocationField
+                                name="factoryCity"
+                                control={control}
+                                kind="city"
+                                provinceFieldName="factoryState"
                                 label="شهر کارخانه*"
-                                placeholder="شهر کارخانه"
-                                {...register("factoryCity")}
-                                error={errors.factoryCity?.message as string}
+                                rules={{ required: "شهر کارخانه را انتخاب کنید" }}
                             />
                             <Input
                                 label="نام شهرک صنعتی*"
@@ -359,18 +364,19 @@ export default function CompanyLocation({ className }: { className?: string }) {
                 <TabPanel>
                     <div className="grid gap-8 xl:grid-cols-2">
                         <div className="space-y-6 xl:col-span-1">
-                            <Input
+                            <SchemaLocationField
+                                name="officeState"
+                                control={control}
+                                kind="province"
                                 label="استان دفتر مرکزی"
-                                placeholder="استان دفتر مرکزی"
-                                {...register("officeState")}
-                                error={errors.officeState?.message as string}
-                                helperText="با وارد کردن استان، نقشه روی همان محدوده قرار می‌گیرد."
+                                description="با انتخاب استان، نقشه روی همان محدوده قرار می‌گیرد."
                             />
-                            <Input
+                            <SchemaLocationField
+                                name="officeCity"
+                                control={control}
+                                kind="city"
+                                provinceFieldName="officeState"
                                 label="شهر دفتر مرکزی"
-                                placeholder="شهر دفتر مرکزی"
-                                {...register("officeCity")}
-                                error={errors.officeCity?.message as string}
                             />
                             <Input
                                 label="کد پستی دفتر مرکزی"

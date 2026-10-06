@@ -1,0 +1,11 @@
+{
+  "datasetVersion": "3.1.2",
+  "license": "GPL-3.0",
+  "revision": "ace21bb251f96ced350bbc01541acffd71121feb",
+  "downloadedOn": "2026-10-03",
+  "notes": "Unmodified source datasets. Cities excludes urban zones (numbered subdivisions of existing cities). No runtime network requests.",
+  "provincesPath": "dist/json/provinces.json",
+  "officialSourceYear": 1404,
+  "citiesPath": "dist/json/cities-filtered.json",
+  "source": "https://github.com/sajaddp/list-of-cities-in-Iran"
+}

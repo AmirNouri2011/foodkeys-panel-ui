@@ -207,6 +207,7 @@
 //   },
 // ];
 import { z } from 'zod';
+import { isLocationPlaceholder } from '@/utils/iran-locations';
 import { productsToForm } from './product-api';
 import {
   optionalEmailArraySchema,
@@ -234,7 +235,7 @@ const productSchema = z.object({
     _productPictures: z.array(z.any()).optional(),
     name: z.string().trim().min(1, { message: validationMessages.productName }),
     categoryType: z.string().trim().min(1, { message: validationMessages.productCategory }),
-    otherTypeName: z.string().optional(),
+    otherTypeName: z.string().nullable().optional(),
     description: z.string().optional(),
     pictures: z.any().optional().nullable(),
     uploadedFileIds: z.union([z.string(), z.array(z.string())]).optional().nullable(),
@@ -416,7 +417,11 @@ const companyTypeSchema = z.object({
 const companyBrandSchema = z.object({
     name: z.string().trim(),
     nameEn: z.string().trim(),
-    brandImage: z.string().trim().optional()
+    brandImage: z.string().trim().optional(),
+    galleryFiles: z.array(z.union([
+        z.string(),
+        z.object({ id: z.string() }),
+    ])).optional(),
 }).superRefine((brand, ctx) => {
     if (!brand.name && (brand.nameEn || brand.brandImage)) {
         ctx.addIssue({
@@ -511,7 +516,6 @@ export const companyFormSchema = z.object({
     linkedInId: z.string().optional(),
     eitaaPhoneNo: optionalMobilePhoneSchema(),
     rubikaPhoneNo: optionalMobilePhoneSchema(),
-    skypeId: z.string().optional(),
     website: optionalWebsiteSchema(),
     contacts: z.array(contactSchema).max(10, {
         message: 'حداکثر ۱۰ مخاطب قابل ثبت است',
@@ -528,15 +532,15 @@ export const companyFormSchema = z.object({
     outSourcedProductsDescription: z.string().optional(),
     currentLogo: z.string().optional(),
     currentBackgroundImages: z.array(z.string()).optional(),
-    factoryCity: requiredStringSchema(),
-    factoryState: requiredStringSchema(),
+    factoryCity: requiredStringSchema().refine((value) => !isLocationPlaceholder(value), { message: 'نام شهر را وارد کنید' }),
+    factoryState: requiredStringSchema().refine((value) => !isLocationPlaceholder(value), { message: 'نام استان را وارد کنید' }),
     industrialCity: requiredStringSchema(),
     factoryPoBox: optionalPostalCodeSchema(),
     officePoBox: optionalPostalCodeSchema(),
     factoryLocation: requiredStringSchema(),
     officeLocation: z.string().optional(),
-    officeCity: z.string().optional(),
-    officeState: z.string().optional(),
+    officeCity: z.string().trim().refine((value) => !isLocationPlaceholder(value), { message: 'نام شهر را وارد کنید' }).optional(),
+    officeState: z.string().trim().refine((value) => !isLocationPlaceholder(value), { message: 'نام استان را وارد کنید' }).optional(),
     gallery: gallerySchema.optional(),
     fullAddress: z.string().optional(),
     latitude: z.number().optional(),
@@ -649,7 +653,6 @@ export function defaultValues(company?: CreateCompanyInput | null) {
         linkedInId: company?.linkedInId ?? '',
         eitaaPhoneNo: company?.eitaaPhoneNo ?? '',
         rubikaPhoneNo: company?.rubikaPhoneNo ?? '',
-        skypeId: company?.skypeId ?? '',
         website: company?.website ?? '',
         contacts: company?.contacts ?? [],
         emails: company?.emails ?? [],

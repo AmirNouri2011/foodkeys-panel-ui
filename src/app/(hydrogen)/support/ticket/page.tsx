@@ -27,6 +27,7 @@ import SupportInbox from '@/app/shared/support/inbox';
 import SelectLoader from '@/components/loader/select-loader';
 import QuillLoader from '@/components/loader/quill-loader';
 import useAxiosPrivate from '@/hooks/use-axios-private';
+import styles from '@/app/shared/support/inbox/support-theme.module.css';
 
 const Select = dynamic(() => import('@/components/ui/select'), {
   ssr: false,
@@ -144,20 +145,19 @@ export default function SupportInboxPage() {
       <PageHeader title={pageHeader.title} breadcrumb={pageHeader.breadcrumb}>
         <Button
           type="button"
-          color="success"
+          color="primary"
           onClick={() => setIsModalOpen(true)}
-          className="mt-2 w-full gap-2 shadow-sm @lg:mt-0 @lg:w-auto"
+          className="mt-2 w-full gap-2 rounded-xl shadow-sm @lg:mt-0 @lg:w-auto"
         >
           <PiPlusBold className="h-4 w-4" />
           ثبت تیکت جدید
         </Button>
       </PageHeader>
 
-      <section className="relative mb-5 overflow-hidden rounded-2xl border border-primary/10 bg-gradient-to-l from-primary/10 via-white to-green-lighter/40 p-5 dark:via-gray-50 sm:p-6">
-        <span className="absolute -left-12 -top-16 h-40 w-40 rounded-full bg-primary/10 blur-3xl" />
-        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+      <section className={styles.hero}>
+        <div className="flex flex-col gap-5 2xl:flex-row 2xl:items-center 2xl:justify-between">
           <div className="flex items-start gap-4">
-            <span className="grid h-12 w-12 flex-none place-items-center rounded-2xl bg-primary text-white shadow-lg shadow-primary/20">
+            <span className="grid h-12 w-12 flex-none place-items-center rounded-2xl border border-primary/15 bg-gray-0 text-primary dark:bg-gray-100">
               <PiHeadset className="h-6 w-6" />
             </span>
             <div>
@@ -171,16 +171,16 @@ export default function SupportInboxPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-2 text-xs text-gray-600 xs:grid-cols-3 lg:min-w-[430px]">
-            <span className="flex items-center gap-2 rounded-xl border border-white/80 bg-white/70 px-3 py-2.5 backdrop-blur dark:bg-gray-100/80">
-              <PiClockCountdown className="h-4 w-4 text-orange-dark" />
+          <div className="flex flex-wrap gap-x-5 gap-y-3 text-xs text-gray-600">
+            <span className="flex items-center gap-2">
+              <PiClockCountdown className="h-4 w-4 text-primary" />
               پیگیری یکپارچه
             </span>
-            <span className="flex items-center gap-2 rounded-xl border border-white/80 bg-white/70 px-3 py-2.5 backdrop-blur dark:bg-gray-100/80">
-              <PiShieldCheck className="h-4 w-4 text-green-dark" />
+            <span className="flex items-center gap-2">
+              <PiShieldCheck className="h-4 w-4 text-primary" />
               گفتگوی امن
             </span>
-            <span className="flex items-center gap-2 rounded-xl border border-white/80 bg-white/70 px-3 py-2.5 backdrop-blur dark:bg-gray-100/80">
+            <span className="flex items-center gap-2">
               <PiCheckCircle className="h-4 w-4 text-primary" />
               تاریخچه کامل
             </span>
@@ -193,7 +193,7 @@ export default function SupportInboxPage() {
 
       <Modal isOpen={isModalOpen} size="lg" onClose={closeModal}>
         <FormProvider {...methods}>
-          <form onSubmit={methods.handleSubmit(onSubmit)}>
+          <form className={styles.theme} dir="rtl" onSubmit={methods.handleSubmit(onSubmit)}>
             <div className="border-b border-gray-100 px-5 py-4 sm:px-7 sm:py-5">
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -217,7 +217,7 @@ export default function SupportInboxPage() {
             </div>
 
             <div className="max-h-[70vh] overflow-y-auto px-5 py-5 sm:px-7">
-              <div className="mb-5 flex items-start gap-2 rounded-xl border border-blue-100 bg-blue-50/70 p-3 text-xs leading-6 text-blue-700">
+              <div className="mb-5 flex items-start gap-2 rounded-xl border border-primary/15 bg-primary-lighter/50 p-3 text-xs leading-6 text-gray-700">
                 <PiInfo className="mt-1 h-4 w-4 flex-none" />
                 <p>
                   برای هر موضوع یک تیکت جدا ثبت کنید. فایل‌های مرتبط را پس از
@@ -326,7 +326,7 @@ export default function SupportInboxPage() {
               </Button>
               <Button
                 type="submit"
-                color="success"
+                color="primary"
                 isLoading={methods.formState.isSubmitting}
                 className="gap-2 sm:min-w-[150px]"
               >

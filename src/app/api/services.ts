@@ -109,6 +109,7 @@ export interface ServiceDTO {
     tags?: string[];
     serviceSchemaDTO?: {
         schemaDefinition: any;
+        validations?: Record<string, string>;
         formTitle: string;
         formDescription: string;
     };

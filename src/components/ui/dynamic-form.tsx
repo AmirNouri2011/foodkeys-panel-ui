@@ -1268,18 +1268,21 @@ import { API_BASE_URL, STATIC_FILES_URL } from '@/config/api.config';
 // }
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm, Controller, FormProvider } from 'react-hook-form';
+import dynamic from 'next/dynamic';
 import {
   Button,
-  Input,
-  Textarea,
   Checkbox,
   Radio,
   FieldError,
   Text,
   ActionIcon,
 } from 'rizzui';
-import { DatePicker } from '@/components/ui/datepicker';
+import { Input, Textarea } from '@/components/ui/outlined-text-field';
+import SchemaDatePicker from '@/components/ui/schema-date-picker';
+import SchemaPriceField from '@/components/ui/schema-price-field';
+import SchemaLocationField from '@/components/ui/schema-location-field';
+import { findProvinceField, getLocationKind } from '@/utils/iran-locations';
 import FileUpload from '@/components/ui/file-upload';
 import LogoUpload from '@/components/ui/logo-upload';
 import { Plus, CheckCircle, XCircle, Image, FileText, X } from 'lucide-react';
@@ -1290,6 +1293,7 @@ import {
   formatFormDataForApi,
   filterSchemaDefinitionForUserPanel,
   filterFormDataByUserPanelSchema,
+  resolveFieldRequirements,
 } from '@/utils/schema-converter';
 import { Select, Title } from '@/components/ui/compatible-components';
 import {
@@ -1298,6 +1302,12 @@ import {
   getRhfWebsiteRules,
   validationMessages,
 } from '@/utils/form-validators';
+import {
+  isLandlineSchemaField,
+  normalizePhoneNumber,
+  normalizeSchemaArrayInput,
+  validateSchemaArrayItem,
+} from '@/utils/schema-field-validation';
 
 export type DynamicFormValidateRef = {
   validate: () => Promise<boolean>;
@@ -1305,6 +1315,15 @@ export type DynamicFormValidateRef = {
   validateWithStatus: () => Promise<DynamicFormValidationResult>;
   focusField: (fieldName: string) => void;
 };
+
+const MiniMap = dynamic(() => import('@/app/shared/mini-map/MiniMap'), {
+  ssr: false,
+});
+
+const getLeafFields = (fields: FieldType[]): FieldType[] =>
+  fields.flatMap((field) =>
+    field.fields?.length ? getLeafFields(field.fields) : [field]
+  );
 
 export type DynamicFormValidationItem = {
   id: string;
@@ -1514,6 +1533,9 @@ export default function DynamicForm({
     [effectiveSchemaDefinition, initialData]
   );
 
+  const formMethods = useForm({
+    defaultValues: filteredInitialData,
+  });
   const {
     control,
     handleSubmit,
@@ -1522,10 +1544,9 @@ export default function DynamicForm({
     watch,
     getValues,
     getFieldState,
+    setValue,
     trigger,
-  } = useForm({
-    defaultValues: filteredInitialData,
-  });
+  } = formMethods;
 
   useEffect(() => {
     if (validateRef) {
@@ -1553,14 +1574,21 @@ export default function DynamicForm({
         },
         validateWithStatus: async () => {
           const isValid = await trigger(undefined, { shouldFocus: false });
-          const items = fields
+          const items = getLeafFields(resolveFieldRequirements(fields, getValues()))
             .map((field) => {
               const fieldState = getFieldState(field.name);
+              const altFieldState =
+                field.type === 'file'
+                  ? getFieldState(`${field.name}Alt`)
+                  : undefined;
               return {
                 id: `dynamic.${field.name}`,
                 label: field.label || field.name,
-                isValid: !fieldState.invalid,
-                message: (fieldState.error?.message as string) || 'تکمیل شده',
+                isValid: !fieldState.invalid && !altFieldState?.invalid,
+                message:
+                  (fieldState.error?.message as string) ||
+                  (altFieldState?.error?.message as string) ||
+                  'تکمیل شده',
                 required: Boolean(field.required),
               };
             })
@@ -1595,6 +1623,18 @@ export default function DynamicForm({
 
   // Watch all form values for changes, but debounce updates
   const formValues = watch();
+  const activeFields = resolveFieldRequirements(fields, formValues);
+  const requirementSignature = JSON.stringify(
+    getLeafFields(activeFields).map((field) => [field.name, field.required])
+  );
+
+  useEffect(() => {
+    const names = (JSON.parse(requirementSignature) as [string, boolean][])
+      .map(([name]) => name);
+    if (names.some((name) => getFieldState(name).invalid)) {
+      void trigger(names);
+    }
+  }, [requirementSignature, getFieldState, trigger]);
 
   // Notify parent component of changes with debounce to prevent infinite loops
   useEffect(() => {
@@ -1645,7 +1685,10 @@ export default function DynamicForm({
       try {
         const schemaDefinition =
           effectiveSchemaDefinition || schema.schemaDefinition;
-        const fieldsFromSchema = convertSchemaToFields(schemaDefinition);
+        const fieldsFromSchema = convertSchemaToFields(
+          schemaDefinition,
+          schema.validations || {}
+        );
         setFields(fieldsFromSchema);
         setFormTitle(schema.formTitle || 'فرم سرویس');
         setFormDescription(schema.formDescription || '');
@@ -1669,7 +1712,7 @@ export default function DynamicForm({
   }, [filteredInitialData, getValues, reset]);
 
   const getValidationRules = (field: FieldType) => {
-    const rules: any = {};
+    const rules: any = { required: false };
 
     if (field.required) {
       rules.required = validationMessages.required;
@@ -1687,14 +1730,14 @@ export default function DynamicForm({
       Object.assign(rules, getRhfWebsiteRules(field.required));
     }
 
-    if (field.minLength) {
+    if (field.minLength && field.type !== 'tel') {
       rules.minLength = {
         value: field.minLength,
         message: `حداقل ${field.minLength} کاراکتر وارد کنید`,
       };
     }
 
-    if (field.maxLength) {
+    if (field.maxLength && field.type !== 'tel') {
       rules.maxLength = {
         value: field.maxLength,
         message: `حداکثر ${field.maxLength} کاراکتر مجاز است`,
@@ -1721,7 +1764,7 @@ export default function DynamicForm({
       };
     }
 
-    if (field.pattern) {
+    if (field.pattern && field.type !== 'tel') {
       rules.pattern = {
         value: new RegExp(field.pattern),
         message: validationMessages.invalidFormat,
@@ -1745,20 +1788,120 @@ export default function DynamicForm({
             ? validationMessages.required
             : `حداقل ${minimumItems} مورد الزامی است`;
         },
+        itemFormat: (value: any[]) => {
+          const completedItems = Array.isArray(value)
+            ? value
+                .map((item, index) => ({ item, index }))
+                .filter(({ item }) =>
+                  typeof item === 'string'
+                    ? item.trim().length > 0
+                    : item !== null && item !== undefined
+                )
+            : [];
+
+          for (const { item, index } of completedItems) {
+            const result = validateSchemaArrayItem(field, String(item));
+            if (result !== true) return `ردیف ${index + 1}: ${result}`;
+          }
+
+          return true;
+        },
       };
     }
 
     return rules;
   };
 
-  const renderField = (field: FieldType) => {
+  const isCheckboxGroup = (field: FieldType) =>
+    field.type === 'object' && Boolean(field.fields?.length) &&
+    field.fields!.every((child) => child.type === 'checkbox');
+
+  // Social choices immediately following a mobile number belong to that contact.
+  const isContactSocialGroup = (field?: FieldType, previous?: FieldType) =>
+    Boolean(field && previous && isCheckboxGroup(field) &&
+      (/social/i.test(field.name) || field.label?.includes('شبکه')) &&
+      (previous.type === 'tel' || previous.type === 'text') &&
+      (previous.pattern?.includes('09') || previous.label?.includes('همراه') ||
+        previous.label?.includes('موبایل')));
+
+  const renderField = (field: FieldType, compactCheckbox = false) => {
+    const fieldError = getFieldState(field.name).error;
+    const isLandlineField = isLandlineSchemaField(field);
+    const fieldPlaceholder = isLandlineField ? '' : field.placeholder;
     const validationRules = getValidationRules(field);
     const fieldLabel = field.required
       ? `${field.label || field.name} *`
       : field.label;
+    if (field.currency || field.displayCurrency || field.component === 'PriceField' || field.component === 'CurrencyField') {
+      return (
+        <Controller
+          name={field.name}
+          control={control}
+          rules={{
+            ...validationRules,
+            validate: (value) => value === '' || value === null || value === undefined ||
+              (Number.isSafeInteger(Number(value)) && Number(value) >= 0) ||
+              'مبلغ باید عدد صحیح و نامنفی باشد',
+          }}
+          render={({ field: { value, onChange, onBlur, ref } }) => (
+            <SchemaPriceField field={field} label={fieldLabel} value={value}
+              onChange={onChange} onBlur={onBlur} inputRef={ref}
+              error={fieldError?.message as string} disabled={loading} />
+          )}
+        />
+      );
+    }
+    const locationKind = ['text', 'textarea', 'select'].includes(field.type)
+      ? getLocationKind(field.name, field.label)
+      : undefined;
+    if (locationKind) {
+      return <SchemaLocationField name={field.name} control={control}
+        kind={locationKind} label={fieldLabel} description={field.description}
+        disabled={loading} rules={validationRules}
+        provinceFieldName={locationKind === 'city' ? findProvinceField(field.name, getLeafFields(fields)) : undefined} />;
+    }
+    if (field.type === 'object' || field.type === 'map') {
+      const children = field.fields || [];
+      const checkboxGroup = isCheckboxGroup(field);
+      const visibleChildren = field.type === 'map'
+        ? children.filter((child) =>
+            [
+              `${field.name}.${field.latitudeField}`,
+              `${field.name}.${field.longitudeField}`,
+            ].includes(child.name)
+          )
+        : children;
+      return (
+        <fieldset disabled={loading} className="space-y-4">
+          <legend className="text-sm font-semibold text-gray-900">{fieldLabel}</legend>
+          {field.description && <Text className="text-xs text-gray-500">{field.description}</Text>}
+          {field.type === 'map' && (
+            <MiniMap
+              coordinatesOnly
+              coordinateFields={{
+                latitude: `${field.name}.${field.latitudeField}`,
+                longitude: `${field.name}.${field.longitudeField}`,
+              }}
+              className={loading ? 'pointer-events-none opacity-60' : ''}
+            />
+          )}
+          <div className={cn(
+            'grid',
+            checkboxGroup ? 'grid-cols-2 gap-3 lg:grid-cols-4' : 'grid-cols-1 gap-4 md:grid-cols-2'
+          )}>
+            {visibleChildren.map((child) => (
+              <div key={child.id} id={`dynamic-field-${child.name}`}>
+                {renderField(child, checkboxGroup)}
+              </div>
+            ))}
+          </div>
+        </fieldset>
+      );
+    }
     const isLogoField =
-      field.name.toLowerCase().includes('logo') ||
-      Boolean(field.label?.includes('لوگو'));
+      !field.fileMode &&
+      (field.name.toLowerCase().includes('logo') ||
+        Boolean(field.label?.includes('لوگو')));
         const getLogoPreview = (value: any) => {
             const uploadedFile = Array.isArray(value) ? value[0] : value;
             if (typeof uploadedFile === 'string') {
@@ -1777,6 +1920,7 @@ export default function DynamicForm({
     };
     if (field.component) {
       switch (field.component) {
+        case 'MultiFileUpload':
         case 'FileUpload':
           return (
             <Controller
@@ -1801,11 +1945,11 @@ export default function DynamicForm({
                           onChange(null);
                           onBlur();
                         }}
-                        error={errors[field.name]?.message as string}
+                        error={fieldError?.message as string}
                         disabled={loading}
                         wrapperClassName="items-center"
                       />
-                      {field.description && !errors[field.name] && (
+                      {field.description && !fieldError && (
                         <Text className="mt-3 text-center text-xs text-gray-500">
                           {field.description}
                         </Text>
@@ -1816,13 +1960,36 @@ export default function DynamicForm({
                       label={fieldLabel}
                       value={value}
                       onChange={(uploadedValue) => {
-                        // Process file upload response
                         onChange(uploadedValue);
+                        const altFieldName = `${field.name}Alt`;
+                        if (field.fileMode === 'multiple') {
+                          const nextFiles = Array.isArray(uploadedValue)
+                            ? uploadedValue
+                            : [];
+                          const currentAlts = getValues(altFieldName);
+                          setValue(
+                            altFieldName,
+                            nextFiles.map(
+                              (_, index) =>
+                                (Array.isArray(currentAlts) &&
+                                  currentAlts[index]) ||
+                                ''
+                            ),
+                            { shouldDirty: true, shouldValidate: true }
+                          );
+                        } else {
+                          setValue(altFieldName, '', {
+                            shouldDirty: true,
+                            shouldValidate: true,
+                          });
+                        }
                       }}
                       onBlur={onBlur}
-                      error={errors[field.name]?.message as string}
-                      helperText={field.description}
-                      multiple={field.maxFiles ? field.maxFiles > 1 : false}
+                      error={fieldError?.message as string}
+                      helperText={
+                        field.validationMessage || field.description
+                      }
+                      multiple={field.fileMode === 'multiple'}
                       accept={field.accept}
                       maxSize={field.maxSize}
                       maxFiles={field.maxFiles}
@@ -1833,24 +2000,104 @@ export default function DynamicForm({
 
                   {/* Display file preview for single file */}
                   {!isLogoField && value && !Array.isArray(value) && (
-                    <FilePreview file={value} onRemove={() => onChange(null)} />
+                    <>
+                      <FilePreview
+                        file={value}
+                        onRemove={() => {
+                          onChange(null);
+                          setValue(`${field.name}Alt`, '', {
+                            shouldDirty: true,
+                            shouldValidate: true,
+                          });
+                        }}
+                      />
+                      <Controller
+                        name={`${field.name}Alt`}
+                        control={control}
+                        rules={{
+                          validate: (alt) =>
+                            !getValues(field.name) ||
+                            Boolean(String(alt || '').trim()) ||
+                            'توضیح کوتاه فایل الزامی است',
+                        }}
+                        render={({ field: altField }) => (
+                          <Input
+                            {...altField}
+                            label="توضیح کوتاه فایل *"
+                            placeholder="توضیح فایل را وارد کنید"
+                            value={altField.value || ''}
+                            error={
+                              errors[`${field.name}Alt`]?.message as string
+                            }
+                            disabled={loading}
+                          />
+                        )}
+                      />
+                    </>
                   )}
 
                   {/* Display file previews for multiple files */}
                   {!isLogoField && Array.isArray(value) && value.length > 0 && (
-                    <div className="space-y-2">
-                      {value.map((file, index) => (
-                        <FilePreview
-                          key={index}
-                          file={file}
-                          onRemove={() => {
-                            const newFiles = [...value];
-                            newFiles.splice(index, 1);
-                            onChange(newFiles);
-                          }}
-                        />
-                      ))}
-                    </div>
+                    <Controller
+                      name={`${field.name}Alt`}
+                      control={control}
+                      rules={{
+                        validate: (alts) => {
+                          const files = getValues(field.name);
+                          return !Array.isArray(files) || files.length === 0 ||
+                            (Array.isArray(alts) &&
+                              alts.length === files.length &&
+                              alts.every((alt) => String(alt || '').trim())) ||
+                            'برای همه فایل‌ها توضیح کوتاه وارد کنید';
+                        },
+                      }}
+                      render={({ field: altField }) => {
+                        const altValues = Array.isArray(altField.value)
+                          ? altField.value
+                          : [];
+                        const altError = errors[`${field.name}Alt`]
+                          ?.message as string;
+
+                        return (
+                          <div className="space-y-3">
+                            {value.map((file, index) => (
+                              <div key={file?.id || index}>
+                                <FilePreview
+                                  file={file}
+                                  onRemove={() => {
+                                    const newFiles = [...value];
+                                    const newAlts = [...altValues];
+                                    newFiles.splice(index, 1);
+                                    newAlts.splice(index, 1);
+                                    onChange(newFiles);
+                                    altField.onChange(newAlts);
+                                    altField.onBlur();
+                                  }}
+                                />
+                                <Input
+                                  className="mt-2"
+                                  label={`توضیح فایل ${index + 1} *`}
+                                  placeholder="توضیح فایل را وارد کنید"
+                                  value={altValues[index] || ''}
+                                  onChange={(event) => {
+                                    const newAlts = [...altValues];
+                                    newAlts[index] = event.target.value;
+                                    altField.onChange(newAlts);
+                                  }}
+                                  onBlur={altField.onBlur}
+                                  error={
+                                    altError && !altValues[index]?.trim()
+                                      ? altError
+                                      : undefined
+                                  }
+                                  disabled={loading}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      }}
+                    />
                   )}
                 </div>
               )}
@@ -1865,11 +2112,11 @@ export default function DynamicForm({
               render={({ field: { value, onChange, onBlur } }) => (
                 <Textarea
                   label={fieldLabel}
-                  placeholder={field.placeholder}
+                  placeholder={fieldPlaceholder}
                   value={value || ''}
                   onChange={onChange}
                   onBlur={onBlur}
-                  error={errors[field.name]?.message as string}
+                  error={fieldError?.message as string}
                   disabled={loading}
                   helperText={field.description}
                 />
@@ -1889,11 +2136,9 @@ export default function DynamicForm({
               label={fieldLabel}
               placeholder={field.placeholder || 'انتخاب کنید'}
               value={value || ''}
-              onChange={(e) => {
-                onChange(e.target.value);
-              }}
+              onChange={onChange}
               onBlur={onBlur}
-              error={errors[field.name]?.message as string}
+              error={fieldError?.message as string}
               disabled={loading}
               options={
                 field.enum?.map((option) => ({
@@ -1911,7 +2156,6 @@ export default function DynamicForm({
       case 'text':
       case 'email':
       case 'url':
-      case 'tel':
       case 'password':
         return (
           <Controller
@@ -1922,11 +2166,44 @@ export default function DynamicForm({
               <Input
                 type={field.type}
                 label={fieldLabel}
-                placeholder={field.placeholder}
+                placeholder={fieldPlaceholder}
                 value={value || ''}
                 onChange={onChange}
                 onBlur={onBlur}
-                error={errors[field.name]?.message as string}
+                error={fieldError?.message as string}
+                disabled={loading}
+                helperText={field.description}
+              />
+            )}
+          />
+        );
+
+      case 'tel':
+        return (
+          <Controller
+            name={field.name}
+            control={control}
+            rules={validationRules}
+            render={({ field: { value, onChange, onBlur } }) => (
+              <Input
+                type="tel"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                autoComplete="tel"
+                maxLength={Math.min(field.maxLength ?? 11, 11)}
+                label={fieldLabel}
+                placeholder={fieldPlaceholder}
+                value={value || ''}
+                onChange={(event) =>
+                  onChange(
+                    normalizePhoneNumber(
+                      event.target.value,
+                      Math.min(field.maxLength ?? 11, 11)
+                    )
+                  )
+                }
+                onBlur={onBlur}
+                error={fieldError?.message as string}
                 disabled={loading}
                 helperText={field.description}
               />
@@ -1943,11 +2220,11 @@ export default function DynamicForm({
             render={({ field: { value, onChange, onBlur } }) => (
               <Textarea
                 label={fieldLabel}
-                placeholder={field.placeholder}
+                placeholder={fieldPlaceholder}
                 value={value || ''}
                 onChange={onChange}
                 onBlur={onBlur}
-                error={errors[field.name]?.message as string}
+                error={fieldError?.message as string}
                 disabled={loading}
                 helperText={field.description}
               />
@@ -1964,8 +2241,9 @@ export default function DynamicForm({
             render={({ field: { value, onChange, onBlur } }) => (
               <Input
                 type="number"
+                step="any"
                 label={fieldLabel}
-                placeholder={field.placeholder}
+                placeholder={fieldPlaceholder}
                 value={value === undefined || value === null ? '' : value}
                 onChange={(e) => {
                   const val =
@@ -1973,7 +2251,7 @@ export default function DynamicForm({
                   onChange(val);
                 }}
                 onBlur={onBlur}
-                error={errors[field.name]?.message as string}
+                error={fieldError?.message as string}
                 disabled={loading}
                 helperText={field.description}
                 min={field.min}
@@ -1990,14 +2268,22 @@ export default function DynamicForm({
             control={control}
             rules={validationRules}
             render={({ field: { value, onChange, onBlur } }) => (
-              <div className="space-y-1">
+              <div className={cn(
+                'space-y-1',
+                compactCheckbox && 'rounded-xl border p-3 transition-colors',
+                compactCheckbox && (value
+                  ? 'border-primary bg-primary-lighter/30'
+                  : 'border-gray-200 bg-white hover:border-primary-lighter')
+              )}>
                 <Checkbox
+                  name={field.name}
+                  className={compactCheckbox ? 'w-full cursor-pointer' : undefined}
                   label={fieldLabel}
                   checked={!!value}
                   onChange={(e) => onChange(e.target.checked)}
                   onBlur={onBlur}
                   disabled={loading}
-                  error={errors[field.name]?.message as string}
+                  error={fieldError?.message as string}
                   helperText={field.description}
                 />
               </div>
@@ -2028,12 +2314,10 @@ export default function DynamicForm({
                     />
                   ))}
                 </div>
-                {errors[field.name] && (
-                  <FieldError>
-                    {errors[field.name]?.message as string}
-                  </FieldError>
+                {fieldError && (
+                  <FieldError error={fieldError.message as string} />
                 )}
-                {field.description && !errors[field.name] && (
+                {field.description && !fieldError && (
                   <Text className="text-xs text-gray-500">
                     {field.description}
                   </Text>
@@ -2054,11 +2338,9 @@ export default function DynamicForm({
                 label={fieldLabel}
                 placeholder={field.placeholder || 'انتخاب کنید'}
                 value={value || ''}
-                onChange={(e) => {
-                  onChange(e.target.value);
-                }}
+                onChange={onChange}
                 onBlur={onBlur}
-                error={errors[field.name]?.message as string}
+                error={fieldError?.message as string}
                 disabled={loading}
                 options={
                   field.options?.map((option) => ({
@@ -2073,28 +2355,41 @@ export default function DynamicForm({
         );
 
       case 'date':
+        const dateLabel = (field.label || field.name).replace(/\s*[（(]\s*(?:الزامی|اجباری)\s*[)）]\s*$/, '');
         return (
           <Controller
             name={field.name}
             control={control}
             rules={validationRules}
-            render={({ field: { value, onChange, onBlur } }) => (
+            render={({ field: { value, onChange, onBlur }, fieldState: { error } }) => (
               <div className="space-y-1">
-                <Text className="text-sm font-medium">{fieldLabel}</Text>
-                <DatePicker
+                <label htmlFor={`schema-date-${field.name}`}
+                  className={cn('block text-sm font-medium', error && 'text-red-dark')}>
+                  {dateLabel}
+                  {field.required && <span className="ms-2 text-xs text-red-dark">(الزامی)</span>}
+                </label>
+                <SchemaDatePicker
+                  id={`schema-date-${field.name}`}
+                  label={dateLabel}
+                  required={field.required}
+                  describedBy={error ? `schema-date-error-${field.name}` : field.description ? `schema-date-help-${field.name}` : undefined}
                   placeholder={field.placeholder || 'انتخاب تاریخ'}
-                  selected={value ? new Date(value) : null}
-                  onChange={onChange}
+                  value={value}
+                  onChange={(date) => {
+                    onChange(date);
+                    if (error) void trigger(field.name);
+                  }}
                   onBlur={onBlur}
                   disabled={loading}
+                  hasError={Boolean(error)}
                 />
-                {errors[field.name] && (
-                  <FieldError>
-                    {errors[field.name]?.message as string}
-                  </FieldError>
+                {error && (
+                  <div id={`schema-date-error-${field.name}`}>
+                    <FieldError error={error.message as string} />
+                  </div>
                 )}
-                {field.description && !errors[field.name] && (
-                  <Text className="text-xs text-gray-500">
+                {field.description && !error && (
+                  <Text id={`schema-date-help-${field.name}`} className="text-xs text-gray-500">
                     {field.description}
                   </Text>
                 )}
@@ -2111,9 +2406,9 @@ export default function DynamicForm({
             rules={validationRules}
             defaultValue={[]}
             render={({ field: { value = [], onChange, onBlur } }) => {
-              const arrayHasError = Boolean(errors[field.name]);
+              const arrayHasError = Boolean(fieldError);
               const arrayErrorMessage =
-                (errors[field.name]?.message as string) ||
+                (fieldError?.message as string) ||
                 (arrayHasError ? validationMessages.required : '');
               const items =
                 Array.isArray(value) && value.length > 0 ? value : [''];
@@ -2135,6 +2430,11 @@ export default function DynamicForm({
                       <Text className="mt-0.5 text-xs text-gray-500">
                         هر مورد را در یک ردیف جداگانه وارد کنید.
                       </Text>
+                      {isLandlineField && (
+                        <Text className="mt-0.5 text-xs text-gray-500">
+                          {validationMessages.landlinePhone}
+                        </Text>
+                      )}
                     </div>
                     <Button
                       type="button"
@@ -2162,21 +2462,46 @@ export default function DynamicForm({
                         <span className="min-w-6 mt-2.5 flex h-6 items-center justify-center rounded-lg bg-gray-100 px-1 text-xs font-semibold text-gray-500">
                           {index + 1}
                         </span>
-                        <Input
+                        {getLocationKind(field.name, field.label) && field.itemType === 'text' ? (
+                          <div className="flex-1">
+                            <SchemaLocationField name={`${field.name}.${index}`} control={control}
+                              kind={getLocationKind(field.name, field.label)!}
+                              label={`${field.label || 'مورد'} ${index + 1}`}
+                              disabled={loading}
+                              rules={{ minLength: field.itemMinLength, maxLength: field.itemMaxLength }}
+                              provinceFieldName={findProvinceField(field.name, getLeafFields(fields))} />
+                          </div>
+                        ) : <Input
+                          type={isLandlineField || field.itemType === 'tel' ? 'tel' : field.itemType === 'email' ? 'email' : 'text'}
+                          inputMode={
+                            isLandlineField || field.itemType === 'tel' ? 'numeric' : undefined
+                          }
+                          pattern={
+                            isLandlineField || field.itemType === 'tel' ? '[0-9]*' : undefined
+                          }
+                          autoComplete={
+                            isLandlineField || field.itemType === 'tel' ? 'tel' : undefined
+                          }
+                          maxLength={
+                            isLandlineField || field.itemType === 'tel'
+                              ? field.itemMaxLength ?? 11
+                              : field.itemMaxLength
+                          }
+                          minLength={field.itemMinLength}
                           value={item || ''}
                           onChange={(e) => {
                             const newValue = [...items];
-                            newValue[index] = e.target.value;
+                            newValue[index] = normalizeSchemaArrayInput(field, e.target.value);
                             onChange(newValue);
                           }}
                           onBlur={onBlur}
                           disabled={loading}
                           placeholder={
-                            field.placeholder ||
-                            `${field.label || 'مورد'} را وارد کنید`
+                            isLandlineField ? '' :
+                            field.placeholder || `${field.label || 'مورد'} را وارد کنید`
                           }
                           className="flex-1 [&_.ring-inset]:border-0"
-                        />
+                        />}
                         {items.length > 1 && (
                           <ActionIcon
                             type="button"
@@ -2216,7 +2541,7 @@ export default function DynamicForm({
                     </div>
                   )}
 
-                  {field.description && !errors[field.name] && (
+                  {field.description && !fieldError && (
                     <Text className="text-xs text-gray-500">
                       {field.description}
                     </Text>
@@ -2243,7 +2568,7 @@ export default function DynamicForm({
                     onChange(uploadedValue);
                   }}
                   onBlur={onBlur}
-                  error={errors[field.name]?.message as string}
+                  error={fieldError?.message as string}
                   helperText={field.description}
                   multiple={field.maxFiles ? field.maxFiles > 1 : false}
                   accept={field.accept}
@@ -2349,14 +2674,22 @@ export default function DynamicForm({
           <Text className="mb-6 text-gray-500">{formDescription}</Text>
         )}
 
+        <FormProvider {...formMethods}>
         <form onSubmit={handleSubmit(handleFormSubmit)}>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-            {fields.map((field) => (
+            {activeFields.map((field, index) => {
+              if (isContactSocialGroup(field, activeFields[index - 1])) return null;
+              const socialGroup = isContactSocialGroup(activeFields[index + 1], field)
+                ? activeFields[index + 1]
+                : undefined;
+              return (
               <div
                 key={field.id}
                 id={`dynamic-field-${field.name}`}
                 className={cn(
-                  surface === 'plain'
+                  socialGroup || field.type === 'object' || field.type === 'map' || field.component === 'LongTextField'
+                    ? 'col-span-1 md:col-span-2'
+                    : surface === 'plain'
                     ? field.type === 'array' ||
                       field.type === 'file' ||
                       field.component === 'Textarea' ||
@@ -2372,8 +2705,14 @@ export default function DynamicForm({
                 )}
               >
                 {renderField(field)}
+                {socialGroup && (
+                  <div id={`dynamic-field-${socialGroup.name}`} className="mt-5 border-t border-gray-200 pt-4">
+                    {renderField(socialGroup)}
+                  </div>
+                )}
               </div>
-            ))}
+              );
+            })}
           </div>
 
           {!hideSubmit && (
@@ -2388,6 +2727,7 @@ export default function DynamicForm({
             </div>
           )}
         </form>
+        </FormProvider>
       </div>
     </div>
   );

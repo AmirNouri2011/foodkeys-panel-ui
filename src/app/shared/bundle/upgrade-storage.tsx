@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import Link from 'next/link';
 import cn from '@/utils/class-names';
 import styles from './subscriptions.module.css';
@@ -23,6 +24,7 @@ export type SubscriptionItem = {
   subCategoryName?: string;
   subCategoryId?: number | string;
   color?: string;
+  renewable?: boolean;
 };
 type UpgradeStorageProps = {
   id?: number | string;
@@ -47,6 +49,7 @@ function SubscriptionRow({
   item: SubscriptionItem;
   id?: number | string;
 }) {
+  const renewalHintId = useId();
   const statusKey =
     item.subscriptionStatus === 'DISABLE'
       ? 'DISABLE'
@@ -61,10 +64,7 @@ function SubscriptionRow({
   const bankName = item.subCategoryName || 'بانک اطلاعاتی';
   const bankId = id ?? item.subCategoryId;
   return (
-    <article
-      className={cn(styles.row, needsRenewal && styles.renewalRow)}
-      data-subscription-status={statusKey}
-    >
+    <article className={styles.row} data-subscription-status={statusKey}>
       <div className={styles.rowMain}>
         <div className={styles.identity}>
           <span className={styles.bankIcon}>
@@ -76,9 +76,7 @@ function SubscriptionRow({
           </div>
         </div>
         <div className={styles.rowMeta}>
-          <span
-            className={cn(styles.status, needsRenewal && styles.renewalStatus)}
-          >
+          <span className={styles.status}>
             <StatusIcon aria-hidden="true" />
             {status.label}
           </span>
@@ -89,16 +87,42 @@ function SubscriptionRow({
         </div>
         <div className={styles.rowAction}>
           {status.action && bankId != null ? (
-            <Link
-              href={`/bundle/${bankId}/buy`}
-              aria-label={`${status.action} ${bankName}`}
-              className={
-                needsRenewal ? styles.primaryAction : styles.secondaryAction
-              }
-            >
-              {status.action}
-              <PiArrowLeft aria-hidden="true" />
-            </Link>
+            item.renewable === false ? (
+              <span
+                className={styles.disabledActionWrapper}
+                tabIndex={0}
+                role="group"
+                aria-label={`تمدید اشتراک ${bankName}`}
+                aria-describedby={renewalHintId}
+              >
+                <button
+                  type="button"
+                  disabled
+                  className={styles.disabledAction}
+                >
+                  تمدید اشتراک
+                  <PiArrowLeft aria-hidden="true" />
+                </button>
+                <span
+                  id={renewalHintId}
+                  role="tooltip"
+                  className={styles.renewalTooltip}
+                >
+                  امکان تمدید این اشتراک وجود نداره
+                </span>
+              </span>
+            ) : (
+              <Link
+                href={`/bundle/${bankId}/buy`}
+                aria-label={`${status.action} ${bankName}`}
+                className={
+                  needsRenewal ? styles.primaryAction : styles.secondaryAction
+                }
+              >
+                {status.action}
+                <PiArrowLeft aria-hidden="true" />
+              </Link>
+            )
           ) : (
             <p className={styles.pendingNote}>
               {statusKey === 'PENDING'
@@ -190,7 +214,7 @@ export default function UpgradeStorage({
   const groups =
     prioritizeRenewals && renewals.length && remaining.length
       ? [
-          { title: 'نیازمند تمدید', items: renewals },
+          { title: 'اشتراک‌های غیرفعال', items: renewals },
           { title: 'سایر اشتراک‌ها', items: remaining },
         ]
       : [{ title: '', items }];

@@ -1,12 +1,10 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Input, Textarea } from 'rizzui';
+import { Input, Textarea } from '@/components/ui/outlined-text-field';
 import { PiTagBold, PiXBold } from 'react-icons/pi';
-import { ImageIcon, Search, Type as TypeIcon } from 'lucide-react';
+import { Search, Type as TypeIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import LogoUpload from '@/components/ui/logo-upload';
-import { STATIC_FILES_URL } from '@/config/api.config';
 
 export interface ServiceDisplaySettingsValues {
   name: string;
@@ -30,27 +28,6 @@ interface ServiceDisplaySettingsProps {
   fieldErrors?: Partial<Record<keyof ServiceDisplaySettingsValues, string>>;
 }
 
-function resolveImagePreview(
-  fileId?: string,
-  filePath?: string
-): string | null {
-  if (filePath) {
-    return filePath.startsWith('http')
-      ? filePath
-      : `${STATIC_FILES_URL}${filePath}`;
-  }
-
-  if (fileId) {
-    return fileId.startsWith('http') || fileId.startsWith('/')
-      ? fileId.startsWith('/')
-        ? `${STATIC_FILES_URL}${fileId}`
-        : fileId
-      : null;
-  }
-
-  return null;
-}
-
 export default function ServiceDisplaySettings({
   values,
   onChange,
@@ -67,12 +44,6 @@ export default function ServiceDisplaySettings({
   useEffect(() => {
     setKeywords(values.keywords || []);
   }, [values.keywords]);
-
-  const logoPreview = resolveImagePreview(values.logo, values.currentLogo);
-  const backgroundPreview = resolveImagePreview(
-    values.backgroundImage,
-    values.currentBackgroundImage
-  );
 
   return (
     <div className="space-y-5">
@@ -110,51 +81,6 @@ export default function ServiceDisplaySettings({
             rows={4}
             className="md:col-span-2"
           />
-        </div>
-      </div>
-
-      <div className="rounded-2xl border border-gray-100 bg-gray-50/70 p-4 md:p-5">
-        <SubsectionTitle
-          icon={<ImageIcon className="h-4 w-4" />}
-          title="هویت بصری"
-          description="تصاویر باکیفیت اعتماد کاربران را بیشتر می‌کنند. فرمت JPG یا PNG تا ۸ مگابایت."
-        />
-        <div className="mt-5 grid grid-cols-1 gap-4 xl:grid-cols-2">
-          <div className="rounded-2xl border border-gray-200 bg-white p-4">
-            <LogoUpload
-              label="لوگوی خدمت"
-              accept="image/*"
-              logoPreview={logoPreview}
-              fileServiceType="SERVICE_LOGO"
-              onUploadSuccess={(fileData) => {
-                onChange('logo', fileData.id);
-                onChange('currentLogo', fileData.filePath);
-              }}
-              onRemove={() => {
-                onChange('logo', '');
-                onChange('currentLogo', '');
-              }}
-              wrapperClassName="flex-grow"
-            />
-          </div>
-          <div className="rounded-2xl border border-gray-200 bg-white p-4">
-            <LogoUpload
-              label="تصویر پس‌زمینه صفحه اختصاصی"
-              accept="image/*"
-              shape="landscape"
-              logoPreview={backgroundPreview}
-              fileServiceType="SERVICE_BACKGROUND_IMAGE"
-              onUploadSuccess={(fileData) => {
-                onChange('backgroundImage', fileData.id);
-                onChange('currentBackgroundImage', fileData.filePath);
-              }}
-              onRemove={() => {
-                onChange('backgroundImage', '');
-                onChange('currentBackgroundImage', '');
-              }}
-              wrapperClassName="flex-grow"
-            />
-          </div>
         </div>
       </div>
 
@@ -233,11 +159,9 @@ function StringListInput({
 
   return (
     <div>
-      <label className="mb-2 block text-sm font-medium text-gray-700">
-        {name}
-      </label>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <Input
+          label={name}
           value={itemText}
           placeholder={`${name} جدید وارد کنید`}
           onChange={(e) => setItemText(e.target.value)}

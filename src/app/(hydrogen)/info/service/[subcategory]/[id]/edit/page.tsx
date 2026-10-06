@@ -533,10 +533,8 @@ export default function ServiceEditPage() {
       );
 
       if (response && response.status === 'SUCCESS') {
-        // Navigate to the service list
-        router.push(
-          routes.info.serviceIndustrySubCategoryList(subcategory as string)
-        );
+        // Services are managed from the user's business dashboard.
+        router.push(routes.info.dashboard);
       } else {
         setError('خطا در بروزرسانی سرویس');
       }
@@ -561,10 +559,8 @@ export default function ServiceEditPage() {
       const response = await serviceApi.deleteService(Number(id));
 
       if (response && response.status === 'SUCCESS') {
-        // Navigate to the service list
-        router.push(
-          routes.info.serviceIndustrySubCategoryList(subcategory as string)
-        );
+        // Services are managed from the user's business dashboard.
+        router.push(routes.info.dashboard);
       } else {
         setError('خطا در حذف سرویس');
         setShowDeleteModal(false);

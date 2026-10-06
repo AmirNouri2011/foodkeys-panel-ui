@@ -4,6 +4,7 @@
 import React from 'react';
 import { Button, Input } from 'rizzui';
 import cn from '@/utils/class-names';
+import SelectBox from '@/components/ui/select';
 
 // components/ui/custom-alert.tsx
 
@@ -106,47 +107,63 @@ export const Search = ({
 };
 
 // Select component replacement
-export interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
+export interface SelectProps {
     options: Array<{ label: string; value: string }>;
     label?: string;
     error?: string;
+    helperText?: React.ReactNode;
     className?: string;
     selectClassName?: string;
     labelClassName?: string;
+    placeholder?: string;
+    value?: string;
+    defaultValue?: string;
+    disabled?: boolean;
+    required?: boolean;
+    name?: string;
+    onChange?: (value: string) => void;
+    onBlur?: React.FocusEventHandler<HTMLButtonElement>;
 }
 
 export const Select = ({
                            options,
                            label,
                            error,
+                           helperText,
                            className,
                            selectClassName,
                            labelClassName,
-                           ...props
+                           placeholder = 'انتخاب کنید',
+                           value,
+                           defaultValue,
+                           disabled,
+                           required,
+                           name,
+                           onChange,
+                           onBlur,
                        }: SelectProps) => {
     return (
-        <div className={cn("w-full", className)}>
-            {label && (
-                <label className={cn("block text-sm font-medium text-gray-700 dark:text-gray-400 mb-1", labelClassName)}>
-                    {label}
-                </label>
-            )}
-            <select
-                className={cn(
-                    "w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 placeholder-gray-500 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary sm:text-sm",
-                    error && "border-red-500 focus:border-red-500 focus:ring-red-500",
-                    selectClassName
-                )}
-                {...props}
-            >
-                {options.map((option) => (
-                    <option key={option.value} value={option.value}>
-                        {option.label}
-                    </option>
-                ))}
-            </select>
-            {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
-        </div>
+        <SelectBox
+            className={cn("w-full", className)}
+            label={label}
+            labelClassName={labelClassName}
+            selectClassName={selectClassName}
+            options={options.map((option) => ({
+                ...option,
+                name: option.label,
+            }))}
+            value={value ?? defaultValue ?? ''}
+            placeholder={placeholder}
+            disabled={disabled}
+            isRequired={required}
+            name={name}
+            onChange={(selectedValue) => onChange?.(String(selectedValue))}
+            onBlur={onBlur}
+            getOptionValue={(option) => option.value}
+            getOptionDisplayValue={(option) => option.label ?? option.name}
+            error={error}
+            helperText={helperText}
+        />
     );
 };
 

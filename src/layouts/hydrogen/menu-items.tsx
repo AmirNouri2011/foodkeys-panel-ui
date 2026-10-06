@@ -794,209 +794,205 @@
 import { routes } from '@/config/routes';
 import { DUMMY_ID } from '@/config/constants';
 import {
-    PiWarehouseDuotone,
-    PiOrangeDuotone,
-    PiPlantDuotone,
-    PiTractorDuotone,
-    PiMonitorPlayDuotone,
-    PiHeadsetDuotone,
-    PiMailboxDuotone,
-    PiChatCenteredTextDuotone,
-    PiContactlessPayment,
-    PiCurrencyDollarDuotone,
-    PiUserCircleDuotone,
-    PiCreditCardDuotone,
-    PiListNumbersDuotone,
-    // Import other icons as needed
+  PiWarehouseDuotone,
+  PiOrangeDuotone,
+  PiPlantDuotone,
+  PiTractorDuotone,
+  PiMonitorPlayDuotone,
+  PiHeadsetDuotone,
+  PiMailboxDuotone,
+  PiChatCenteredTextDuotone,
+  PiContactlessPayment,
+  PiCurrencyDollarDuotone,
+  PiUserCircleDuotone,
+  PiCreditCardDuotone,
+  PiListNumbersDuotone,
+  // Import other icons as needed
 } from 'react-icons/pi';
 import { AiTwotoneHome } from 'react-icons/ai';
 import { useServiceSubcategories } from '@/hooks/use-service-subcategories';
 
 const MenuItems = () => {
-    // Use our custom hook to get service subcategories
-    const { subcategories } = useServiceSubcategories();
+  // Use our custom hook to get service subcategories
+  const { subcategories } = useServiceSubcategories();
 
-    // Generate dynamic dropdown items for service bank
-    const serviceBankItems = subcategories.map((subcat) => ({
-        name: subcat.subCategoryDisplayName,
-        href: `/info/service/${subcat.subCategoryName}/list`,
-    }));
+  // Generate dynamic dropdown items for service bank
+  const serviceBankItems = subcategories.map((subcat) => ({
+    name: subcat.subCategoryDisplayName,
+    href: routes.info.serviceIndustrySubCategoryCreate(subcat.subCategoryName),
+  }));
 
-    // The base menu items (static parts)
-    return [
-        // Label start
+  // The base menu items (static parts)
+  return [
+    // Label start
+    {
+      name: 'خانه',
+    },
+    {
+      name: 'خانه',
+      href: '/',
+      icon: <AiTwotoneHome />,
+    },
+    {
+      name: 'حساب کاربری',
+      href: '/profile',
+      icon: <PiUserCircleDuotone />,
+    },
+    {
+      name: 'مدیریت اشتراک',
+      href: routes.subscriptionList,
+      icon: <PiCreditCardDuotone />,
+    },
+    // Label end
+    {
+      name: 'مدیریت اطلاعات',
+    },
+    {
+      name: 'لیست شرکت‌های ثبت شده',
+      href: routes.info.foodIndustryList,
+      icon: <PiListNumbersDuotone />,
+    },
+    {
+      name: 'بانک صنعت غذا',
+      href: '#',
+      icon: <PiOrangeDuotone />,
+      dropdownItems: [
         {
-            name: 'خانه',
+          name: 'ثبت شرکت جدید',
+          href: routes.info.foodIndustryAdd,
+        },
+      ],
+    },
+    {
+      name: 'بانک صنعت کشاورزی',
+      href: '#',
+      icon: <PiPlantDuotone />,
+      dropdownItems: [
+        {
+          name: 'ثبت شرکت جدید',
+          href: routes.info.agricultureIndustryAdd,
+        },
+      ],
+    },
+    {
+      name: 'بانک ماشین‌آلات',
+      href: '#',
+      icon: <PiTractorDuotone />,
+      dropdownItems: [
+        {
+          name: 'لیست شرکت‌های ثبت شده',
+          href: routes.info.machinery,
         },
         {
-            name: 'خانه',
-            href: '/',
-            icon: <AiTwotoneHome />,
+          name: 'ثبت خریداران ماشین‌آلات',
+          href: routes.info.machineryBuyerAdd,
         },
         {
-            name: 'حساب کاربری',
-            href: '/profile',
-            icon: <PiUserCircleDuotone />,
+          name: 'ثبت فروشندگان ماشین‌آلات',
+          href: routes.info.machinerySellerAdd,
+        },
+      ],
+    },
+    {
+      name: 'بانک خدمات',
+      href: '#',
+      icon: <PiWarehouseDuotone />,
+      dropdownItems: [
+        // Dynamic subcategory items
+        ...serviceBankItems,
+      ],
+    },
+    {
+      name: 'رسانه‌ها',
+      href: '#',
+      icon: <PiMonitorPlayDuotone />,
+      dropdownItems: [
+        {
+          name: 'لیست شرکت‌های ثبت شده',
+          href: routes.info.mediaBankList,
         },
         {
-            name: 'مدیریت اشتراک',
-            href: routes.subscriptionList,
-            icon: <PiCreditCardDuotone />,
+          name: 'ثبت شرکت جدید',
+          href: routes.info.mediaBankAdd,
         },
-        // Label end
+      ],
+    },
+    {
+      name: 'پشتیبانی',
+    },
+    {
+      name: 'تیکت',
+      href: '/support/ticket',
+      icon: <PiHeadsetDuotone />,
+    },
+    // {
+    //     name: 'ایمیل',
+    //     href: '/support/email',
+    //     icon: <PiMailboxDuotone />,
+    // },
+    // {
+    //     name: 'پیام',
+    //     href: '/support/message',
+    //     icon: <PiChatCenteredTextDuotone />,
+    // },
+    {
+      name: 'مدیریت مالی',
+    },
+    {
+      name: 'پرداخت‌',
+      href: '#',
+      icon: <PiCurrencyDollarDuotone />,
+      dropdownItems: [
         {
-            name: 'مدیریت اطلاعات',
-        },
-        {
-            name: 'لیست شرکت‌های ثبت شده',
-            href: routes.info.foodIndustryList,
-            icon: <PiListNumbersDuotone />,
-        },
-        {
-            name: 'بانک صنعت غذا',
-            href: '#',
-            icon: <PiOrangeDuotone />,
-            dropdownItems: [
-                {
-                    name: 'ثبت شرکت جدید',
-                    href: routes.info.foodIndustryAdd,
-                },
-            ],
-        },
-        {
-            name: 'بانک صنعت کشاورزی',
-            href: '#',
-            icon: <PiPlantDuotone />,
-            dropdownItems: [
-                {
-                    name: 'ثبت شرکت جدید',
-                    href: routes.info.agricultureIndustryAdd,
-                },
-            ],
-        },
-        {
-            name: 'بانک ماشین‌آلات',
-            href: '#',
-            icon: <PiTractorDuotone />,
-            dropdownItems: [
-                {
-                    name: 'لیست شرکت‌های ثبت شده',
-                    href: routes.info.machinery,
-                },
-                {
-                    name: 'ثبت خریداران ماشین‌آلات',
-                    href: routes.info.machineryBuyerAdd,
-                },
-                {
-                    name: 'ثبت فروشندگان ماشین‌آلات',
-                    href: routes.info.machinerySellerAdd,
-                },
-            ],
+          name: 'لیست پرداخت‌ها',
+          href: routes.finance.paymentList,
         },
         {
-            name: 'بانک خدمات',
-            href: '#',
-            icon: <PiWarehouseDuotone />,
-            dropdownItems: [
-                {
-                    name: 'لیست شرکت‌های ثبت شده',
-                    href: routes.info.serviceIndustryList,
-                },
-                // Dynamic subcategory items
-                ...serviceBankItems,
-            ],
-        },
-        {
-            name: 'رسانه‌ها',
-            href: '#',
-            icon: <PiMonitorPlayDuotone />,
-            dropdownItems: [
-                {
-                    name: 'لیست شرکت‌های ثبت شده',
-                    href: routes.info.mediaBankList,
-                },
-                {
-                    name: 'ثبت شرکت جدید',
-                    href: routes.info.mediaBankAdd,
-                },
-            ],
-        },
-        {
-            name: 'پشتیبانی',
-        },
-        {
-            name: 'تیکت',
-            href: '/support/ticket',
-            icon: <PiHeadsetDuotone />,
-        },
-        // {
-        //     name: 'ایمیل',
-        //     href: '/support/email',
-        //     icon: <PiMailboxDuotone />,
-        // },
-        // {
-        //     name: 'پیام',
-        //     href: '/support/message',
-        //     icon: <PiChatCenteredTextDuotone />,
-        // },
-        {
-            name: 'مدیریت مالی',
-        },
-        {
-            name: 'پرداخت‌',
-            href: '#',
-            icon: <PiCurrencyDollarDuotone />,
-            dropdownItems: [
-                {
-                    name: 'لیست پرداخت‌ها',
-                    href: routes.finance.paymentList,
-                },
-                {
-                    name: 'لیست تراکنش‌ها',
-                    href: routes.finance.transactionList,
-                },
-                // {
-                //     name: 'جزییات (تنها برای محیط آزمایشی)',
-                //     href: routes.invoice.details(DUMMY_ID),
-                // },
-                // {
-                //     name: 'ایجاد',
-                //     href: routes.invoice.create,
-                // },
-            ],
+          name: 'لیست تراکنش‌ها',
+          href: routes.finance.transactionList,
         },
         // {
-        //     name: 'فاکتور',
-        //     href: '#',
-        //     icon: <PiCurrencyDollarDuotone />,
-        //     dropdownItems: [
-        //         // {
-        //         //     name: 'لیست',
-        //         //     href: routes.invoice.home,
-        //         // },
-        //
-        //         // {
-        //         //     name: 'ایجاد',
-        //         //     href: routes.invoice.create,
-        //         // },
-        //     ],
+        //     name: 'جزییات (تنها برای محیط آزمایشی)',
+        //     href: routes.invoice.details(DUMMY_ID),
         // },
         // {
-        //     name: 'بخش مدیریت (موقت)',
-        //     href: '#',
-        //     icon: <PiCurrencyDollarDuotone />,
-        //     dropdownItems: [
-        //         // {
-        //         //     name: 'داشبورد',
-        //         //     href: routes.management.dashboard,
-        //         // },
-        //         {
-        //             name: 'درخواست‌های کاربران',
-        //             href: routes.management.requestList,
-        //         },
-        //     ],
+        //     name: 'ایجاد',
+        //     href: routes.invoice.create,
         // },
-    ];
+      ],
+    },
+    // {
+    //     name: 'فاکتور',
+    //     href: '#',
+    //     icon: <PiCurrencyDollarDuotone />,
+    //     dropdownItems: [
+    //         // {
+    //         //     name: 'لیست',
+    //         //     href: routes.invoice.home,
+    //         // },
+    //
+    //         // {
+    //         //     name: 'ایجاد',
+    //         //     href: routes.invoice.create,
+    //         // },
+    //     ],
+    // },
+    // {
+    //     name: 'بخش مدیریت (موقت)',
+    //     href: '#',
+    //     icon: <PiCurrencyDollarDuotone />,
+    //     dropdownItems: [
+    //         // {
+    //         //     name: 'داشبورد',
+    //         //     href: routes.management.dashboard,
+    //         // },
+    //         {
+    //             name: 'درخواست‌های کاربران',
+    //             href: routes.management.requestList,
+    //         },
+    //     ],
+    // },
+  ];
 };
 
 export const menuItems = MenuItems();

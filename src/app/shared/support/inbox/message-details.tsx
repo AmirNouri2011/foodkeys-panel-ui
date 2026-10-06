@@ -666,6 +666,7 @@ import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 import { HiOutlineClipboardDocument } from 'react-icons/hi2';
 import { AiTwotoneCloseCircle } from 'react-icons/ai';
 import { useRouter } from 'next/navigation';
+import styles from './support-theme.module.css';
 const QuillEditor = dynamic(() => import('@/components/ui/quill-editor'), {
   ssr: false,
 });
@@ -813,8 +814,8 @@ const priorityNames: Record<string, string> = {
 
 function ticketStatusStyle(status?: string) {
   if (status === 'CLOSED') return 'border-gray-200 bg-gray-100 text-gray-600';
-  if (status === 'ANSWERED') return 'border-green-200 bg-green-50 text-green-700';
-  return 'border-orange-200 bg-orange-50 text-orange-700';
+  if (status === 'ANSWERED') return styles.answered;
+  return styles.pending;
 }
 
 export default function MessageDetails({ className }: { className?: string }) {
@@ -826,6 +827,7 @@ export default function MessageDetails({ className }: { className?: string }) {
   const setTicketStats = useSetAtom(ticketStatsAtom);
   const router = useRouter();
   const scrollOnMessagesUpdateRef = useRef(false);
+  const conversationScrollRef = useRef<HTMLDivElement>(null);
 
   const selectedTicket =
     data?.find((t: any) => t.id === messageId) ||
@@ -916,9 +918,11 @@ export default function MessageDetails({ className }: { className?: string }) {
     scrollOnMessagesUpdateRef.current = false;
 
     requestAnimationFrame(() => {
-      document
-        .getElementById('ticket-messages-end')
-        ?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      const conversation = conversationScrollRef.current;
+      conversation?.scrollTo({
+        top: conversation.scrollHeight,
+        behavior: 'smooth',
+      });
     });
   }, [messages, showMessages]);
 
@@ -1057,7 +1061,7 @@ export default function MessageDetails({ className }: { className?: string }) {
   return (
       <div
           className={cn(
-              'relative overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:bg-gray-50',
+              'relative overflow-hidden rounded-2xl border border-gray-200 bg-gray-0 shadow-sm dark:bg-gray-50',
               className
           )}
       >
@@ -1116,17 +1120,17 @@ export default function MessageDetails({ className }: { className?: string }) {
             {selectedTicket && (
                 <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                   <div className="flex flex-wrap gap-2 text-xs text-gray-600">
-                    <span className="rounded-lg border border-gray-200 bg-white px-3 py-2">
+                    <span className="rounded-lg border border-gray-200 bg-gray-0 px-3 py-2">
                       {departmentNames[selectedTicket.department] ||
                         selectedTicket.departmentStr ||
                         'پشتیبانی'}
                     </span>
-                    <span className="rounded-lg border border-gray-200 bg-white px-3 py-2">
+                    <span className="rounded-lg border border-gray-200 bg-gray-0 px-3 py-2">
                       {categoryNames[selectedTicket.category] ||
                         selectedTicket.categoryStr ||
                         'عمومی'}
                     </span>
-                    <span className="rounded-lg border border-gray-200 bg-white px-3 py-2">
+                    <span className="rounded-lg border border-gray-200 bg-gray-0 px-3 py-2">
                       {priorityNames[selectedTicket.priority] ||
                         selectedTicket.priorityStr ||
                         'اولویت معمولی'}
@@ -1156,14 +1160,15 @@ export default function MessageDetails({ className }: { className?: string }) {
           </header>
           {showMessages ? (
               <>
-                <div className="bg-gray-50/30 [&_.simplebar-content]:py-4">
+                <div className={`${styles.conversation} [&_.simplebar-content]:py-5`}>
                   <SimpleBar 
+                    scrollableNodeProps={{ ref: conversationScrollRef, tabIndex: 0, 'aria-label': 'پیام‌های تیکت' }}
                     className="min-h-[300px] max-h-[50vh] xl:h-[calc(100dvh-32rem)] xl:min-h-[360px] xl:max-h-[600px] [&_.simplebar-track.simplebar-vertical]:bottom-3 [&_.simplebar-track.simplebar-vertical]:top-3"
                     style={{
                       '--scrollbar-width': '8px',
-                      '--scrollbar-thumb-bg': '#cbd5e1',
-                      '--scrollbar-thumb-hover-bg': '#94a3b8',
-                      '--scrollbar-track-bg': '#f1f5f9',
+                      '--scrollbar-thumb-bg': 'rgb(var(--gray-300))',
+                      '--scrollbar-thumb-hover-bg': 'rgb(var(--gray-400))',
+                      '--scrollbar-track-bg': 'rgb(var(--gray-100))',
                     } as React.CSSProperties}
                   >
                     <MessageBody messages={messages} />
@@ -1190,7 +1195,7 @@ export default function MessageDetails({ className }: { className?: string }) {
                     >
                       {({ control, watch, formState: { errors } }) => (
                         <>
-                          <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/10">
+                          <div className="overflow-hidden rounded-xl border border-gray-200 bg-gray-0 shadow-sm focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/10">
                             <Controller
                               control={control}
                               name="message"
@@ -1198,7 +1203,7 @@ export default function MessageDetails({ className }: { className?: string }) {
                                 <QuillEditor
                                   value={value}
                                   onChange={onChange}
-                                  className="border-0 bg-white [&>.ql-container]:border-0 [&>.ql-container_.ql-editor]:min-h-[90px] [&>.ql-container_.ql-editor]:max-h-[160px] [&>.ql-toolbar]:overflow-x-auto [&>.ql-toolbar]:border-0 [&>.ql-toolbar]:border-b [&>.ql-toolbar]:border-gray-100 [&>.ql-toolbar]:whitespace-nowrap"
+                                  className="border-0 bg-gray-0 [&>.ql-container]:border-0 [&>.ql-container_.ql-editor]:min-h-[90px] [&>.ql-container_.ql-editor]:max-h-[160px] [&>.ql-toolbar]:overflow-x-auto [&>.ql-toolbar]:border-0 [&>.ql-toolbar]:border-b [&>.ql-toolbar]:border-gray-100 [&>.ql-toolbar]:whitespace-nowrap"
                                 />
                               )}
                             />
@@ -1214,7 +1219,7 @@ export default function MessageDetails({ className }: { className?: string }) {
                               {attachments.map((file, index) => (
                                 <div
                                   key={`${file.name}-${index}`}
-                                  className="flex items-center gap-2 rounded-xl border border-gray-200 bg-white p-2.5"
+                                  className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-0 p-2.5"
                                 >
                                   <span className="grid h-8 w-8 flex-none place-items-center rounded-lg bg-primary-lighter text-primary">
                                     <PiPaperclipLight className="h-4 w-4" />
@@ -1276,7 +1281,7 @@ export default function MessageDetails({ className }: { className?: string }) {
                               isLoading={sendBtnLoading}
                               type="submit"
                               size="sm"
-                              color="success"
+                              color="primary"
                               disabled={!watch('message')?.trim() || sendBtnLoading}
                               className="gap-2 rounded-lg px-5"
                             >

@@ -1,7 +1,11 @@
 import { Controller, useFormContext } from 'react-hook-form';
 import { Layers3, AlignRight, CheckCircle2 } from 'lucide-react';
 
-export default function ProductAvailability() {
+export default function ProductAvailability({
+  onModeChange,
+}: {
+  onModeChange: (value: string) => void;
+}) {
   const { control } = useFormContext();
   return (
     <Controller
@@ -49,7 +53,7 @@ export default function ProductAvailability() {
                   name={field.name}
                   value={value}
                   checked={field.value === value}
-                  onChange={() => field.onChange(value)}
+                  onChange={() => onModeChange(value)}
                   onBlur={field.onBlur}
                   className="mt-1 h-4 w-4 shrink-0 accent-primary"
                 />

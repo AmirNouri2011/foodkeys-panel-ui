@@ -75,6 +75,8 @@ interface FormNavProps {
   className?: string;
 }
 
+const NAV_TOP_GAP = 16;
+
 export default function FormNav({ className }: FormNavProps) {
   const navRef = useRef<HTMLElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -192,7 +194,7 @@ export default function FormNav({ className }: FormNavProps) {
     const top = sectionScrollTop(
       section.getBoundingClientRect().top,
       window.scrollY,
-      headerHeight + (navRef.current?.offsetHeight ?? 54) + 12,
+      headerHeight + NAV_TOP_GAP + (navRef.current?.offsetHeight ?? 54) + 12,
       document.documentElement.scrollHeight - window.innerHeight
     );
     pendingNavigation.current = { value, top };
@@ -262,9 +264,9 @@ export default function FormNav({ className }: FormNavProps) {
       ref={navRef}
       aria-label="دسترسی سریع به بخش‌های فرم"
       dir="rtl"
-      style={{ top: headerHeight }}
+      style={{ top: headerHeight + NAV_TOP_GAP }}
       className={cn(
-        'sticky z-20 mb-2 min-w-0 rounded-xl border border-gray-200 bg-gray-0/95 p-2 shadow-sm backdrop-blur-md dark:border-gray-300 dark:bg-gray-50/95',
+        'sticky z-20 mb-2 mt-4 min-w-0 rounded-xl border border-gray-200 bg-gray-0/95 p-2 shadow-md backdrop-blur-md dark:border-gray-300 dark:bg-gray-50/95',
         className
       )}
     >

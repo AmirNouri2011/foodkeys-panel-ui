@@ -23,7 +23,10 @@ export default function PageHeader({
       )}
     >
       <div>
-        <Text tag="h2" className="mb-2 text-[22px] lg:text-2xl 4xl:text-[26px]">
+        <Text
+          tag="h2"
+          className="mb-2 mt-4 text-[22px] lg:text-2xl 4xl:text-[26px]"
+        >
           {title}
         </Text>
 

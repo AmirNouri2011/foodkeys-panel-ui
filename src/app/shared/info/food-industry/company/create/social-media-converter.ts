@@ -65,14 +65,6 @@ export const socialMediaConverter = (data) => {
         });
     }
 
-    // Process Skype ID
-    if (data.skypeId) {
-        socialMedias.push({
-            name: data.skypeId,
-            type: "SKYPE_ID"
-        });
-    }
-
     // Process Website
     if (data.website) {
         socialMedias.push({

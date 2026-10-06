@@ -19,7 +19,7 @@ import cn from '@/utils/class-names';
 type StatusFilter = 'ALL' | 'DISABLE' | 'ACTIVE' | 'PENDING';
 const statusOptions: { label: string; value: StatusFilter }[] = [
   { label: 'همه اشتراک‌ها', value: 'ALL' },
-  { label: 'نیازمند تمدید', value: 'DISABLE' },
+  { label: 'غیرفعال', value: 'DISABLE' },
   { label: 'فعال', value: 'ACTIVE' },
   { label: 'در انتظار تایید', value: 'PENDING' },
 ];
@@ -143,7 +143,7 @@ export default function ProfileSettingsFormPage() {
     (item) => statusFilter === 'ALL' || item.subscriptionStatus === statusFilter
   );
   const renewalCount = items.filter(
-    (item) => item.subscriptionStatus === 'DISABLE'
+    (item) => item.subscriptionStatus === 'DISABLE' && item.renewable !== false
   ).length;
   const hasActiveFilters =
     statusFilter !== 'ALL' || Boolean(categoryFilter) || Boolean(query.trim());

@@ -192,18 +192,18 @@ function LogoUpload(
             : '');
 
     return (
-        <div className={cn('flex flex-col', wrapperClassName)}>
+        <div className={cn('flex min-w-0 max-w-full flex-col @container/logo-upload', wrapperClassName)}>
             {label && (
                 <label className="mb-2 block text-sm font-medium text-gray-700">
                     {label}
                 </label>
             )}
 
-            <div className={cn(uploadValidation && 'flex flex-col items-center justify-center gap-5 sm:flex-row sm:items-start')}>
+            <div className={cn(uploadValidation && 'flex min-w-0 flex-col items-center justify-center gap-5 @lg/logo-upload:flex-row @lg/logo-upload:items-start')}>
             <div
                 className={cn(
-                    'relative flex flex-col items-center justify-center',
-                    uploadValidation && 'shrink-0',
+                    'relative flex min-w-0 max-w-full flex-col items-center justify-center',
+                    uploadValidation && 'w-full max-w-[16rem] @lg/logo-upload:w-40 @lg/logo-upload:shrink-0',
                     'transition duration-200',
                     className
                 )}
@@ -361,7 +361,7 @@ function LogoUpload(
 
                 {currentLogoPreview && currentFileName && (
                     <p
-                        className="mt-2 max-w-64 truncate text-center text-xs text-gray-500"
+                        className="mt-2 w-full max-w-[16rem] truncate text-center text-xs text-gray-500"
                         title={currentFileName}
                     >
                         {currentFileName}
@@ -374,7 +374,7 @@ function LogoUpload(
                     </p>
                 )}
             </div>
-            {uploadValidation && <FileUploadGuidelines id="company-logo-upload-rules" state={uploadValidation} className="mt-0 w-full max-w-sm" />}
+            {uploadValidation && <FileUploadGuidelines id="company-logo-upload-rules" state={uploadValidation} className="mt-0 w-full max-w-sm @lg/logo-upload:flex-1" />}
             </div>
         </div>
     );

@@ -300,14 +300,33 @@
   border-end-end-radius: 16px;
 }
 .row {
+  --status-color: #526175;
+  --status-bg: #f1f5f9;
+  --status-line: #cbd5e1;
   padding: 22px 24px 16px;
   border-bottom: 1px solid rgb(var(--gray-200));
+  border-inline-start: 4px solid var(--status-line);
   background: rgb(var(--gray-0));
 }
-.renewalRow {
-  background: var(--sub-soft);
-  border-inline-start: 3px solid var(--sub-brand);
-  padding-inline-start: 21px;
+.row[data-subscription-status='ACTIVE'] {
+  --status-color: #166534;
+  --status-bg: #ecfdf3;
+  --status-line: #86cda2;
+}
+.row[data-subscription-status='DISABLE'] {
+  --status-color: #b42318;
+  --status-bg: #fff1f0;
+  --status-line: #f1a49b;
+  background: linear-gradient(
+    to left,
+    var(--status-bg),
+    rgb(var(--gray-0)) 70%
+  );
+}
+.row[data-subscription-status='PENDING'] {
+  --status-color: #92400e;
+  --status-bg: #fffbeb;
+  --status-line: #edcc83;
 }
 .rowMain {
   display: grid;
@@ -336,10 +355,10 @@
   width: 21px;
   height: 21px;
 }
-.renewalRow .bankIcon {
-  color: var(--sub-brand);
-  border-color: var(--sub-line);
-  background: rgb(var(--gray-0));
+.row .bankIcon {
+  color: var(--status-color);
+  border-color: var(--status-line);
+  background: var(--status-bg);
 }
 .identityText {
   min-width: 0;
@@ -348,9 +367,6 @@
   font-size: 14px;
   line-height: 1.9;
   font-weight: 600;
-}
-.renewalRow .identityText h3 {
-  font-weight: 700;
 }
 .identityText p {
   margin-top: 4px;
@@ -367,18 +383,19 @@
 .status {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  font-size: 11px;
-  font-weight: 500;
-  color: rgb(var(--gray-600));
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--status-line);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--status-color);
+  background: var(--status-bg);
+  white-space: nowrap;
 }
 .status svg {
   width: 15px;
   height: 15px;
-}
-.renewalStatus {
-  color: var(--sub-brand);
-  font-weight: 700;
 }
 .expiry {
   display: flex;
@@ -395,7 +412,8 @@
   min-width: 0;
 }
 .primaryAction,
-.secondaryAction {
+.secondaryAction,
+.disabledAction {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -429,10 +447,64 @@
 .secondaryAction:hover {
   background: var(--sub-soft);
 }
+.row .primaryAction,
+.row .secondaryAction {
+  color: var(--status-color);
+  background: var(--status-bg);
+  border-color: var(--status-line);
+  box-shadow: none;
+}
+.row .primaryAction:hover,
+.row .secondaryAction:hover {
+  background: var(--status-bg);
+  border-color: var(--status-color);
+  box-shadow: 0 0 0 1px var(--status-color);
+}
 .primaryAction svg,
-.secondaryAction svg {
+.secondaryAction svg,
+.disabledAction svg {
   width: 16px;
   height: 16px;
+}
+.disabledActionWrapper {
+  display: block;
+  position: relative;
+  cursor: not-allowed;
+  border-radius: 9px;
+}
+.disabledAction {
+  color: rgb(var(--gray-500));
+  background: rgb(var(--gray-100));
+  border: 1px solid rgb(var(--gray-200));
+  pointer-events: none;
+}
+.renewalTooltip {
+  position: absolute;
+  z-index: 20;
+  inset-inline-end: 0;
+  bottom: calc(100% + 8px);
+  width: 230px;
+  max-width: 70vw;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #1e293b;
+  color: #ffffff;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 0.15);
+  font-size: 12px;
+  line-height: 1.8;
+  text-align: center;
+  visibility: hidden;
+  opacity: 0;
+}
+.disabledActionWrapper:hover .renewalTooltip,
+.disabledActionWrapper:focus .renewalTooltip,
+.disabledActionWrapper:focus-within .renewalTooltip {
+  visibility: visible;
+  opacity: 1;
+}
+.disabledActionWrapper:focus-visible {
+  outline: 2px solid var(--sub-brand);
+  outline-offset: 4px;
 }
 .pendingNote {
   font-size: 11px;
@@ -685,9 +757,6 @@
   .row {
     padding: 18px 16px 14px;
   }
-  .renewalRow {
-    padding-inline-start: 13px;
-  }
   .rowMain {
     grid-template-columns: minmax(0, 1fr);
     gap: 14px;
@@ -719,7 +788,8 @@
     margin-inline-start: 48px;
   }
   .primaryAction,
-  .secondaryAction {
+  .secondaryAction,
+  .disabledAction {
     min-height: 44px;
   }
   .pendingNote {
@@ -766,4 +836,22 @@
   --sub-soft: #1a2b21;
   --sub-line: #324d3d;
   --sub-on-brand: #15251b;
+}
+:global([data-theme='dark']) .row[data-subscription-status='ACTIVE'],
+:global(.dark) .row[data-subscription-status='ACTIVE'] {
+  --status-color: #86efac;
+  --status-bg: #173324;
+  --status-line: #347a50;
+}
+:global([data-theme='dark']) .row[data-subscription-status='DISABLE'],
+:global(.dark) .row[data-subscription-status='DISABLE'] {
+  --status-color: #fda49b;
+  --status-bg: #361f23;
+  --status-line: #94463f;
+}
+:global([data-theme='dark']) .row[data-subscription-status='PENDING'],
+:global(.dark) .row[data-subscription-status='PENDING'] {
+  --status-color: #fcd879;
+  --status-bg: #332c1b;
+  --status-line: #8a6c30;
 }

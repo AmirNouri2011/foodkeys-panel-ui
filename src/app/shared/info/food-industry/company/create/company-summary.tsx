@@ -568,6 +568,10 @@ export default function CompanySummary({
           shouldDirty: true,
           shouldValidate: true,
         });
+        setValue(`brands.${brandIndex}.galleryFiles`, [uploadedFile.id], {
+          shouldDirty: true,
+          shouldValidate: true,
+        });
         setBrandImageFileNames((current) => ({
           ...current,
           [uploadedFile.filePath]: uploadedFile.originalFileName || uploadedFile.fileName,
@@ -605,6 +609,7 @@ export default function CompanySummary({
   // Remove brand image
   const removeBrandImage = (brandIndex: number) => {
     setValue(`brands.${brandIndex}.brandImage`, '');
+    setValue(`brands.${brandIndex}.galleryFiles`, []);
     toast.success('تصویر برند حذف شد');
   };
 
@@ -614,6 +619,7 @@ export default function CompanySummary({
         name: '',
         nameEn: '',
         brandImage: '',
+        galleryFiles: [],
       });
     } else {
       toast.error('حداکثر ۵۰ برند میتوانید وارد کنید');

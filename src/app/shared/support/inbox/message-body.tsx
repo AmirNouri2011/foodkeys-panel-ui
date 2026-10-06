@@ -107,7 +107,7 @@ export default function MessageBody({ messages }: { messages: TicketMessage[] })
           >
             <div
               className={cn(
-                'flex max-w-[94%] items-start gap-2.5 sm:max-w-[680px] sm:gap-3',
+                'flex min-w-0 max-w-full items-start gap-2.5 sm:max-w-[90%] sm:gap-3',
                 isSupport ? 'flex-row' : 'flex-row-reverse'
               )}
             >
@@ -156,13 +156,13 @@ export default function MessageBody({ messages }: { messages: TicketMessage[] })
                   className={cn(
                     'overflow-hidden rounded-2xl border px-3.5 py-2.5 shadow-sm',
                     isSupport
-                      ? 'rounded-tl-md border-gray-200 bg-white text-gray-800'
+                      ? 'rounded-tl-md border-gray-200 bg-gray-0 text-gray-800'
                       : 'rounded-tr-md border-primary bg-primary text-white'
                   )}
                 >
                   <div
                     className={cn(
-                      'break-words text-sm leading-7 [&_a]:underline [&_ol]:list-decimal [&_ol]:pr-5 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_ul]:list-disc [&_ul]:pr-5',
+                      'break-words text-sm leading-7 [overflow-wrap:anywhere] [&_a]:underline [&_ol]:list-decimal [&_ol]:pr-5 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_ul]:list-disc [&_ul]:pr-5',
                       isSupport ? '[&_a]:text-primary' : '[&_a]:text-white'
                     )}
                     dangerouslySetInnerHTML={{ __html: sanitizedContent }}
@@ -217,7 +217,7 @@ export default function MessageBody({ messages }: { messages: TicketMessage[] })
                                 className={cn(
                                   'grid h-8 w-8 place-items-center rounded-lg transition-colors',
                                   isSupport
-                                    ? 'bg-white text-gray-600 hover:text-primary'
+                                    ? 'bg-gray-0 text-gray-600 hover:text-primary'
                                     : 'bg-white/10 text-white hover:bg-white/20'
                                 )}
                               >
@@ -230,7 +230,7 @@ export default function MessageBody({ messages }: { messages: TicketMessage[] })
                                 className={cn(
                                   'grid h-8 w-8 place-items-center rounded-lg transition-colors',
                                   isSupport
-                                    ? 'bg-white text-gray-600 hover:text-primary'
+                                    ? 'bg-gray-0 text-gray-600 hover:text-primary'
                                     : 'bg-white/10 text-white hover:bg-white/20'
                                 )}
                               >

@@ -16,6 +16,7 @@ export default function ProductMedia({ className }: { className?: string }) {
     register,
     watch,
     getValues,
+    setValue,
     setError,
     clearErrors,
     formState: { errors },
@@ -32,6 +33,7 @@ export default function ProductMedia({ className }: { className?: string }) {
   });
   const [modalType, setModalType] = useState<0 | 1 | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [pendingMode, setPendingMode] = useState<string | null>(null);
   const mode = watch('productAvailability', '2');
   const currentProducts: GroupedProduct[] = watch('products') || [];
   const currentOutsourced: GroupedProduct[] = watch('outSourcedProducts') || [];
@@ -39,6 +41,47 @@ export default function ProductMedia({ className }: { className?: string }) {
   const fieldName = modalType === 1 ? 'outSourcedProducts' : 'products';
   const close = () => {
     if (!uploading) setModalType(null);
+  };
+
+  const changeMode = (nextMode: string) => {
+    if (mode === '2') {
+      products.replace([]);
+      outsourced.replace([]);
+      clearErrors(['products', 'outSourcedProducts']);
+    } else {
+      for (const name of [
+        'productTitles',
+        'productsDescription',
+        'outSourcedProductsDescription',
+      ]) {
+        setValue(name, '', { shouldDirty: true });
+        clearErrors(name);
+      }
+    }
+    setValue('productAvailability', nextMode, {
+      shouldDirty: true,
+      shouldTouch: true,
+    });
+    setPendingMode(null);
+  };
+
+  const requestModeChange = (nextMode: string) => {
+    if (nextMode === mode) return;
+    const hasPreviousData =
+      mode === '2'
+        ? ['products', 'outSourcedProducts'].some(
+            (name) => getValues(name)?.length > 0
+          )
+        : [
+            'productTitles',
+            'productsDescription',
+            'outSourcedProductsDescription',
+          ].some((name) => Boolean(getValues(name)?.trim()));
+    if (hasPreviousData) {
+      setPendingMode(nextMode);
+    } else {
+      changeMode(nextMode);
+    }
   };
 
   const confirm = () => {
@@ -100,7 +143,44 @@ export default function ProductMedia({ className }: { className?: string }) {
           محصولات و خدمات شرکت خود را معرفی کنید.
         </p>
       </div>
-      <ProductAvailability />
+      <ProductAvailability
+        key={`${mode}-${pendingMode ?? 'idle'}`}
+        onModeChange={requestModeChange}
+      />
+      <Modal
+        isOpen={pendingMode !== null}
+        onClose={() => setPendingMode(null)}
+        customSize="480px"
+      >
+        <div dir="rtl" className={cn(styles.theme, 'p-5 sm:p-6')}>
+          <h3 className="text-lg font-semibold">تغییر روش ثبت محصولات</h3>
+          <p className="mt-4 text-sm leading-7 text-gray-600">
+            {pendingMode === '1'
+              ? 'با انتخاب ثبت توصیفی، تمام دسته‌بندی‌ها، محصولات و تصاویر انتخاب‌شده در ثبت تفصیلی، از این فرم حذف می‌شوند.'
+              : 'با انتخاب ثبت تفصیلی، عنوان‌ها و توضیحات واردشده در ثبت توصیفی،  از این فرم حذف می‌شوند.'}
+          </p>
+          <p className="mt-2 text-sm leading-7 text-gray-600">
+            این اطلاعات با تغییر دوباره روش برنمی‌گردند. تغییر روش را تأیید
+            می‌کنید؟
+          </p>
+          <div className="mt-6 flex flex-wrap justify-end gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setPendingMode(null)}
+            >
+              انصراف و حفظ اطلاعات
+            </Button>
+            <Button
+              type="button"
+              color="danger"
+              onClick={() => pendingMode !== null && changeMode(pendingMode)}
+            >
+              حذف اطلاعات و تغییر روش
+            </Button>
+          </div>
+        </div>
+      </Modal>
       <div className="rounded-2xl border border-gray-200 p-4 sm:p-6">
         {mode === '1' ? (
           <div className="grid gap-5 sm:grid-cols-2">
@@ -126,9 +206,9 @@ export default function ProductMedia({ className }: { className?: string }) {
             />
             <Textarea
               className="col-span-full"
-              label="عنوان محصولات برون‌سپاری‌شده"
-              {...register('outSourcedProductTitles')}
-              error={errors.outSourcedProductTitles?.message as string}
+              label="توضیحات محصولات برون‌سپاری‌شده"
+              {...register('outSourcedProductsDescription')}
+              error={errors.outSourcedProductsDescription?.message as string}
               rows={3}
               placeholder="محصولاتی که تولید آن‌ها را به دیگران می‌سپارید (اختیاری)"
             />

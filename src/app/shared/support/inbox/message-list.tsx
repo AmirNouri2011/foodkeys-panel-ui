@@ -25,6 +25,7 @@ import { LineGroup, Skeleton } from '@/components/ui/skeleton';
 import useAxiosPrivate from '@/hooks/use-axios-private';
 import toast from 'react-hot-toast';
 import { tabAtom } from './inbox-tabs';
+import styles from './support-theme.module.css';
 
 interface MessageItemProps {
   message: any;
@@ -41,8 +42,8 @@ export const ticketStatsAtom = atomWithStorage('ticketStats', {
 });
 
 const statusStyles: Record<string, string> = {
-  PENDING: 'border-orange-200 bg-orange-50 text-orange-700',
-  ANSWERED: 'border-green-200 bg-green-50 text-green-700',
+  PENDING: styles.pending,
+  ANSWERED: styles.answered,
   CLOSED: 'border-gray-200 bg-gray-100 text-gray-600',
 };
 
@@ -90,6 +91,7 @@ export function MessageItem({ className, message }: MessageItemProps) {
   return (
     <button
       type="button"
+      aria-pressed={isActive}
       onClick={handleChange}
       className={cn(
         'group relative w-full border-b border-gray-100 px-4 py-3.5 text-right transition-colors last:border-b-0 hover:bg-gray-50/80',
@@ -109,7 +111,7 @@ export function MessageItem({ className, message }: MessageItemProps) {
             'mt-0.5 grid h-10 w-10 flex-none place-items-center rounded-xl border transition-colors',
             isActive
               ? 'border-primary/20 bg-primary text-white'
-              : 'border-gray-200 bg-white text-gray-500 group-hover:text-primary'
+              : 'border-gray-200 bg-gray-0 text-gray-500 group-hover:text-primary'
           )}
         >
           <PiChatCircleDots className="h-5 w-5" />
@@ -315,7 +317,8 @@ export default function MessageList({
         <Input
           value={search}
           onChange={(event) => setSearch(event.target.value)}
-          placeholder="جستجو در عنوان یا شماره تیکت..."
+          aria-label="جستجو در تیکت‌های این صفحه"
+          placeholder="جستجو در تیکت‌های این صفحه..."
           prefix={<PiMagnifyingGlass className="h-4 w-4 text-gray-400" />}
           suffix={
             search ? (

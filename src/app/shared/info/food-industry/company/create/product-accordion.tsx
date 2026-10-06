@@ -351,9 +351,6 @@ export default function ProductAccordion({
                       ? 'در صورت تمایل تصویر اضافه کنید'
                       : 'یک تصویر برای تمام محصولات این دسته انتخاب کنید'}
                   </p>
-                  {dataObjectName !== 'products' && (
-                    <FileUploadGuidelines id="product-category-upload-rules" state={uploadValidation} />
-                  )}
                   {(errors[dataObjectName] as any)?.[selected.indices[0]]
                     ?.pictures?.message && (
                     <p className="mt-1 text-xs text-red-dark">
@@ -365,9 +362,7 @@ export default function ProductAccordion({
                   )}
                 </div>
               </div>
-              {dataObjectName === 'products' && (
-                <FileUploadGuidelines id="product-category-upload-rules" state={uploadValidation} compact />
-              )}
+              <FileUploadGuidelines id="product-category-upload-rules" state={uploadValidation} compact />
             </section>
             <section aria-label="محصولات دسته‌بندی" className="border-t pt-5">
               <div className="mb-1 flex flex-wrap items-center justify-between gap-3">

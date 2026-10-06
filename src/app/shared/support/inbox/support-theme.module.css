@@ -1,0 +1,87 @@
+.theme {
+  /* Match the forest green and soft sage surfaces of the panel navigation. */
+  --primary-lighter: 232 241 234;
+  --primary-light: 72 125 88;
+  --primary-default: 40 93 67;
+  --primary-dark: 30 73 52;
+  --gray-50: 248 250 248;
+  --gray-100: 240 244 240;
+  --gray-200: 222 231 224;
+  --gray-300: 202 214 205;
+  --gray-400: 119 137 126;
+  --gray-500: 96 116 103;
+  --gray-600: 74 96 82;
+  --gray-700: 53 77 61;
+  --gray-800: 38 61 46;
+  --gray-900: 29 48 36;
+  color: rgb(var(--gray-800));
+  min-width: 0;
+}
+
+.theme :is(button, a):focus-visible {
+  outline: 2px solid rgb(var(--primary-default));
+  outline-offset: 3px;
+}
+
+.hero {
+  margin-bottom: 20px;
+  padding: 24px;
+  border: 1px solid rgb(var(--gray-200));
+  border-radius: 16px;
+  background: linear-gradient(110deg, rgb(var(--gray-50)), rgb(var(--primary-lighter)));
+}
+
+.pending {
+  border-color: #ecdcb7;
+  background: #faf3e3;
+  color: #855e21;
+}
+
+.answered {
+  border-color: #cdddcc;
+  background: #edf5eb;
+  color: #356344;
+}
+
+.conversation {
+  background: rgb(var(--gray-50));
+}
+
+.theme :global(.ql-editor) {
+  text-align: right;
+  direction: rtl;
+  color: rgb(var(--gray-800));
+}
+
+:global([data-theme='dark']) .theme {
+  --primary-lighter: 35 62 47;
+  --primary-light: 126 177 140;
+  --primary-default: 77 137 96;
+  --primary-dark: 58 111 75;
+  --gray-50: 22 30 25;
+  --gray-100: 30 40 33;
+  --gray-200: 49 63 53;
+  --gray-300: 65 81 70;
+  --gray-400: 142 159 147;
+  --gray-500: 160 176 165;
+  --gray-600: 179 194 183;
+  --gray-700: 199 211 202;
+  --gray-800: 220 229 222;
+  --gray-900: 238 243 239;
+}
+
+:global([data-theme='dark']) .pending {
+  border-color: #675432;
+  background: #3d3525;
+  color: #ebcd92;
+}
+
+:global([data-theme='dark']) .answered {
+  border-color: #3b6047;
+  background: #243b2d;
+  color: #b6d5b9;
+}
+
+@media (max-width: 639px) {
+  .hero { padding: 18px; }
+}

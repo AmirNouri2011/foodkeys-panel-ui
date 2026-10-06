@@ -189,10 +189,11 @@ export default function Sidebar({ className }: { className?: string }) {
           label: 'خدمات و آگهی‌ها',
           icon: Library,
           children: [
-            { label: 'همه خدمات', href: routes.info.serviceBank },
             ...subcategories.map((item) => ({
               label: item.subCategoryDisplayName,
-              href: `/info/service/${item.subCategoryName}/list`,
+              href: routes.info.serviceIndustrySubCategoryCreate(
+                item.subCategoryName
+              ),
             })),
           ],
         },

@@ -1,267 +1,673 @@
 'use client';
 
-import React, {
-  useState,
-  useMemo,
-  useCallback,
-  ChangeEvent,
-  useRef,
-} from 'react';
-import dynamic from 'next/dynamic';
-import axios from 'axios';
-import { useColumn } from '@/hooks/use-column';
-import ControlledTable from '@/components/controlled-table';
-import { getColumns } from './columns';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useQuery } from 'react-query';
-import { Input } from 'rizzui';
-import { PiBuildings, PiX } from 'react-icons/pi';
-import { useTable } from '@/hooks/use-table';
-import axiosInstance from '@/utils/axios-instance';
-import Spinner from '@/components/ui/spinner';
-import useAxiosPrivate from '@/hooks/use-axios-private';
 import toast from 'react-hot-toast';
-
-const FilterElement = dynamic(
-  () => import('@/app/shared/ecommerce/product/product-list/filter-element'),
-  { ssr: false }
-);
-const TableFooter = dynamic(() => import('@/app/shared/table-footer'), {
-  ssr: false,
-});
-
-const filterState = {
-  visit: [null, null],
-  createdAt: [null, null],
-  status: '',
-};
+import {
+  ArrowDownLeft,
+  ArrowUpLeft,
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle2,
+  ChevronLeft,
+  Copy,
+  CreditCard,
+  Download,
+  Eye,
+  FileText,
+  History,
+  RefreshCw,
+  Search,
+  Wallet,
+  X,
+} from 'lucide-react';
+import useAxiosPrivate from '@/hooks/use-axios-private';
+import {
+  Transaction,
+  gatewayLabel,
+  transactionStatus,
+  numberFa,
+  amountValue,
+  transactionDate,
+  transactionTime,
+} from './transaction-utils';
+import styles from './transactions.module.css';
 
 export default function TransactionsTable() {
-  const [revisionRequestLoading, setRevisionRequestLoading] =
-    useState<boolean>(false);
+  const axios = useAxiosPrivate();
+  const [input, setInput] = useState('');
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [inputValue, setInputValue] = useState('');
-  const [billDownloadLoading, setBillDownloadLoading] = useState<Record<string, boolean>>({});
-  const searchInput = useRef<HTMLInputElement>(null);
-  const _axios = useAxiosPrivate();
-  const fetchPayments = async (
-    searchTerm: string,
-    currentPage: number,
-    pageSize: number
-  ) => {
-    const API_URL = `/transaction?pageNumber=${currentPage}&pageSize=${pageSize}&filter=${searchTerm}`;
-
-    const response = await _axios.get(API_URL);
-
-    if (response.data.statusCode === 200) {
+  const [status, setStatus] = useState('all');
+  const [gateway, setGateway] = useState('all');
+  const [sort, setSort] = useState('default');
+  const [selected, setSelected] = useState<Transaction | null>(null);
+  const [downloading, setDownloading] = useState<Record<string, boolean>>({});
+  const dialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(input.trim());
+    }, 450);
+    return () => clearTimeout(timer);
+  }, [input]);
+  useEffect(() => {
+    if (selected && !dialog.current?.open) dialog.current?.showModal();
+  }, [selected]);
+  const query = useQuery(
+    ['transactions', page, pageSize],
+    async () => {
+      const response = await axios.get('/transaction', {
+        params: { pageNumber: page, pageSize },
+      });
+      if (
+        response.data.statusCode !== 200 ||
+        !Array.isArray(response.data.data)
+      )
+        throw new Error('Invalid transaction response');
       return {
-        data: response.data.data,
-        totalItems: response.data.pagination.totalElements,
+        rows: response.data.data as Transaction[],
+        total: Number(
+          response.data.pagination?.totalElements ?? response.data.data.length
+        ),
       };
-    } else {
-      throw new Error('Failed to fetch payments');
+    },
+    { keepPreviousData: true }
+  );
+  const rows = useMemo(() => query.data?.rows ?? [], [query.data?.rows]);
+  const total = query.data?.total ?? 0;
+  const pages = Math.max(1, Math.ceil(total / pageSize));
+  const gateways = Array.from(new Set(rows.map(gatewayLabel)));
+  const visible = useMemo(() => {
+    const result = rows.filter(
+      (row) =>
+        (status === 'all' || transactionStatus(row).tone === status) &&
+        (gateway === 'all' || gatewayLabel(row) === gateway) &&
+        [
+          row.id,
+          row.refId,
+          row.serviceNameFa,
+          row.serviceName,
+          gatewayLabel(row),
+          transactionStatus(row).label,
+          String(amountValue(row)),
+          numberFa(amountValue(row)),
+        ]
+          .join(' ')
+          .toLocaleLowerCase('fa-IR')
+          .includes(search.toLocaleLowerCase('fa-IR'))
+    );
+    return sort === 'default'
+      ? result
+      : result.sort((a, b) =>
+          sort === 'high'
+            ? amountValue(b) - amountValue(a)
+            : amountValue(a) - amountValue(b)
+        );
+  }, [rows, status, gateway, sort, search]);
+  const success = rows.filter(
+    (row) => transactionStatus(row).tone === 'success'
+  );
+  const pending = rows.filter(
+    (row) => transactionStatus(row).tone === 'pending'
+  );
+  const filtered = status !== 'all' || gateway !== 'all';
+  const reset = () => {
+    setInput('');
+    setStatus('all');
+    setGateway('all');
+    setSort('default');
+  };
+  const copy = async (value: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success('شناسه کپی شد');
+    } catch {
+      toast.error('امکان کپی شناسه وجود ندارد');
     }
   };
-  const handleRequestRevision = useCallback(async (id: number) => {
-    console.log(id);
-    setRevisionRequestLoading(true);
+  const downloadBill = async (row: Transaction) => {
+    if (!row.id || downloading[row.id]) return;
+    setDownloading((prev) => ({ ...prev, [row.id]: true }));
     try {
-      let response = await _axios.post('company/' + id + '/revision/', {});
-      if (response.status === 200 && response.data.statusCode === 200)
-        toast.success(response.data.message);
-      else toast.error(response.data.message);
-    } catch (e) {
-      console.error(e);
-      // @ts-ignore
-      toast.error(e?.response?.data?.message || 'خطا در درخواست بازبینی');
-    } finally {
-      setRevisionRequestLoading(false);
-    }
-  }, [_axios]);
-
-  const handleDownloadBill = useCallback(async (transactionId: string) => {
-    if (!transactionId) {
-      toast.error('شناسه تراکنش یافت نشد');
-      return;
-    }
-
-    try {
-      setBillDownloadLoading((prev) => ({ ...prev, [transactionId]: true }));
-      const response = await _axios.post(
-        '/billing-info/generate-bill/' + transactionId,
+      const response = await axios.post(
+        `/billing-info/generate-bill/${encodeURIComponent(row.id)}`,
         { templateId: 1 },
         { responseType: 'blob' }
       );
-
-      // Create a blob from the response
-      const blob = new Blob([response.data], {
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      });
-
-      // Create a download link
-      const url = window.URL.createObjectURL(blob);
+      const url = URL.createObjectURL(
+        new Blob([response.data], {
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        })
+      );
       const link = document.createElement('a');
       link.href = url;
-      link.download = `bill_${transactionId}_${new Date().getTime()}.xlsx`;
-      document.body.appendChild(link);
+      link.download = `bill_${row.id}.xlsx`;
       link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-
-      toast.success('فاکتور با موفقیت دانلود شد');
-    } catch (error: any) {
-      console.error('Error generating bill:', error);
-      toast.error(error?.response?.data?.message || 'خطا در صدور فاکتور');
+      URL.revokeObjectURL(url);
+      toast.success('فاکتور دانلود شد');
+    } catch {
+      toast.error('دانلود فاکتور انجام نشد. دوباره تلاش کنید.');
     } finally {
-      setBillDownloadLoading((prev) => ({ ...prev, [transactionId]: false }));
+      setDownloading((prev) => ({ ...prev, [row.id]: false }));
     }
-  }, [_axios]);
-
-  const debounceSearch = useCallback((func: Function, delay: number) => {
-    let timer: NodeJS.Timeout;
-    return (...args: any) => {
-      clearTimeout(timer);
-      // @ts-ignore
-      timer = setTimeout(() => func.apply(this, args), delay);
-    };
-  }, []);
-
-  const handleSearchInput = (val: string) => {
-    setInputValue(val);
-    debounceHandleSearch(val);
+  };
+  const exportRows = () => {
+    const cell = (value: unknown) =>
+      `"${String(value ?? '')
+        .replace(/^[=+@\-\t\r]/, "'$&")
+        .replace(/"/g, '""')}"`;
+    const values = [
+      [
+        'شماره تراکنش',
+        'نوع تراکنش',
+        'مبلغ (ریال)',
+        'درگاه پرداخت',
+        'وضعیت',
+        'تاریخ',
+        'ساعت',
+        'کد پیگیری',
+      ],
+      ...visible.map((row) => [
+        row.id,
+        row.serviceNameFa || row.serviceName,
+        amountValue(row),
+        gatewayLabel(row),
+        transactionStatus(row).label,
+        transactionDate(row),
+        transactionTime(row),
+        row.refId,
+      ]),
+    ];
+    const url = URL.createObjectURL(
+      new Blob(
+        ['\uFEFF' + values.map((row) => row.map(cell).join(',')).join('\r\n')],
+        { type: 'text/csv;charset=utf-8;' }
+      )
+    );
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `transactions-page-${page}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+  const billAvailable = (row: Transaction) =>
+    row.hasBill ||
+    (row.serviceName === 'BUY_SUBSCRIPTION' &&
+      transactionStatus(row).tone === 'success');
+  const badge = (row: Transaction) => {
+    const state = transactionStatus(row);
+    return (
+      <span className={`${styles.badge} ${styles[state.tone]}`}>
+        <i />
+        {state.label}
+      </span>
+    );
   };
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const debounceHandleSearch = useCallback(
-    debounceSearch((val: string) => {
-      setSearchTerm(val);
-      setCurrentPage(1);
-    }, 500),
-    []
-  );
-
-  const { data, isLoading, isError } = useQuery(
-    ['payments', searchTerm, currentPage, pageSize],
-    () => fetchPayments(searchTerm, currentPage, pageSize),
-    {
-      keepPreviousData: true,
-    }
-  );
-
-  const handleClearSearch = () => {
-    setInputValue('');
-    setSearchTerm('');
-    if (searchInput.current) searchInput.current.value = '';
-    setCurrentPage(1);
-  };
-
-  const {
-    filters,
-    updateFilter,
-    sortConfig,
-    handleSort,
-    selectedRowKeys,
-    setSelectedRowKeys,
-    handleRowSelect,
-    handleSelectAll,
-    handleDelete,
-    handleReset,
-    // handleRequestRevision
-  } = useTable(data?.data || [], pageSize, filterState, isLoading);
-
-  console.log(data?.data);
-  const columns = useMemo(
-    () =>
-      getColumns({
-        data: data?.data || [],
-        sortConfig: (sortConfig && 'key' in sortConfig && 'direction' in sortConfig) ? sortConfig as { key: string; direction: 'asc' | 'desc' } : null,
-        checkedItems: selectedRowKeys,
-        onHeaderCellClick: (value: string) => handleSort(value),
-        onChecked: handleRowSelect,
-        handleSelectAll,
-        handleDownloadBill: handleDownloadBill,
-        billDownloadLoading: billDownloadLoading
-      }),
-    [data, selectedRowKeys, sortConfig, billDownloadLoading, handleDownloadBill, handleRowSelect, handleSelectAll, handleSort]
-  );
-
-  const { visibleColumns, checkedColumns, setCheckedColumns } =
-    useColumn(columns);
-
-  // if (isLoading) {
-  //     return <div>Loading...</div>;
-  // }
-
-  if (isError) {
-    return <div>خطا در دریافت اطلاعات</div>;
-  }
-  if (!data) {
-    return <Spinner size="xl" />;
-  }
   return (
-    <>
-      <div className="md:w-82 relative mb-4 max-w-md lg:w-72">
-        {/*<Input*/}
-        {/*    ref={searchInput}*/}
-        {/*    size="lg"*/}
-        {/*    value={inputValue} // Input value is directly controlled by inputValue*/}
-        {/*    placeholder="جستجو براساس نام شرکت"*/}
-        {/*    prefix={<PiBuildings className="text-lg" />}*/}
-        {/*    onChange={(e: ChangeEvent<HTMLInputElement>) => handleSearchInput(e.target.value)}*/}
-        {/*/>*/}
-        {inputValue && (
+    <main className={styles.page} dir="rtl">
+      <nav className={styles.breadcrumb} aria-label="مسیر صفحه">
+        <Link href="/">میز کار</Link>
+        <ChevronLeft size={14} />
+        <span>امور مالی</span>
+        <ChevronLeft size={14} />
+        <span>گردش حساب</span>
+      </nav>
+      <header className={styles.header}>
+        <div>
+          <div className={styles.eyebrow}>گزارش مالی حساب شما</div>
+          <h1>تراکنش‌ها و گردش حساب</h1>
+          <p>
+            پرداخت‌ها، وضعیت تراکنش‌ها و فاکتورهای خود را در یک نگاه دنبال کنید.
+          </p>
+        </div>
+        <div className={styles.actions}>
           <button
-            onClick={handleClearSearch}
-            className="absolute inset-y-0 right-0 flex items-center pr-2"
+            onClick={() => query.refetch()}
+            disabled={query.isFetching}
+            className={styles.button}
           >
-            <PiX className="text-xl text-gray-500" />
+            <RefreshCw
+              size={16}
+              className={query.isFetching ? styles.spin : ''}
+            />
+            به‌روزرسانی
           </button>
+          <Link href="/finance/wallet" className={styles.primary}>
+            <Wallet size={17} />
+            کیف پول
+            <ArrowLeft size={15} />
+          </Link>
+        </div>
+      </header>
+      <section className={styles.stats} aria-label="خلاصه تراکنش‌ها">
+        {[
+          {
+            label: 'تعداد کل تراکنش‌ها',
+            value: query.data ? numberFa(total) : '—',
+            hint: 'تمام سوابق حساب',
+            icon: History,
+            tone: 'brand',
+          },
+          {
+            label: 'مبلغ تراکنش‌های موفق',
+            value: query.data
+              ? numberFa(
+                  success.reduce((sum, row) => sum + amountValue(row), 0)
+                )
+              : '—',
+            hint: 'ریال · در صفحه جاری',
+            icon: CreditCard,
+            tone: 'brand',
+          },
+          {
+            label: 'پرداخت‌های موفق',
+            value: query.data ? numberFa(success.length) : '—',
+            hint: 'تراکنش در صفحه جاری',
+            icon: CheckCircle2,
+            tone: 'success',
+          },
+          {
+            label: 'در انتظار تأیید',
+            value: query.data ? numberFa(pending.length) : '—',
+            hint: 'تراکنش در صفحه جاری',
+            icon: History,
+            tone: 'pending',
+          },
+        ].map((item) => (
+          <article className={styles.stat} key={item.label}>
+            <span className={`${styles.statIcon} ${styles[item.tone]}`}>
+              <item.icon size={21} />
+            </span>
+            <span className={styles.statLabel}>{item.label}</span>
+            <strong>{item.value}</strong>
+            <small>{item.hint}</small>
+          </article>
+        ))}
+      </section>
+      <section
+        className={styles.panel}
+        aria-labelledby="transaction-list-title"
+      >
+        <div className={styles.panelHeading}>
+          <div>
+            <h2 id="transaction-list-title">
+              سوابق تراکنش‌ها <span>{query.data ? numberFa(total) : '—'}</span>
+            </h2>
+            <p>جزئیات هر پرداخت و درگاه استفاده‌شده را بررسی کنید.</p>
+          </div>
+          <button
+            className={styles.button}
+            disabled={!visible.length || query.isFetching}
+            onClick={exportRows}
+          >
+            <Download size={16} />
+            خروجی صفحه (CSV)
+          </button>
+        </div>
+        <div className={styles.toolbar}>
+          <div className={styles.search}>
+            <Search size={18} />
+            <input
+              aria-label="جست‌وجوی تراکنش‌ها"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="جست‌وجوی نوع یا شناسه در این صفحه…"
+            />
+            {input && (
+              <button
+                aria-label="پاک کردن جست‌وجو"
+                onClick={() => setInput('')}
+              >
+                <X size={16} />
+              </button>
+            )}
+          </div>
+          <label className={styles.select}>
+            درگاه
+            <select
+              value={gateway}
+              onChange={(e) => setGateway(e.target.value)}
+            >
+              <option value="all">همه درگاه‌ها</option>
+              {Array.from(
+                new Set([...gateways, ...(gateway !== 'all' ? [gateway] : [])])
+              ).map((name) => (
+                <option key={name}>{name}</option>
+              ))}
+            </select>
+          </label>
+          <label className={styles.select}>
+            مرتب‌سازی
+            <select value={sort} onChange={(e) => setSort(e.target.value)}>
+              <option value="default">ترتیب پیش‌فرض</option>
+              <option value="high">بیشترین مبلغ</option>
+              <option value="low">کمترین مبلغ</option>
+            </select>
+          </label>
+        </div>
+        <div className={styles.filterLine}>
+          <div className={styles.tabs} aria-label="فیلتر وضعیت">
+            {[
+              ['all', 'همه'],
+              ['success', 'موفق'],
+              ['pending', 'در انتظار'],
+              ['failed', 'ناموفق'],
+            ].map(([value, label]) => (
+              <button
+                key={value}
+                aria-pressed={status === value}
+                className={status === value ? styles.activeTab : ''}
+                onClick={() => setStatus(value)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <span className={styles.filterNote}>
+            جست‌وجو و فیلتر در صفحه جاری
+            {(filtered || input) && (
+              <button onClick={reset}>
+                پاک کردن فیلترها
+                <X size={12} />
+              </button>
+            )}
+          </span>
+        </div>
+        <div aria-live="polite" className={styles.fetchStatus}>
+          {query.isFetching && !query.isLoading
+            ? 'در حال به‌روزرسانی سوابق…'
+            : ''}
+        </div>
+        {query.isError ? (
+          <div className={styles.empty} role="alert">
+            <History size={34} />
+            <h3>سوابق دریافت نشد</h3>
+            <p>اتصال خود را بررسی کنید و دوباره تلاش کنید.</p>
+            <button onClick={() => query.refetch()} className={styles.button}>
+              تلاش دوباره
+            </button>
+          </div>
+        ) : query.isLoading ? (
+          <div className={styles.empty} role="status">
+            <RefreshCw className={styles.spin} size={30} />
+            <p>در حال دریافت تراکنش‌ها…</p>
+          </div>
+        ) : !visible.length ? (
+          <div className={styles.empty}>
+            <Search size={34} />
+            <h3>
+              {filtered || search
+                ? 'تراکنشی با این شرایط پیدا نشد'
+                : 'هنوز تراکنشی ثبت نشده'}
+            </h3>
+            <p>
+              {filtered || search
+                ? 'جست‌وجو یا فیلترها را تغییر دهید.'
+                : 'سوابق پرداخت‌های شما در این بخش نمایش داده می‌شود.'}
+            </p>
+            {(filtered || search) && (
+              <button className={styles.button} onClick={reset}>
+                نمایش همه تراکنش‌ها
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className={styles.tableScroll} aria-busy={query.isFetching}>
+            <table className={styles.table}>
+              <caption className="sr-only">
+                سوابق تراکنش‌ها؛ مبلغ‌ها به ریال
+              </caption>
+              <thead>
+                <tr>
+                  {[
+                    'تراکنش',
+                    'تاریخ و ساعت',
+                    'مبلغ (ریال)',
+                    'درگاه پرداخت',
+                    'وضعیت',
+                    'کد پیگیری',
+                    'عملیات',
+                  ].map((label) => (
+                    <th scope="col" key={label}>
+                      {label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {visible.map((row) => (
+                  <tr key={row.id}>
+                    <td>
+                      <div className={styles.transaction}>
+                        <span className={styles.rowIcon}>
+                          {row.serviceName === 'BUY_SUBSCRIPTION' ? (
+                            <ArrowUpLeft size={19} />
+                          ) : (
+                            <ArrowDownLeft size={19} />
+                          )}
+                        </span>
+                        <div>
+                          <strong>
+                            {row.serviceNameFa || row.serviceName || 'تراکنش'}
+                          </strong>
+                          <button
+                            title={row.id}
+                            className={styles.id}
+                            onClick={() => copy(row.id)}
+                            aria-label={`کپی شماره تراکنش ${row.id}`}
+                          >
+                            <span dir="ltr">{row.id?.slice(0, 8)}…</span>
+                            <Copy size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <span>{transactionDate(row)}</span>
+                      <small className={styles.secondary} dir="ltr">
+                        {transactionTime(row)}
+                      </small>
+                    </td>
+                    <td>
+                      <strong className={styles.amount}>
+                        {numberFa(amountValue(row))}
+                      </strong>
+                    </td>
+                    <td>
+                      <span className={styles.gateway}>
+                        <CreditCard size={15} />
+                        {gatewayLabel(row)}
+                      </span>
+                    </td>
+                    <td>{badge(row)}</td>
+                    <td>
+                      <span className={styles.tracking} dir="ltr">
+                        {row.refId?.replace(/^FK_TRX-/, '') || '—'}
+                      </span>
+                    </td>
+                    <td>
+                      <div className={styles.rowActions}>
+                        <button
+                          onClick={() => setSelected(row)}
+                          className={styles.iconButton}
+                          aria-label={`جزئیات تراکنش ${row.id}`}
+                          title="جزئیات تراکنش"
+                        >
+                          <Eye size={17} />
+                        </button>
+                        {billAvailable(row) && (
+                          <button
+                            onClick={() => downloadBill(row)}
+                            disabled={downloading[row.id]}
+                            className={styles.iconButton}
+                            aria-label={`دانلود فاکتور ${row.id}`}
+                            title="دانلود فاکتور"
+                          >
+                            {downloading[row.id] ? (
+                              <RefreshCw size={17} className={styles.spin} />
+                            ) : (
+                              <Download size={17} />
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
-      </div>
-      <ControlledTable
-        variant="modern"
-        isLoading={isLoading}
-        showLoadingText={true}
-        data={data.data}
-        columns={visibleColumns}
-        paginatorOptions={{
-          pageSize,
-          setPageSize,
-          total: data.totalItems,
-          current: currentPage,
-          onChange: (page: number) => setCurrentPage(page),
+        <footer className={styles.footer}>
+          <span>
+            {numberFa(visible.length)} مورد در این صفحه · {numberFa(total)}{' '}
+            تراکنش
+          </span>
+          <div>
+            <label>
+              تعداد نمایش
+              <select
+                aria-label="تعداد تراکنش در صفحه"
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setPage(1);
+                }}
+                disabled={query.isFetching}
+              >
+                {[10, 20, 50].map((size) => (
+                  <option key={size} value={size}>
+                    {numberFa(size)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              aria-label="صفحه قبلی"
+              disabled={page <= 1 || query.isFetching}
+              onClick={() => setPage((value) => value - 1)}
+            >
+              <ArrowRight size={16} />
+            </button>
+            <span>
+              صفحه {numberFa(page)} از {numberFa(pages)}
+            </span>
+            <button
+              aria-label="صفحه بعدی"
+              disabled={page >= pages || query.isFetching}
+              onClick={() => setPage((value) => value + 1)}
+            >
+              <ArrowLeft size={16} />
+            </button>
+          </div>
+        </footer>
+      </section>
+      <p className={styles.note}>
+        <FileText size={15} />
+        نام درگاه مطابق اطلاعات ثبت‌شده هر تراکنش نمایش داده می‌شود. برای دریافت
+        فاکتور، از آیکون دانلود استفاده کنید.
+      </p>
+      <dialog
+        ref={dialog}
+        className={styles.dialog}
+        aria-labelledby="transaction-detail-title"
+        onClose={() => setSelected(null)}
+        onClick={(e) => {
+          if (e.target === dialog.current) dialog.current?.close();
         }}
-        filterOptions={{
-          searchTerm,
-          onSearchClear: handleClearSearch,
-          onSearchChange: (event) => setSearchTerm(event.target.value),
-          hasSearched: !!searchTerm,
-          hideIndex: 1,
-          columns,
-          checkedColumns,
-          setCheckedColumns,
-          enableDrawerFilter: true,
-        }}
-        filterElement={
-          <FilterElement
-            filters={filters}
-            isFiltered={!!filters}
-            updateFilter={updateFilter}
-            handleReset={handleReset}
-          />
-        }
-        tableFooter={
-          <TableFooter
-            checkedItems={selectedRowKeys}
-            handleDelete={(ids: string[]) => {
-              setSelectedRowKeys([]);
-              handleDelete(ids);
-            }}
-          />
-        }
-        className="overflow-hidden rounded-md border border-gray-200 text-sm shadow-sm"
-      />
-    </>
+      >
+        {selected && (
+          <>
+            <div className={styles.dialogHeader}>
+              <div>
+                <span className={styles.eyebrow}>اطلاعات پرداخت</span>
+                <h2 id="transaction-detail-title">جزئیات تراکنش</h2>
+              </div>
+              <button
+                autoFocus
+                className={styles.iconButton}
+                onClick={() => dialog.current?.close()}
+                aria-label="بستن جزئیات"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className={styles.detailAmount}>
+              <CreditCard size={25} />
+              <strong>
+                {numberFa(amountValue(selected))}
+                <small> ریال</small>
+              </strong>
+              {badge(selected)}
+            </div>
+            <dl className={styles.details}>
+              {[
+                [
+                  'نوع تراکنش',
+                  selected.serviceNameFa || selected.serviceName || '—',
+                ],
+                ['درگاه پرداخت', gatewayLabel(selected)],
+                ['تاریخ', transactionDate(selected)],
+                ['ساعت', transactionTime(selected) || '—'],
+                ['کد پیگیری', selected.refId || '—'],
+                ['شماره تراکنش', selected.id],
+                ['شماره فاکتور', selected.invoiceId || selected.billId || '—'],
+              ].map(([label, value]) => (
+                <div key={label}>
+                  <dt>{label}</dt>
+                  <dd
+                    dir={
+                      [
+                        'شماره تراکنش',
+                        'کد پیگیری',
+                        'شماره فاکتور',
+                        'ساعت',
+                      ].includes(label)
+                        ? 'ltr'
+                        : 'rtl'
+                    }
+                  >
+                    {value}
+                    {label === 'شماره تراکنش' && (
+                      <button
+                        onClick={() => copy(selected.id)}
+                        aria-label="کپی شماره تراکنش"
+                        className={styles.iconButton}
+                      >
+                        <Copy size={14} />
+                      </button>
+                    )}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+            {selected.error && <p className={styles.error}>{selected.error}</p>}
+            <div className={styles.dialogFooter}>
+              {billAvailable(selected) && (
+                <button
+                  className={styles.primary}
+                  disabled={downloading[selected.id]}
+                  onClick={() => downloadBill(selected)}
+                >
+                  <Download size={16} />
+                  {downloading[selected.id]
+                    ? 'در حال دانلود…'
+                    : 'دانلود فاکتور'}
+                </button>
+              )}
+              <button
+                className={styles.button}
+                onClick={() => dialog.current?.close()}
+              >
+                بستن
+              </button>
+            </div>
+          </>
+        )}
+      </dialog>
+    </main>
   );
 }

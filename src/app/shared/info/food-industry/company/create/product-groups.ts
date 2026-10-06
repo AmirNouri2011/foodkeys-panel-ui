@@ -4,6 +4,9 @@ export interface GroupedProduct {
   fieldId?: string;
   _categoryKey?: string;
   _productPictures?: any[];
+  otherTypeName?: string | null;
+  uploadedFileIds?: string[] | string | null;
+  removedFileIds?: string[] | string | null;
   categoryType?: string;
   name?: string;
   description?: string;

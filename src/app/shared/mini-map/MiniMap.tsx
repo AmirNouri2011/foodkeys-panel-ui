@@ -69,6 +69,8 @@ interface MiniMapProps {
   className?: string;
   locationPrefix?: 'factory' | 'office' | string;
   setAddress?: (address: string) => void;
+  coordinateFields?: { latitude: string; longitude: string };
+  coordinatesOnly?: boolean;
 }
 
 const DEFAULT_POSITION: Coordinates = [35.6892523, 51.3896004];
@@ -233,10 +235,12 @@ export default function MiniMap({
   className = '',
   locationPrefix = '',
   setAddress,
+  coordinateFields,
+  coordinatesOnly = false,
 }: MiniMapProps) {
   const { setValue, unregister, watch } = useFormContext();
-  const latitudeField = `${locationPrefix}Latitude`;
-  const longitudeField = `${locationPrefix}Longitude`;
+  const latitudeField = coordinateFields?.latitude || `${locationPrefix}Latitude`;
+  const longitudeField = coordinateFields?.longitude || `${locationPrefix}Longitude`;
   const stateField = `${locationPrefix}State`;
   const cityField = `${locationPrefix}City`;
   const addressField = `${locationPrefix}Location`;
@@ -271,7 +275,7 @@ export default function MiniMap({
   const abortController = useRef<AbortController | null>(null);
   const cityAbortController = useRef<AbortController | null>(null);
   const lastCenteredState = useRef('');
-  const isStateSelected = Boolean(normalizePersianText(formState));
+  const isStateSelected = coordinatesOnly || Boolean(normalizePersianText(formState));
 
   useEffect(() => {
     const nextLatitude = Number(latitude);
@@ -301,6 +305,8 @@ export default function MiniMap({
 
   useEffect(() => {
     const normalizedState = normalizePersianText(formState);
+
+    if (coordinatesOnly) return;
 
     if (!normalizedState) {
       lastCenteredState.current = '';
@@ -365,7 +371,7 @@ export default function MiniMap({
     }, 600);
 
     return () => window.clearTimeout(timer);
-  }, [formState, latitude, latitudeField, longitude, longitudeField, unregister]);
+  }, [coordinatesOnly, formState, latitude, latitudeField, longitude, longitudeField, unregister]);
 
   const applyLocation = useCallback(
     (result: NominatimResult, coordinates: Coordinates) => {
@@ -383,14 +389,14 @@ export default function MiniMap({
         shouldValidate: true,
       });
 
-      if (administrative.state) {
+      if (!coordinatesOnly && administrative.state) {
         lastCenteredState.current = normalizePersianText(administrative.state);
         setValue(stateField, administrative.state, {
           shouldDirty: true,
           shouldValidate: true,
         });
       }
-      if (administrative.city) {
+      if (!coordinatesOnly && administrative.city) {
         setValue(cityField, administrative.city, {
           shouldDirty: true,
           shouldValidate: true,
@@ -398,11 +404,12 @@ export default function MiniMap({
       }
       if (persianAddress) {
         setSelectedAddress(persianAddress);
-        setAddress?.(persianAddress);
+        if (!coordinatesOnly) setAddress?.(persianAddress);
       }
     },
     [
       cityField,
+      coordinatesOnly,
       latitudeField,
       longitudeField,
       setAddress,
@@ -420,6 +427,13 @@ export default function MiniMap({
       setResults([]);
       setError('');
       setIsResolving(true);
+
+      if (coordinatesOnly) {
+        setValue(latitudeField, coordinates[0], { shouldDirty: true, shouldValidate: true });
+        setValue(longitudeField, coordinates[1], { shouldDirty: true, shouldValidate: true });
+        setIsResolving(false);
+        return;
+      }
 
       try {
         const params = new URLSearchParams({
@@ -449,7 +463,7 @@ export default function MiniMap({
         if (!controller.signal.aborted) setIsResolving(false);
       }
     },
-    [applyLocation, latitudeField, longitudeField, setValue]
+    [applyLocation, coordinatesOnly, latitudeField, longitudeField, setValue]
   );
 
   const search = async () => {
@@ -707,8 +721,9 @@ export default function MiniMap({
       <div className="flex items-start gap-2 border-t border-gray-200 bg-white px-4 py-3 text-xs leading-5 text-gray-600">
         <PiMapPinFill className="text-red-600 mt-0.5 h-4 w-4 shrink-0" />
         <span>
-          برای ثبت دقیق، روی نقشه بزنید یا نشانگر را جابه‌جا کنید. استان، شهر و
-          نشانی فارسی به‌صورت خودکار تکمیل می‌شود.
+          {coordinatesOnly
+            ? 'روی نقشه بزنید یا نشانگر را جابه‌جا کنید؛ فقط طول و عرض جغرافیایی ذخیره می‌شود.'
+            : 'برای ثبت دقیق، روی نقشه بزنید یا نشانگر را جابه‌جا کنید. استان، شهر و نشانی فارسی به‌صورت خودکار تکمیل می‌شود.'}
         </span>
       </div>
     </div>

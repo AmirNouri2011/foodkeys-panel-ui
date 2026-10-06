@@ -93,13 +93,6 @@
 //         helperText="(مثال: foodkeys)"
 //       />
 //       <Input
-//           label="آی دی اسکایپ"
-//           placeholder="آی دی اسکایپ"
-//           {...register('skypeId')}
-//           error={errors.skypeId?.message as string}
-//           helperText="(مثال: foodkeys)"
-//       />
-//       <Input
 //         type="number"
 //         label="شماره ایتا"
 //         placeholder="شماره ایتا"
@@ -267,13 +260,6 @@ export default function CompanySocial({ className }: { className?: string }) {
             placeholder="آی دی لینکدین"
             {...register('linkedInId')}
             error={errors.linkedInId?.message as string}
-            helperText="(مثال: foodkeys)"
-        />
-        <Input
-            label="آی دی اسکایپ"
-            placeholder="آی دی اسکایپ"
-            {...register('skypeId')}
-            error={errors.skypeId?.message as string}
             helperText="(مثال: foodkeys)"
         />
         <Input

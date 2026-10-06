@@ -308,19 +308,25 @@ import {
   useCallback,
   useMemo,
   useRef,
+  type MouseEvent,
   type ReactNode,
 } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from 'rizzui';
+import { Dialog } from '@headlessui/react';
 import {
   AlertTriangle,
   ArrowRight,
   BriefcaseBusiness,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Eye,
   FileText,
   Save,
+  ServerCrash,
   Sparkles,
+  RotateCcw,
   X,
   XCircle,
 } from 'lucide-react';
@@ -340,6 +346,8 @@ import ServiceDisplaySettings, {
   ServiceDisplaySettingsValues,
 } from '@/app/shared/info/service/service-display-settings';
 import { getServiceDisplaySettingsErrors } from '@/app/shared/info/service/form-utils';
+import CompanySuccessDialog from '@/app/shared/info/company-success-dialog';
+import useAxiosPrivate from '@/hooks/use-axios-private';
 
 // Custom alert component to avoid the rizzui Alert issue
 const CustomAlert = ({ children, variant = 'default', className = '' }) => {
@@ -446,11 +454,16 @@ export default function ServiceCreatePage() {
   const { subcategory } = useParams();
   const router = useRouter();
   const serviceApi = useServiceApi();
+  const axiosPrivate = useAxiosPrivate();
 
   // States
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [backendErrors, setBackendErrors] = useState<BackendErrorItem[]>([]);
+  const [registrationResult, setRegistrationResult] = useState<{
+    subCategoryId: number;
+    subscription: 'active' | 'missing' | 'unknown';
+  } | null>(null);
   const [serviceData, setServiceData] = useState<Partial<ServiceDTO>>({
     name: '',
     nameEn: '',
@@ -471,6 +484,8 @@ export default function ServiceCreatePage() {
   const [isValidationComplete, setIsValidationComplete] = useState(false);
   const [isValidationPopupClosing, setIsValidationPopupClosing] =
     useState(false);
+  const [isValidationPopupCollapsed, setIsValidationPopupCollapsed] =
+    useState(false);
   const [validationItems, setValidationItems] = useState<ValidationPopupItem[]>(
     []
   );
@@ -481,6 +496,7 @@ export default function ServiceCreatePage() {
     schema,
     loading: schemaLoading,
     error: schemaError,
+    retry: retrySchema,
   } = useServiceSchema(subCategoryId);
   const {
     subcategories,
@@ -488,7 +504,9 @@ export default function ServiceCreatePage() {
     error: subcategoriesError,
   } = useServiceSubcategories();
   const selectedSubcategory = useMemo(() => {
-    const routeName = decodeURIComponent(String(subcategory || '')).toLowerCase();
+    const routeName = decodeURIComponent(
+      String(subcategory || '')
+    ).toLowerCase();
     return subcategories.find(
       (item) => item.subCategoryName.toLowerCase() === routeName
     );
@@ -501,6 +519,25 @@ export default function ServiceCreatePage() {
     selectedSubcategory?.subCategoryDescription ||
     schema?.formDescription ||
     'اطلاعات خدمت را کامل و دقیق وارد کنید.';
+
+  const scrollToSection = useCallback(
+    (event: MouseEvent<HTMLAnchorElement>, sectionId: string) => {
+      event.preventDefault();
+
+      const section = document.getElementById(sectionId);
+      if (!section) return;
+
+      const reduceMotion = window.matchMedia(
+        '(prefers-reduced-motion: reduce)'
+      ).matches;
+      section.scrollIntoView({
+        behavior: reduceMotion ? 'auto' : 'smooth',
+        block: 'start',
+      });
+      window.history.replaceState(null, '', `#${sectionId}`);
+    },
+    []
+  );
 
   const getBackendFieldLabel = useCallback(
     (field?: string) => {
@@ -756,8 +793,33 @@ export default function ServiceCreatePage() {
     window.setTimeout(() => element?.focus({ preventScroll: true }), 350);
   }, []);
 
+  const fetchSubscriptionStatus = useCallback(
+    async (currentSubCategoryId: number) => {
+      let subscription: 'active' | 'missing' | 'unknown' = 'unknown';
+
+      try {
+        const response = await axiosPrivate.get(
+          `/subscription/subcategory/${currentSubCategoryId}?status=ACTIVE`
+        );
+        if (response.data?.status === 'SUCCESS') {
+          subscription = response.data?.data?.length ? 'active' : 'missing';
+        }
+      } catch (subscriptionError) {
+        console.error('Error fetching subscription:', subscriptionError);
+      }
+
+      setRegistrationResult({
+        subCategoryId: currentSubCategoryId,
+        subscription,
+      });
+    },
+    [axiosPrivate]
+  );
+
   // Handle form submission
   const handleSubmit = async () => {
+    if (registrationResult || isLoading) return;
+
     try {
       setIsLoading(true);
       setError(null);
@@ -794,6 +856,7 @@ export default function ServiceCreatePage() {
           (item) => !item.isValid
         );
         setError('لطفاً خطاهای فرم را برطرف کنید');
+        setIsValidationPopupCollapsed(false);
         setIsValidationPopupOpen(true);
         setIsLoading(false);
         // Let the popup's initial validation pass finish before moving focus.
@@ -806,6 +869,7 @@ export default function ServiceCreatePage() {
 
       if (!serviceData.subCategoryId) {
         setError('زیرشاخه تعیین نشده است');
+        setIsValidationPopupCollapsed(false);
         setIsValidationPopupOpen(true);
         setIsLoading(false);
         return;
@@ -845,10 +909,7 @@ export default function ServiceCreatePage() {
       const response = await serviceApi.createService(serviceToCreate);
 
       if (response && response.status === 'SUCCESS') {
-        // Navigate to the service list
-        router.replace(
-          routes.info.serviceIndustrySubCategoryList(subcategory as string)
-        );
+        await fetchSubscriptionStatus(serviceToCreate.subCategoryId);
       } else {
         const responseErrors = normalizeBackendErrors(response);
         setBackendErrors(responseErrors);
@@ -865,7 +926,48 @@ export default function ServiceCreatePage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 pb-10 pt-4 md:px-6 md:pt-6 lg:px-8">
-      <header className="relative mb-6 overflow-hidden rounded-3xl border border-primary-lighter bg-gradient-to-l from-primary-lighter/40 via-white to-white p-5 shadow-sm md:p-7 dark:via-gray-0 dark:to-gray-0">
+      <CompanySuccessDialog
+        open={Boolean(registrationResult)}
+        title="اطلاعات شما با موفقیت ثبت شد"
+        description={
+          registrationResult?.subscription === 'active'
+            ? 'اشتراک فعال این زیرخدمت تأیید شد. اطلاعات ثبت‌شده برای بررسی در اختیار کارشناسان ما قرار می‌گیرد.'
+            : registrationResult?.subscription === 'unknown'
+            ? 'اطلاعات شما ذخیره شد، اما بررسی وضعیت اشتراک انجام نشد. وضعیت را از صفحه کسب‌وکارهای من پیگیری کنید.'
+            : 'برای انتشار این مورد، اشتراک زیرخدمت مربوط را انتخاب و تهیه کنید.'
+        }
+        notice={
+          registrationResult?.subscription === 'active'
+            ? 'اطلاعات ثبت‌شده پس از بررسی کارشناسان ما، حداکثر تا ۷۲ ساعت منتشر می‌شود.'
+            : 'ثبت اطلاعات تکمیل شده است. انتشار آن پس از تهیه اشتراک و بررسی کارشناسان انجام می‌شود.'
+        }
+        purchased={registrationResult?.subscription === 'active'}
+        statusLabel={
+          registrationResult?.subscription === 'active'
+            ? 'اشتراک فعال تأیید شد'
+            : 'اطلاعات خدمت ذخیره شد'
+        }
+        steps={['ثبت اطلاعات', 'تهیه اشتراک', 'بررسی و انتشار']}
+        stepsAriaLabel="مراحل انتشار خدمت"
+        actionLabel={
+          registrationResult?.subscription === 'missing'
+            ? 'انتخاب و خرید اشتراک'
+            : 'رفتن به کسب‌وکارهای من'
+        }
+        onContinue={() =>
+          router.replace(
+            registrationResult?.subscription === 'missing'
+              ? `/bundle/${registrationResult.subCategoryId}/buy`
+              : routes.info.dashboard
+          )
+        }
+        onLater={
+          registrationResult?.subscription === 'missing'
+            ? () => router.replace(routes.info.dashboard)
+            : undefined
+        }
+      />
+      <header className="relative mb-6 overflow-hidden rounded-3xl border border-primary-lighter bg-gradient-to-l from-primary-lighter/40 via-white to-white p-5 shadow-sm dark:via-gray-0 dark:to-gray-0 md:p-7">
         <div className="absolute -left-12 -top-16 h-48 w-48 rounded-full bg-primary-lighter/40 blur-3xl" />
         <div className="relative flex flex-col justify-between gap-6 lg:flex-row lg:items-center">
           <div className="flex items-start gap-4">
@@ -899,6 +1001,7 @@ export default function ServiceCreatePage() {
           <div className="grid min-w-fit grid-cols-2 gap-2 rounded-2xl border border-white/80 bg-white/80 p-2 shadow-sm backdrop-blur">
             <a
               href="#display-information"
+              onClick={(event) => scrollToSection(event, 'display-information')}
               className="flex items-center gap-2 rounded-xl bg-primary px-3 py-2.5 text-sm font-medium text-white transition hover:bg-primary-dark"
             >
               <Eye className="h-4 w-4" />
@@ -906,6 +1009,9 @@ export default function ServiceCreatePage() {
             </a>
             <a
               href="#specialized-information"
+              onClick={(event) =>
+                scrollToSection(event, 'specialized-information')
+              }
               className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-100"
             >
               <FileText className="h-4 w-4" />
@@ -917,11 +1023,12 @@ export default function ServiceCreatePage() {
 
       {error && <CustomAlert variant="danger">{error}</CustomAlert>}
 
-      {schemaError && (
-        <CustomAlert variant="danger">
-          خطا در بارگذاری ساختار فرم: {schemaError}
-        </CustomAlert>
-      )}
+      <SchemaErrorDialog
+        open={Boolean(schemaError)}
+        retrying={schemaLoading}
+        onRetry={retrySchema}
+        onCancel={() => router.replace(routes.dashboard)}
+      />
 
       <section
         id="display-information"
@@ -954,10 +1061,12 @@ export default function ServiceCreatePage() {
       </section>
 
       {schemaLoading ? (
-        <div className="flex min-h-56 items-center justify-center rounded-3xl border border-gray-200 bg-white py-10 shadow-sm">
+        <div className="min-h-56 flex items-center justify-center rounded-3xl border border-gray-200 bg-white py-10 shadow-sm">
           <div className="text-center">
             <Spinner size="xl" />
-            <p className="mt-4 text-sm text-gray-500">در حال آماده‌سازی فرم تخصصی...</p>
+            <p className="mt-4 text-sm text-gray-500">
+              در حال آماده‌سازی فرم تخصصی...
+            </p>
           </div>
         </div>
       ) : schema ? (
@@ -989,14 +1098,16 @@ export default function ServiceCreatePage() {
         </section>
       ) : null}
 
-      <div className="sticky bottom-4 z-30 mt-6 rounded-2xl border border-gray-200 bg-white/95 p-3 shadow-xl backdrop-blur md:p-4 dark:bg-gray-0/95">
+      <div className="sticky bottom-4 z-30 mt-6 rounded-2xl border border-gray-200 bg-white/95 p-3 shadow-xl backdrop-blur dark:bg-gray-0/95 md:p-4">
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
           <div className="flex items-center gap-3 text-sm text-gray-600">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-lighter text-primary-dark">
               <CheckCircle2 className="h-5 w-5" />
             </span>
             <div>
-              <p className="font-semibold text-gray-900">آماده ثبت اطلاعات هستید؟</p>
+              <p className="font-semibold text-gray-900">
+                آماده ثبت اطلاعات هستید؟
+              </p>
               <p className="mt-0.5 text-xs text-gray-500">
                 پیش از ذخیره، موارد الزامی به‌صورت خودکار بررسی می‌شوند.
               </p>
@@ -1029,13 +1140,10 @@ export default function ServiceCreatePage() {
           items={validationItems}
           isComplete={isValidationComplete}
           isClosing={isValidationPopupClosing}
+          isCollapsed={isValidationPopupCollapsed}
           onItemClick={focusValidationItem}
-          onClose={() => {
-            setIsValidationPopupOpen(false);
-            setIsValidationPopupClosing(false);
-            setIsValidationComplete(false);
-            setValidationItems([]);
-          }}
+          onCollapse={() => setIsValidationPopupCollapsed(true)}
+          onExpand={() => setIsValidationPopupCollapsed(false)}
         />
       )}
       {backendErrors.length > 0 && (
@@ -1045,6 +1153,80 @@ export default function ServiceCreatePage() {
         />
       )}
     </div>
+  );
+}
+
+function SchemaErrorDialog({
+  open,
+  retrying,
+  onRetry,
+  onCancel,
+}: {
+  open: boolean;
+  retrying: boolean;
+  onRetry: () => void | Promise<void>;
+  onCancel: () => void;
+}) {
+  return (
+    <Dialog
+      open={open}
+      onClose={onCancel}
+      className="relative z-[9999]"
+      dir="rtl"
+    >
+      <div
+        className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+        aria-hidden="true"
+      />
+      <div className="fixed inset-0 overflow-y-auto p-4 sm:p-6">
+        <div className="flex min-h-full items-center justify-center">
+          <Dialog.Panel className="relative w-full max-w-md rounded-3xl bg-white p-6 text-right shadow-2xl dark:bg-gray-100 sm:p-8">
+            <button
+              type="button"
+              onClick={onCancel}
+              className="absolute left-5 top-5 flex h-10 w-10 items-center justify-center rounded-full text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              aria-label="انصراف و بازگشت به داشبورد"
+            >
+              <X className="h-5 w-5" aria-hidden="true" />
+            </button>
+            <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-red-lighter text-red-dark">
+              <ServerCrash className="h-8 w-8" aria-hidden="true" />
+            </div>
+            <p className="mb-2 text-sm font-medium text-red-dark">
+              خطا در ارتباط با سرور
+            </p>
+            <Dialog.Title className="text-xl font-bold leading-relaxed text-gray-900 sm:text-2xl">
+              دریافت فرم تخصصی امکان‌پذیر نیست
+            </Dialog.Title>
+            <Dialog.Description className="mt-3 text-sm leading-7 text-gray-600 sm:text-base">
+              در حال حاضر دریافت ساختار این فرم از سرور با خطا مواجه شده است.
+              لطفاً کمی دیگر دوباره تلاش کنید.
+            </Dialog.Description>
+            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={onCancel}
+                className="flex min-h-[48px] flex-1 items-center justify-center rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm font-semibold text-gray-700 transition-colors hover:border-gray-400 hover:bg-gray-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
+              >
+                انصراف
+              </button>
+              <button
+                type="button"
+                onClick={onRetry}
+                disabled={retrying}
+                className="flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <RotateCcw
+                  className={`h-5 w-5 ${retrying ? 'animate-spin' : ''}`}
+                  aria-hidden="true"
+                />
+                {retrying ? 'در حال تلاش مجدد...' : 'تلاش مجدد'}
+              </button>
+            </div>
+          </Dialog.Panel>
+        </div>
+      </div>
+    </Dialog>
   );
 }
 
@@ -1063,7 +1245,7 @@ function SectionHeading({
     <div className="flex items-start gap-3 border-b border-gray-100 bg-gray-50/70 px-4 py-4 md:px-6 md:py-5">
       <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-primary-lighter text-primary-dark">
         {icon}
-        <span className="absolute -left-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white">
+        <span className="min-w-5 absolute -left-1 -top-1 flex h-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white">
           {number}
         </span>
       </div>
@@ -1081,96 +1263,159 @@ function ValidationStatusPopup({
   items,
   isComplete,
   isClosing,
+  isCollapsed,
   onItemClick,
-  onClose,
+  onCollapse,
+  onExpand,
 }: {
   items: ValidationPopupItem[];
   isComplete: boolean;
   isClosing: boolean;
+  isCollapsed: boolean;
   onItemClick: (itemId: string) => void;
-  onClose: () => void;
+  onCollapse: () => void;
+  onExpand: () => void;
 }) {
   const hasErrors = !isComplete;
+  const popupRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (isCollapsed || isClosing) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!popupRef.current?.contains(event.target as Node)) {
+        onCollapse();
+      }
+    };
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onCollapse();
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isCollapsed, isClosing, onCollapse]);
 
   return (
-    <aside
-      role="dialog"
-      aria-live="polite"
-      aria-label="وضعیت تکمیل فرم"
-      className={`fixed bottom-5 left-5 z-[100] w-[calc(100%-2.5rem)] max-w-md overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl transition-all duration-500 dark:border-gray-700 dark:bg-gray-900 ${
-        isClosing
-          ? 'translate-y-5 scale-95 opacity-0'
-          : 'translate-y-0 scale-100 opacity-100'
-      }`}
-      dir="rtl"
+    <section
+      className="max-w-80 fixed bottom-24 left-4 z-[100] w-[calc(100%-2rem)] transition-transform duration-300 ease-out sm:left-6 sm:w-80"
+      style={{
+        transform: isClosing
+          ? 'translateX(calc(-100% - 1.5rem))'
+          : isCollapsed
+          ? 'translateX(calc(-100% + 3.5rem))'
+          : 'translateX(0)',
+      }}
+      aria-label="پنل وضعیت تکمیل فرم"
     >
-      <div
-        className={`flex items-start justify-between gap-4 border-b px-5 py-4 ${
-          hasErrors
-            ? 'border-red-light bg-red-lighter dark:border-red-dark dark:bg-red-dark/20'
-            : 'border-green-light bg-green-lighter dark:border-green-dark dark:bg-green-dark/20'
+      <aside
+        ref={popupRef}
+        role={isCollapsed ? undefined : 'dialog'}
+        aria-live="polite"
+        aria-hidden={isCollapsed}
+        aria-label="وضعیت تکمیل فرم"
+        className={`flex max-h-[26rem] flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl transition-opacity duration-200 dark:border-gray-700 dark:bg-gray-900 ${
+          isCollapsed ? 'pointer-events-none opacity-0' : 'opacity-100'
         }`}
+        dir="rtl"
       >
-        <div className="flex items-start gap-3">
-          {hasErrors ? (
-            <AlertTriangle className="mt-0.5 h-6 w-6 shrink-0 text-red" />
-          ) : (
-            <CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0 text-green" />
-          )}
-          <div>
-            <p
-              className={`font-semibold ${
-                hasErrors ? 'text-red-dark' : 'text-green-dark'
-              }`}
-            >
-              {hasErrors
-                ? 'لطفا موارد الزامی را تکمیل کنید'
-                : 'تمامی موارد درست است'}
-            </p>
-            <p className="mt-1 text-xs text-gray-600 dark:text-gray-300">
-              {hasErrors
-                ? 'برای رفتن به هر قسمت، روی همان مورد کلیک کنید.'
-                : 'اطلاعات آماده ذخیره است.'}
-            </p>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded-full p-1 text-gray-500 transition hover:bg-white/80 hover:text-gray-900"
-          aria-label="بستن"
+        <div
+          className={`flex shrink-0 items-start justify-between gap-3 border-b px-4 py-3 ${
+            hasErrors
+              ? 'border-red-light bg-red-lighter dark:border-red-dark dark:bg-red-dark/20'
+              : 'border-green-light bg-green-lighter dark:border-green-dark dark:bg-green-dark/20'
+          }`}
         >
-          <X className="h-5 w-5" />
-        </button>
-      </div>
-
-      <div className="max-h-72 space-y-2 overflow-y-auto px-5 py-4">
-        {items.map((item) => (
-          <button
-            type="button"
-            key={item.id}
-            onClick={() => onItemClick(item.id)}
-            className={`flex w-full items-start gap-3 overflow-hidden rounded-xl border px-3 py-2.5 text-right transition-all duration-500 focus:outline-none focus:ring-2 ${
-              item.isValid
-                ? item.isFading
-                  ? 'max-h-0 translate-x-4 border-transparent px-3 py-0 opacity-0'
-                  : 'max-h-24 border-green bg-green-lighter text-green-dark opacity-100 ring-green dark:border-green-light dark:bg-green-dark/20 dark:text-green-lighter'
-                : 'border-red-light bg-red-lighter text-red-dark ring-red hover:border-red hover:bg-red-light/20 dark:border-red-dark dark:bg-red-dark/20 dark:text-red-lighter'
-            }`}
-          >
-            {item.isValid ? (
-              <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green" />
+          <div className="flex items-start gap-3">
+            {hasErrors ? (
+              <AlertTriangle className="mt-0.5 h-6 w-6 shrink-0 text-red" />
             ) : (
-              <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-dark" />
+              <CheckCircle2 className="mt-0.5 h-6 w-6 shrink-0 text-green" />
             )}
             <div>
-              <p className="text-sm font-medium text-black">{item.label}</p>
-              <p className="mt-0.5 text-xs opacity-80">{item.message}</p>
+              <p
+                className={`font-semibold ${
+                  hasErrors ? 'text-red-dark' : 'text-green-dark'
+                }`}
+              >
+                {hasErrors
+                  ? `${items.length} مورد نیاز به اصلاح دارد`
+                  : 'تمامی موارد درست است'}
+              </p>
+              <p className="mt-1 text-xs text-gray-600 dark:text-gray-300">
+                {hasErrors
+                  ? 'برای رفتن به هر فیلد، روی همان مورد کلیک کنید.'
+                  : 'اطلاعات آماده ذخیره است.'}
+              </p>
             </div>
+          </div>
+          <button
+            type="button"
+            onClick={onCollapse}
+            disabled={isCollapsed}
+            className="rounded-full p-1 text-gray-500 transition hover:bg-white/80 hover:text-gray-900"
+            aria-label="جمع کردن پنل خطاها"
+          >
+            <ChevronLeft className="h-5 w-5" />
           </button>
-        ))}
-      </div>
-    </aside>
+        </div>
+
+        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-3 py-3">
+          {items.map((item) => (
+            <button
+              type="button"
+              key={item.id}
+              disabled={isCollapsed}
+              onClick={() => {
+                onItemClick(item.id);
+                onCollapse();
+              }}
+              className={`flex w-full items-start gap-2.5 overflow-hidden rounded-xl border px-3 py-2 text-right transition-all duration-500 focus:outline-none focus:ring-2 ${
+                item.isValid
+                  ? item.isFading
+                    ? 'max-h-0 translate-x-4 border-transparent py-0 opacity-0'
+                    : 'max-h-24 border-green bg-green-lighter text-green-dark opacity-100 ring-green dark:border-green-light dark:bg-green-dark/20 dark:text-green-lighter'
+                  : 'border-red-light bg-red-lighter text-red-dark ring-red hover:border-red hover:bg-red-light/20 dark:border-red-dark dark:bg-red-dark/20 dark:text-red-lighter'
+              }`}
+            >
+              {item.isValid ? (
+                <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green" />
+              ) : (
+                <XCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-dark" />
+              )}
+              <div>
+                <p className="text-sm font-medium text-black dark:text-white">
+                  {item.label}
+                </p>
+                <p className="mt-0.5 text-xs opacity-80">{item.message}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      </aside>
+
+      <button
+        type="button"
+        onClick={onExpand}
+        aria-label={`باز کردن پنل خطاها؛ ${items.length} مورد`}
+        className={`absolute right-0 top-1/2 flex h-20 w-14 -translate-y-1/2 flex-col items-center justify-center gap-1 rounded-r-2xl border border-l-0 shadow-xl transition-opacity duration-200 ${
+          hasErrors
+            ? 'border-red-light bg-red-lighter text-red-dark'
+            : 'border-green-light bg-green-lighter text-green-dark'
+        } ${
+          isCollapsed && !isClosing
+            ? 'pointer-events-auto opacity-100'
+            : 'pointer-events-none opacity-0'
+        }`}
+      >
+        <span className="text-sm font-bold">{items.length}</span>
+        <ChevronRight className="h-5 w-5" />
+      </button>
+    </section>
   );
 }
 

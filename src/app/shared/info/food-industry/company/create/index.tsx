@@ -1,6 +1,7 @@
 'use client';
 
 import { API_BASE_URL } from '@/config/api.config';
+import { cleanLocationValue } from '@/utils/iran-locations';
 import React, { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Element } from 'react-scroll';
@@ -48,7 +49,7 @@ import { createGlobalState } from 'react-use';
 import { socialMediaConverter } from '@/utils/social-media-converter';
 import { telConverter } from '@/utils/tel-converter';
 import { routes } from '@/config/routes';
-import Link from 'next/link';
+import CompanySuccessDialog from '@/app/shared/info/company-success-dialog';
 import CompanyLocation from "@/app/shared/info/food-industry/company/create/company-location";
 import {
   prepareCompanyDataWithGallery,
@@ -313,6 +314,7 @@ export interface BrandDTO {
   nameEn?: string
   brandImage?: string
   logoUrl?: string
+  galleryFiles?: string[]
 }
 
 /** A single product entry */
@@ -381,7 +383,7 @@ export interface CompanyCreateDTO {
   employeesCount?: string
   productTitles?: string
   productsDescription?: string
-  outSourcedProductTitles?: string
+  outSourcedProductsDescription?: string
   productAvailability?: string
   hasPrivatePage?: boolean
   miniAppIframeSource?: string
@@ -414,7 +416,6 @@ export interface CompanyCreateDTO {
   whatsAppPhoneNo?: string
   instagramId?: string
   linkedInId?: string
-  skypeId?: string
   eitaaPhoneNo?: string
   rubikaPhoneNo?: string
   website?: string
@@ -460,7 +461,7 @@ export interface CreateCompanyInput {
   employeesCount?: string
   productTitles?: string
   productsDescription?: string
-  outSourcedProductTitles?: string
+  outSourcedProductsDescription?: string
   productAvailability?: string
   hasPrivatePage?: boolean
   miniAppIframeSource?: string
@@ -504,7 +505,6 @@ export interface CreateCompanyInput {
   whatsAppPhoneNo?: string
   instagramId?: string
   linkedInId?: string
-  skypeId?: string
   eitaaPhoneNo?: string
   rubikaPhoneNo?: string
   website?: string
@@ -660,6 +660,10 @@ export default function CreateCompany({
 }: IndexProps) {
   const router = useRouter();
   const [isLoading, setLoading] = useState(false);
+  const [registrationResult, setRegistrationResult] = useState<{
+    subCategoryId: number;
+    subscription: 'active' | 'missing' | 'unknown';
+  } | null>(null);
   const [subcategories, setSubcategories] = useState();
   const _axios = useAxiosPrivate();
   const productSaveProgress = useRef<CompanyProductSaveProgress>({});
@@ -720,141 +724,23 @@ export default function CreateCompany({
         </div>
     );
   }
-  // const onSubmit: SubmitHandler<CreateCompanyInput> = async (data) => {
-  //   setLoading(true);
-  //   const fetchSubscriptions = async (subCategoryId: number) => {
-  //     try {
-  //       const response = await _axios.get(`/subscription/${subCategoryId}`);
-  //       if (response.data.status === 'SUCCESS') {
-  //         if (!response.data?.data) router.replace('/bundle/buy');
-  //       }
-  //     } catch (error) {
-  //       console.error('Error fetching subcategories:', error);
-  //     }
-  //   };
-  //   await fetchSubscriptions(data.subcategory?.value);
-  //   setTimeout(() => {
-  //     setLoading(false);
-  //     console.log('product_data', data);
-
-  //     toast.success(
-  //       <Text tag="b">
-  //         {id ? 'بروزرسانی اطلاعات' : 'ثبت اطلاعات'} موفقیت آمیز بود
-  //       </Text>
-  //     );
-  //     methods.reset();
-  //   }, 600);
-  // };
   const fetchSubscriptions = async (subCategoryId: number) => {
+    let subscription: 'active' | 'missing' | 'unknown' = 'unknown';
     try {
-      const response = await _axios.get(`/subscription/subcategory/${subCategoryId}?status=ACTIVE`);
+      const response = await _axios.get(
+        `/subscription/subcategory/${subCategoryId}?status=ACTIVE`
+      );
       if (response.data.status === 'SUCCESS') {
-        if (!response.data?.data || !response.data?.data?.length) {
-          toast.success(
-            <div>
-              <Text tag="b">{'اطلاعات شما به طور موقت ثبت شد.\n\n'}</Text>
-              <Text>
-                {
-                  'برای تایید نهایی و استفاده از خدمات سایت، لطفا اشتراک فعال جدیدی تهیه کنید.\n'
-                }
-              </Text>
-              <Link href={`/bundle/${subCategoryId}/buy`}>
-                <Button
-                  className="mt-3"
-                  size="sm"
-                  // onClick={() => router.replace()}
-                >
-                  خرید اشتراک
-                </Button>
-              </Link>
-            </div>,
-            { duration: 5000 }
-          );
-          // toast.custom((t) => (
-          //   <div
-          //     className={`${
-          //       t.visible ? 'animate-enter' : 'animate-leave'
-          //     } pointer-events-auto flex w-full max-w-md rounded-lg bg-white shadow-lg ring-1 ring-black ring-opacity-5`}
-          //   >
-          //     <div className="w-0 flex-1 p-4">
-          //       <div className="flex items-start">
-          //         <div className="flex-shrink-0 pt-0.5">
-          //           <img
-          //             className="h-10 w-10 rounded-full"
-          //             src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&ixqx=6GHAjsWpt9&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2.2&w=160&h=160&q=80"
-          //             alt=""
-          //           />
-          //         </div>
-          //         <div className="ml-3 flex-1">
-          //           <p className="text-sm font-medium text-gray-900">
-          //             Emilia Gates
-          //           </p>
-          //           <p className="mt-1 text-sm text-gray-500">
-          //             Sure! 8:30pm works great!
-          //           </p>
-          //         </div>
-          //       </div>
-          //     </div>
-          //     <div className="flex border-l border-gray-200">
-          //       <button
-          //         onClick={() => toast.dismiss(t.id)}
-          //         className="text-indigo-600 hover:text-indigo-500 focus:ring-indigo-500 flex w-full items-center justify-center rounded-none rounded-r-lg border border-transparent p-4 text-sm font-medium focus:outline-none focus:ring-2"
-          //       >
-          //         Close
-          //       </button>
-          //     </div>
-          //   </div>
-          // ));
-          router.replace(`/bundle/${subCategoryId}/buy`);
-        } else {
-          // toast.success(
-          //   <>
-          //     <Text tag="b">
-          //       {id ? 'بروزرسانی اطلاعات' : 'ثبت اطلاعات'} موفقیت آمیز بود
-          //     </Text>
-          //     <Text>{'\n'}</Text>
-          //     <Text>
-          //       بعد از تایید اطلاعات ثبت شده، شرکت شما در سایت بروزرسانی می‌شود
-          //     </Text>
-          //   </>
-          // );
-          toast.success(
-              <div
-                  dir="rtl"
-                  className="
-        bg-emerald-lightest p-4 rounded-lg shadow
-        text-right
-      "
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  {/*<AiOutlineCheckCircle className="text-emerald" size={20} />*/}
-                  <Text as="strong" className="text-emerald-dark text-lg">
-                    {id ? "بروزرسانی اطلاعات" : "ثبت اطلاعات"} موفقیت‌آمیز بود
-                  </Text>
-                </div>
-                <Text className="text-gray-600 text-sm">
-                  بعد از تایید اطلاعات ثبت‌شده، شرکت شما در سایت بروزرسانی می‌شود
-                </Text>
-              </div>,
-              {
-                position: "top-center",   // for RTL languages :contentReference[oaicite:7]{index=7}
-                autoClose: 5000,
-                closeOnClick: true,
-                pauseOnHover: true,
-                draggable: true,
-                hideProgressBar: false,
-                // icon: false            // we render our own icon
-              }
-          );
-          router.replace(`/info/food-industry`)
-        }
+        subscription = response.data?.data?.length ? 'active' : 'missing';
       }
     } catch (error) {
       console.error('Error fetching subscription:', error);
     }
+    setRegistrationResult({ subCategoryId, subscription });
   };
 
   const onSubmit: SubmitHandler<CreateCompanyInput> = async (data) => {
+    if (registrationResult || isLoading) return;
     setIsValidationPopupOpen(false);
     setIsValidationPopupCollapsed(false);
     setLoading(true);
@@ -880,7 +766,6 @@ export default function CreateCompany({
       //   rubikaPhoneNo: data.rubikaPhoneNo,
       //   smsNumber: data.smsNumber,
       //   hotlineNumber: data.hotlineNumber,
-      //   skypeId: data.skypeId,
       //   website: data.website,
       //   emails: data.emails,
       // });
@@ -935,8 +820,8 @@ export default function CreateCompany({
       //   landArea: data.landArea,
       //   productAvailability: data.productAvailability,
       //   productTitles: data.productTitles,
-      //   productsDescription: data.productsDescription,
-      //   outSourcedProductTitles: data.outSourcedProductTitles,
+      //   productsDescription: data.productAvailability === '1' ? data.productsDescription : undefined,
+      //   outSourcedProductsDescription: data.productAvailability === '1' ? data.outSourcedProductsDescription : undefined,
       //   outSourcedProductsDescription: data.outSourcedProductsDescription,
       // };
       //
@@ -1041,7 +926,6 @@ export default function CreateCompany({
         linkedInId: data.linkedInId,
         eitaaPhoneNo: data.eitaaPhoneNo,
         rubikaPhoneNo: data.rubikaPhoneNo,
-        skypeId: data.skypeId,
         website: data.website,
         emails: data.emails,
         smsNumber: data.smsNumber,
@@ -1062,10 +946,10 @@ export default function CreateCompany({
       const location: LocationDTO = {
         officeLocation: data.officeLocation,
         factoryLocation: data.factoryLocation,
-        officeCity:      data.officeCity,
-        officeState:     data.officeState,
-        factoryCity:     data.factoryCity,
-        factoryState:    data.factoryState,
+        officeCity:      cleanLocationValue(data.officeCity),
+        officeState:     cleanLocationValue(data.officeState),
+        factoryCity:     cleanLocationValue(data.factoryCity),
+        factoryState:    cleanLocationValue(data.factoryState),
         industrialCity:  data.industrialCity,
         country:         data.country || 'ایران',
         officePoBox:     data.officePoBox,
@@ -1091,6 +975,9 @@ export default function CreateCompany({
         name: brand.name,
         nameEn: brand.nameEn,
         brandImage: brand.brandImage || undefined,
+        galleryFiles: (brand.galleryFiles || [])
+          .map((file) => typeof file === 'string' ? file : file.id)
+          .filter(Boolean),
       }));
 
       console.log(`products: ${JSON.stringify(products)}`)
@@ -1118,9 +1005,9 @@ export default function CreateCompany({
         buildingArea:       data.buildingArea,
         companyStakeholders: data.companyStakeHolders,
         employeesCount:     data.employeesCount,
-        productTitles:      data.productTitles,
-        productsDescription: data.productsDescription,
-        outSourcedProductTitles: data.outSourcedProductTitles,
+        productTitles:      data.productAvailability === '1' ? data.productTitles : undefined,
+        productsDescription: data.productAvailability === '1' ? data.productsDescription : undefined,
+        outSourcedProductsDescription: data.productAvailability === '1' ? data.outSourcedProductsDescription : undefined,
         productAvailability: data.productAvailability,
         // hasPrivatePage:     data.hasPrivatePage,
         // miniAppIframeSource:data.miniAppIframeSource,
@@ -1153,7 +1040,6 @@ export default function CreateCompany({
         whatsAppPhoneNo:    data.whatsAppPhoneNo,
         instagramId:        data.instagramId,
         linkedInId:         data.linkedInId,
-        skypeId:            data.skypeId,
         eitaaPhoneNo:       data.eitaaPhoneNo,
         rubikaPhoneNo:      data.rubikaPhoneNo,
         website:            data.website,
@@ -1175,12 +1061,6 @@ export default function CreateCompany({
       }
       const response = await saveCompanyWithProducts(
         _axios, companyDto, id, productSaveProgress.current,
-        (outsourced, productId) => {
-          const field = outsourced ? 'outSourcedProducts' : 'products';
-          methods.getValues(field)?.forEach((_, index) => {
-            methods.setValue(`${field}.${index}.id`, productId);
-          });
-        },
       );
 
       // let response = {
@@ -1232,7 +1112,6 @@ export default function CreateCompany({
   //       rubikaPhoneNo: data.rubikaPhoneNo,
   //       smsNumber: data.smsNumber,
   //       hotlineNumber: data.hotlineNumber,
-  //       skypeId: data.skypeId,
   //       website: data.website,
   //       emails: data.emails
   //     })
@@ -1401,6 +1280,24 @@ export default function CreateCompany({
 
   return (
     <div className="@container min-w-0 max-w-full">
+      <CompanySuccessDialog
+        open={Boolean(registrationResult)}
+        title={id ? 'اطلاعات شرکت شما با موفقیت به‌روزرسانی گردید' : 'شرکت شما با موفقیت ثبت گردید'}
+        description={registrationResult?.subscription === 'active'
+          ? 'اشتراک فعال شما ثبت شده است. اطلاعات شرکت شما برای بررسی در اختیار کارشناسان ما قرار می‌گیرد.'
+          : registrationResult?.subscription === 'unknown'
+            ? 'اطلاعات شرکت شما ذخیره شد، اما بررسی وضعیت اشتراک انجام نشد. وضعیت اشتراک را در صفحه کسب‌وکارهای من بررسی کنید.'
+            : 'برای انتشار شرکت شما خواهشمند است اشتراک موردنظر را تهیه بفرمایید.'}
+        notice={registrationResult?.subscription === 'active'
+          ? 'اطلاعات شرکت شما پس از بررسی کارشناسان ما، حداکثر تا ۷۲ ساعت منتشر می‌شود.'
+          : 'ثبت اطلاعات شرکت تکمیل شده است. انتشار شرکت پس از تهیه اشتراک و بررسی کارشناسان انجام می‌شود.'}
+        purchased={registrationResult?.subscription === 'active'}
+        actionLabel={registrationResult?.subscription === 'missing' ? 'انتخاب و خرید اشتراک' : 'رفتن به کسب‌وکارهای من'}
+        onContinue={() => router.replace(registrationResult?.subscription === 'missing'
+          ? `/bundle/${registrationResult.subCategoryId}/buy`
+          : routes.info.dashboard)}
+        onLater={registrationResult?.subscription === 'missing' ? () => router.replace(routes.info.dashboard) : undefined}
+      />
       <FormNav />
       <FormProvider {...methods}>
         <CompanyUploadValidationProvider>
