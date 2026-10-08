@@ -1,4 +1,3 @@
-import { useId } from 'react';
 import Link from 'next/link';
 import cn from '@/utils/class-names';
 import styles from './subscriptions.module.css';
@@ -12,6 +11,8 @@ import {
   PiInfo,
   PiStack,
   PiWarningCircle,
+  PiCalendarBlank,
+  PiArrowClockwise,
 } from 'react-icons/pi';
 
 export type SubscriptionStatus = 'ACTIVE' | 'PENDING' | 'DISABLE' | string;
@@ -49,7 +50,6 @@ function SubscriptionRow({
   item: SubscriptionItem;
   id?: number | string;
 }) {
-  const renewalHintId = useId();
   const statusKey =
     item.subscriptionStatus === 'DISABLE'
       ? 'DISABLE'
@@ -65,81 +65,43 @@ function SubscriptionRow({
   const bankId = id ?? item.subCategoryId;
   return (
     <article className={styles.row} data-subscription-status={statusKey}>
+      <div className={styles.cardTop}>
+        <span className={styles.bankIcon}>
+          <PiBuildings aria-hidden="true" />
+        </span>
+        <span className={styles.status}>
+          <StatusIcon aria-hidden="true" />
+          {status.label}
+        </span>
+      </div>
       <div className={styles.rowMain}>
         <div className={styles.identity}>
-          <span className={styles.bankIcon}>
-            <PiBuildings aria-hidden="true" />
-          </span>
           <div className={styles.identityText}>
             <h3>{bankName}</h3>
             <p>{item.bundleTitle || 'اشتراک بانک اطلاعاتی'}</p>
           </div>
         </div>
         <div className={styles.rowMeta}>
-          <span className={styles.status}>
-            <StatusIcon aria-hidden="true" />
-            {status.label}
-          </span>
           <div className={styles.expiry}>
-            <span>پایان اعتبار</span>
+            <span>
+              <PiCalendarBlank aria-hidden="true" /> پایان اعتبار
+            </span>
             <bdi>{item.endDateStr || 'ثبت نشده'}</bdi>
           </div>
-        </div>
-        <div className={styles.rowAction}>
-          {status.action && bankId != null ? (
-            item.renewable === false ? (
-              <span
-                className={styles.disabledActionWrapper}
-                tabIndex={0}
-                role="group"
-                aria-label={`تمدید اشتراک ${bankName}`}
-                aria-describedby={renewalHintId}
-              >
-                <button
-                  type="button"
-                  disabled
-                  className={styles.disabledAction}
-                >
-                  تمدید اشتراک
-                  <PiArrowLeft aria-hidden="true" />
-                </button>
-                <span
-                  id={renewalHintId}
-                  role="tooltip"
-                  className={styles.renewalTooltip}
-                >
-                  امکان تمدید این اشتراک وجود نداره
-                </span>
-              </span>
-            ) : (
-              <Link
-                href={`/bundle/${bankId}/buy`}
-                aria-label={`${status.action} ${bankName}`}
-                className={
-                  needsRenewal ? styles.primaryAction : styles.secondaryAction
-                }
-              >
-                {status.action}
-                <PiArrowLeft aria-hidden="true" />
-              </Link>
-            )
-          ) : (
-            <p className={styles.pendingNote}>
-              {statusKey === 'PENDING'
-                ? 'پس از تایید، دسترسی فعال می‌شود.'
-                : 'اطلاعات دسترسی در حال بررسی است.'}
-            </p>
-          )}
         </div>
       </div>
       {!!item.bundleFeatures?.length && (
         <details className={styles.details}>
           <summary aria-label={`جزئیات اشتراک ${bankName}`}>
-            جزئیات اشتراک
+            <span>
+              امکانات اشتراک{' '}
+              <span className={styles.featureCount}>
+                {item.bundleFeatures.length.toLocaleString('fa-IR')}
+              </span>
+            </span>
             <PiCaretDown aria-hidden="true" />
           </summary>
           <div className={styles.detailsBody}>
-            <h4>امکانات {item.bundleTitle || 'این اشتراک'}</h4>
             <ul>
               {item.bundleFeatures.map((feature, index) => (
                 <li key={index}>
@@ -151,6 +113,37 @@ function SubscriptionRow({
           </div>
         </details>
       )}
+      <div className={styles.rowAction}>
+        {status.action && bankId != null ? (
+          item.renewable === false ? (
+            <div className={styles.unavailable}>
+              <button type="button" disabled className={styles.disabledAction}>
+                امکان تمدید ندارد
+              </button>
+              <span>این پلن قابل تمدید نیست.</span>
+            </div>
+          ) : (
+            <Link
+              href={`/bundle/${bankId}/buy`}
+              aria-label={`${status.action} ${bankName}`}
+              className={
+                needsRenewal ? styles.primaryAction : styles.secondaryAction
+              }
+            >
+              <PiArrowClockwise aria-hidden="true" />
+              {status.action}
+              <PiArrowLeft aria-hidden="true" />
+            </Link>
+          )
+        ) : (
+          <p className={styles.pendingNote}>
+            <PiInfo aria-hidden="true" />
+            {statusKey === 'PENDING'
+              ? 'پس از تایید، دسترسی فعال می‌شود.'
+              : 'اطلاعات دسترسی در حال بررسی است.'}
+          </p>
+        )}
+      </div>
     </article>
   );
 }
@@ -228,13 +221,15 @@ export default function UpgradeStorage({
               <span>{group.items.length.toLocaleString('fa-IR')} اشتراک</span>
             </div>
           )}
-          {group.items.map((item, index) => (
-            <SubscriptionRow
-              key={item.id ?? `${item.subCategoryId}-${index}`}
-              item={item}
-              id={id}
-            />
-          ))}
+          <div className={styles.cardGrid}>
+            {group.items.map((item, index) => (
+              <SubscriptionRow
+                key={item.id ?? `${item.subCategoryId}-${index}`}
+                item={item}
+                id={id}
+              />
+            ))}
+          </div>
         </div>
       ))}
     </div>
