@@ -617,10 +617,9 @@ export const AuthProvider = ({children}) => {
             formHook: any
         ) => {
             try {
-                const response = await axiosInstance.post('/auth/change-password', {
-                    oldPassword,
+                const response = await axiosInstance.post('/profile/change-password', {
+                    currentPassword: oldPassword,
                     newPassword,
-                    confirmNewPassword,
                 });
                 if (response?.data?.status === 'SUCCESS')
                     toast.success(response.data.message || 'خطا در تغییر رمزعبور');

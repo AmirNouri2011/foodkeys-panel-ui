@@ -79,10 +79,9 @@ export default function PasswordSettingsView({ settings }: { settings?: Password
 
   const onSubmit = async (data: PasswordFormTypes) => {
     try {
-      const response = await api.post('/auth/change-password', {
-        oldPassword: data.currentPassword,
+      const response = await api.post('/profile/change-password', {
+        currentPassword: data.currentPassword,
         newPassword: data.newPassword,
-        confirmNewPassword: data.confirmedPassword,
       });
       if (response.data?.status && response.data.status !== 'SUCCESS') {
         toast.error(response.data.message || 'تغییر رمز عبور انجام نشد');

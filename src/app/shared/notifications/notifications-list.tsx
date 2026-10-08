@@ -1,7 +1,9 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { useQuery } from 'react-query';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { routes } from '@/config/routes';
+import { useQuery, useQueryClient } from 'react-query';
 import * as dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/fa';
@@ -28,6 +30,7 @@ import {
 } from 'react-icons/pi';
 import toast from 'react-hot-toast';
 import cn from '@/utils/class-names';
+import styles from './notifications-list.module.css';
 
 dayjs.extend(relativeTime);
 dayjs.locale('fa');
@@ -81,131 +84,129 @@ function getTopicLabel(topic?: string) {
 
 function NotificationRow({
   item,
-  archivedView,
-  isArchiving,
   onOpen,
-  onArchive,
+  isMovingToArchive,
+  onArchiveAnimationEnd,
 }: {
   item: NotificationItem;
-  archivedView: boolean;
-  isArchiving: boolean;
   onOpen: (item: NotificationItem) => void;
-  onArchive: (id: number | string) => void;
+  isMovingToArchive: boolean;
+  onArchiveAnimationEnd: () => void;
 }) {
   const date = getDateParts(item.createdAt);
   const priority = getPriority(item.priority);
   const topicLabel = getTopicLabel(item.topic);
 
   return (
-    <article
-      role="button"
-      tabIndex={0}
-      onClick={() => onOpen(item)}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          onOpen(item);
+    <div
+      className={cn(styles.row, isMovingToArchive && styles.archiving)}
+      onAnimationEnd={(event) => {
+        if (event.target === event.currentTarget && isMovingToArchive) {
+          onArchiveAnimationEnd();
         }
       }}
-      className={cn(
-        'group relative cursor-pointer overflow-hidden rounded-2xl border bg-white px-4 py-4 transition duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_12px_32px_-22px_rgba(15,23,42,0.45)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:px-5',
-        'dark:bg-gray-50',
-        item.isRead
-          ? 'border-gray-200'
-          : 'border-primary/20 bg-primary-lighter/10 shadow-[inset_-3px_0_0_rgb(var(--primary-default))]'
-      )}
     >
-      <div className="flex items-start gap-3.5 sm:gap-4">
-        <div
+      <div className="min-h-0 overflow-hidden">
+        <article
+          role="button"
+          tabIndex={isMovingToArchive ? -1 : 0}
+          aria-disabled={isMovingToArchive}
+          onClick={() => onOpen(item)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              onOpen(item);
+            }
+          }}
           className={cn(
-            'relative mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl [&>svg]:h-5 [&>svg]:w-5',
+            'group relative cursor-pointer overflow-hidden rounded-2xl border bg-white px-4 py-4 transition duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_12px_32px_-22px_rgba(15,23,42,0.45)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 sm:px-5',
+            'dark:bg-gray-50',
             item.isRead
-              ? 'bg-gray-100 text-gray-500'
-              : 'bg-primary text-white shadow-[0_8px_20px_-10px_rgb(var(--primary-default))]'
+              ? 'border-gray-200'
+              : 'border-primary/20 bg-primary-lighter/10 shadow-[inset_-3px_0_0_rgb(var(--primary-default))]'
           )}
         >
-          <RingBellSolidIcon />
-          {!item.isRead ? (
-            <span className="absolute -end-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-red" />
+          {isMovingToArchive ? (
+            <div className={styles.archiveOverlay} role="status">
+              <PiArchive className="h-5 w-5" />
+              <span>به بایگانی منتقل شد</span>
+            </div>
           ) : null}
-        </div>
+          <div className="flex items-start gap-3.5 sm:gap-4">
+            <div
+              className={cn(
+                'relative mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl [&>svg]:h-5 [&>svg]:w-5',
+                item.isRead
+                  ? 'bg-gray-100 text-gray-500'
+                  : 'bg-primary text-white shadow-[0_8px_20px_-10px_rgb(var(--primary-default))]'
+              )}
+            >
+              <RingBellSolidIcon />
+              {!item.isRead ? (
+                <span className="absolute -end-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-red" />
+              ) : null}
+            </div>
 
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <Text
-                  tag="h3"
-                  className={cn(
-                    'line-clamp-1 text-sm text-gray-900 sm:text-base',
-                    item.isRead ? 'font-semibold' : 'font-bold'
-                  )}
-                >
-                  {item.title || 'اعلان جدید'}
-                </Text>
-                {!item.isRead ? (
-                  <span className="rounded-full bg-primary-lighter px-2 py-0.5 text-[10px] font-semibold text-primary-dark">
-                    خوانده‌نشده
+            <div className="min-w-0 flex-1">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Text
+                      tag="h3"
+                      className={cn(
+                        'line-clamp-1 text-sm text-gray-900 sm:text-base',
+                        item.isRead ? 'font-semibold' : 'font-bold'
+                      )}
+                    >
+                      {item.title || 'اعلان جدید'}
+                    </Text>
+                    {!item.isRead ? (
+                      <span className="rounded-full bg-primary-lighter px-2 py-0.5 text-[10px] font-semibold text-primary-dark">
+                        خوانده‌نشده
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="mt-1.5 line-clamp-2 text-sm leading-6 text-gray-600">
+                    {item.message || 'برای مشاهده جزئیات این اعلان کلیک کنید.'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-gray-400">
+                <time dateTime={item.createdAt} title={date.absolute}>
+                  {date.relative || date.absolute}
+                </time>
+                {date.relative ? (
+                  <span className="hidden h-1 w-1 rounded-full bg-gray-300 sm:block" />
+                ) : null}
+                {date.relative ? (
+                  <span className="hidden sm:inline">{date.absolute}</span>
+                ) : null}
+                {priority ? (
+                  <Badge
+                    size="sm"
+                    variant="outline"
+                    className={cn(
+                      'rounded-full px-2 py-0.5 text-[10px]',
+                      priority.className
+                    )}
+                  >
+                    {priority.label}
+                  </Badge>
+                ) : null}
+                {topicLabel ? (
+                  <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] text-gray-500">
+                    {topicLabel}
                   </span>
                 ) : null}
               </div>
-              <p className="mt-1.5 line-clamp-2 text-sm leading-6 text-gray-600">
-                {item.message || 'برای مشاهده جزئیات این اعلان کلیک کنید.'}
-              </p>
             </div>
 
-            {!archivedView ? (
-              <Button
-                variant="text"
-                size="sm"
-                isLoading={isArchiving}
-                disabled={isArchiving}
-                className="h-9 w-9 shrink-0 rounded-xl p-0 text-gray-400 hover:bg-gray-100 hover:text-gray-700 sm:opacity-0 sm:group-focus-within:opacity-100 sm:group-hover:opacity-100"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onArchive(item.id);
-                }}
-                aria-label={`بایگانی ${item.title || 'اعلان'}`}
-                title="بایگانی"
-              >
-                <PiArchive className="h-4 w-4" />
-              </Button>
-            ) : null}
+            <PiArrowLeft className="mt-3 hidden h-4 w-4 shrink-0 text-gray-300 transition group-hover:-translate-x-0.5 group-hover:text-primary md:block" />
           </div>
-
-          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-gray-400">
-            <time dateTime={item.createdAt} title={date.absolute}>
-              {date.relative || date.absolute}
-            </time>
-            {date.relative ? (
-              <span className="hidden h-1 w-1 rounded-full bg-gray-300 sm:block" />
-            ) : null}
-            {date.relative ? (
-              <span className="hidden sm:inline">{date.absolute}</span>
-            ) : null}
-            {priority ? (
-              <Badge
-                size="sm"
-                variant="outline"
-                className={cn(
-                  'rounded-full px-2 py-0.5 text-[10px]',
-                  priority.className
-                )}
-              >
-                {priority.label}
-              </Badge>
-            ) : null}
-            {topicLabel ? (
-              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] text-gray-500">
-                {topicLabel}
-              </span>
-            ) : null}
-          </div>
-        </div>
-
-        <PiArrowLeft className="mt-3 hidden h-4 w-4 shrink-0 text-gray-300 transition group-hover:-translate-x-0.5 group-hover:text-primary md:block" />
+        </article>
       </div>
-    </article>
+    </div>
   );
 }
 
@@ -351,22 +352,55 @@ function NotificationDetailsModal({
 
 export default function NotificationsListView() {
   const service = useNotificationService();
+  const queryClient = useQueryClient();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const targetId = searchParams.get('notification');
+  const openedTargetRef = useRef<string | null>(null);
   const [page, setPage] = useState(1);
   const [archived, setArchived] = useState(false);
-  const [archivingId, setArchivingId] = useState<number | string | null>(null);
+  const [pendingArchiveIds, setPendingArchiveIds] = useState<Set<string>>(
+    () => new Set()
+  );
   const [selectedItem, setSelectedItem] = useState<NotificationItem | null>(
     null
   );
 
   const { data, isLoading, isError, refetch, isFetching } = useQuery(
-    notificationKeys.list(archived, page),
-    () => service.getNotifications(page, NOTIFICATIONS_PAGE_SIZE, archived),
-    { keepPreviousData: true }
+    notificationKeys.inbox(),
+    service.getInbox
   );
 
-  const items = useMemo(() => data?.data ?? [], [data]);
-  const totalItems = data?.totalItems ?? items.length;
-  const totalPages = data?.totalPages ?? 1;
+  const { activeItems, archivedItems } = useMemo(
+    () => ({
+      activeItems: (data ?? []).filter(
+        (item) =>
+          (!item.isRead && !item.archived) ||
+          pendingArchiveIds.has(String(item.id))
+      ),
+      archivedItems: (data ?? []).filter(
+        (item) =>
+          (item.isRead || item.archived) &&
+          !pendingArchiveIds.has(String(item.id))
+      ),
+    }),
+    [data, pendingArchiveIds]
+  );
+  const visibleItems = archived ? archivedItems : activeItems;
+  const totalItems = visibleItems.length;
+  const totalPages = Math.max(
+    1,
+    Math.ceil(totalItems / NOTIFICATIONS_PAGE_SIZE)
+  );
+  const currentPage = Math.min(page, totalPages);
+  const items = visibleItems.slice(
+    (currentPage - 1) * NOTIFICATIONS_PAGE_SIZE,
+    currentPage * NOTIFICATIONS_PAGE_SIZE
+  );
+
+  useEffect(() => {
+    setPage(currentPage);
+  }, [currentPage]);
 
   const {
     data: notificationDetails,
@@ -379,29 +413,76 @@ export default function NotificationsListView() {
     { enabled: selectedItem !== null }
   );
 
-  const handleOpen = (item: NotificationItem) => {
-    setSelectedItem(item);
+  const handleOpen = useCallback(
+    (item: NotificationItem) => {
+      setSelectedItem(item);
 
-    if (!item.isRead) {
-      void service
-        .markRead(item.id)
-        .then(() => refetch())
-        .catch(() => undefined);
-    }
-  };
+      const inbox =
+        queryClient.getQueryData<NotificationItem[]>(
+          notificationKeys.inbox()
+        ) ?? [];
+      const targetItems = inbox.filter((notification) =>
+        item.isRead || item.archived
+          ? notification.isRead || notification.archived
+          : !notification.isRead && !notification.archived
+      );
+      const index = targetItems.findIndex(
+        (notification) => String(notification.id) === String(item.id)
+      );
+      setArchived(item.isRead || item.archived);
+      if (index >= 0) setPage(Math.floor(index / NOTIFICATIONS_PAGE_SIZE) + 1);
 
-  const handleArchive = async (id: number | string) => {
-    try {
-      setArchivingId(id);
-      await service.archive(id);
-      await refetch();
-      toast.success('اعلان به بایگانی منتقل شد');
-    } catch {
-      toast.error('بایگانی اعلان انجام نشد');
-    } finally {
-      setArchivingId(null);
+      if (!item.isRead) {
+        void service
+          .markRead(item.id)
+          .then(() => {
+            // Keep the row until the details close so the user can see it leave.
+            if (!item.archived) {
+              setPendingArchiveIds((previous) =>
+                new Set(previous).add(String(item.id))
+              );
+            }
+            queryClient.setQueryData<NotificationItem[]>(
+              notificationKeys.inbox(),
+              (previous) =>
+                previous?.map((notification) =>
+                  String(notification.id) === String(item.id)
+                    ? { ...notification, isRead: true }
+                    : notification
+                )
+            );
+            queryClient.invalidateQueries(notificationKeys.unreadCount());
+            queryClient.invalidateQueries(notificationKeys.recent());
+          })
+          .catch(() =>
+            toast.error('ثبت خوانده‌شدن اعلان انجام نشد؛ دوباره تلاش کنید')
+          );
+      }
+    },
+    [queryClient, service]
+  );
+
+  useEffect(() => {
+    if (!targetId) {
+      openedTargetRef.current = null;
+      return;
     }
-  };
+    if (openedTargetRef.current === targetId) return;
+    if (!data) return;
+    openedTargetRef.current = targetId;
+    const item = data?.find(
+      (notification) => String(notification.id) === targetId
+    );
+    handleOpen(
+      item ?? {
+        id: targetId,
+        title: 'اعلان',
+        message: '',
+        isRead: false,
+        archived: false,
+      }
+    );
+  }, [targetId, data, handleOpen]);
 
   if (isLoading && !data) {
     return (
@@ -498,11 +579,15 @@ export default function NotificationsListView() {
               >
                 <PiBell className="h-4 w-4" />
                 فعال
+                <span className="rounded-full bg-gray-500/10 px-2 py-0.5 text-xs tabular-nums">
+                  {activeItems.length.toLocaleString('fa-IR')}
+                </span>
               </button>
               <button
                 type="button"
                 onClick={() => {
                   setArchived(true);
+                  setPendingArchiveIds(new Set());
                   setPage(1);
                 }}
                 className={cn(
@@ -515,6 +600,9 @@ export default function NotificationsListView() {
               >
                 <PiArchive className="h-4 w-4" />
                 بایگانی‌شده
+                <span className="rounded-full bg-gray-500/10 px-2 py-0.5 text-xs tabular-nums">
+                  {archivedItems.length.toLocaleString('fa-IR')}
+                </span>
               </button>
             </div>
 
@@ -539,7 +627,7 @@ export default function NotificationsListView() {
                 image={<EmptyBoxIcon className="h-28 w-28" />}
                 text={
                   archived
-                    ? 'هنوز اعلانی را بایگانی نکرده‌اید'
+                    ? 'هنوز اعلان خوانده‌شده یا بایگانی‌شده‌ای ندارید'
                     : 'در حال حاضر اعلان فعالی ندارید'
                 }
                 textClassName="text-sm font-medium text-gray-500"
@@ -557,10 +645,19 @@ export default function NotificationsListView() {
                 <NotificationRow
                   key={String(item.id)}
                   item={item}
-                  archivedView={archived}
-                  isArchiving={archivingId === item.id}
                   onOpen={handleOpen}
-                  onArchive={handleArchive}
+                  isMovingToArchive={
+                    !archived &&
+                    selectedItem === null &&
+                    pendingArchiveIds.has(String(item.id))
+                  }
+                  onArchiveAnimationEnd={() => {
+                    setPendingArchiveIds((previous) => {
+                      const next = new Set(previous);
+                      next.delete(String(item.id));
+                      return next;
+                    });
+                  }}
                 />
               ))}
             </div>
@@ -606,7 +703,11 @@ export default function NotificationsListView() {
         item={notificationDetails ?? selectedItem}
         isLoading={isDetailsLoading}
         isError={isDetailsError}
-        onClose={() => setSelectedItem(null)}
+        onClose={() => {
+          setSelectedItem(null);
+          if (targetId)
+            router.replace(routes.notificationCenter, { scroll: false });
+        }}
         onRetry={() => refetchDetails()}
       />
     </>

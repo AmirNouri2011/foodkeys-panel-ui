@@ -6,6 +6,7 @@ import { NOTIFICATIONS_API_URL } from '@/config/api.config';
 import {
   NotificationItem,
   NotificationPage,
+  NOTIFICATIONS_DROPDOWN_SIZE,
   normalizeNotification,
 } from '@/config/notifications';
 
@@ -24,7 +25,9 @@ export const useNotificationService = () => {
     const res = await axios.get(`${NOTIFICATIONS_API_URL}/unread-count`);
     const payload = res?.data;
     const value =
-      typeof payload === 'number' ? payload : payload?.data ?? payload?.count ?? 0;
+      typeof payload === 'number'
+        ? payload
+        : payload?.data ?? payload?.count ?? 0;
     return Number(value) || 0;
   }, [axios]);
 
@@ -68,6 +71,51 @@ export const useNotificationService = () => {
     [axios]
   );
 
+  /** Fill the dropdown with active items, skipping older read notifications. */
+  const getActiveRecent = useCallback(async (): Promise<NotificationPage> => {
+    const first = await getNotifications(1, 100, false);
+    const active = first.data.filter((item) => !item.isRead && !item.archived);
+    for (
+      let page = 2;
+      page <= first.totalPages && active.length < NOTIFICATIONS_DROPDOWN_SIZE;
+      page += 1
+    ) {
+      const next = await getNotifications(page, 100, false);
+      active.push(
+        ...next.data.filter((item) => !item.isRead && !item.archived)
+      );
+    }
+    return { ...first, data: active.slice(0, NOTIFICATIONS_DROPDOWN_SIZE) };
+  }, [getNotifications]);
+
+  /** Complete inbox for read-based tabs and their total counts. */
+  const getInbox = useCallback(async (): Promise<NotificationItem[]> => {
+    // The API partitions by manual archive status, not read status. Load both
+    // partitions before regrouping so counts and pagination include older reads.
+    const loadPartition = async (archived: boolean) => {
+      const first = await getNotifications(1, 100, archived);
+      const items = [...first.data];
+      for (let page = 2; page <= first.totalPages; page += 1) {
+        const next = await getNotifications(page, 100, archived);
+        items.push(...next.data);
+      }
+      return archived
+        ? items.map((item) => ({ ...item, archived: true }))
+        : items;
+    };
+    const partitions = await Promise.all([
+      loadPartition(false),
+      loadPartition(true),
+    ]);
+    return Array.from(
+      new Map(partitions.flat().map((item) => [String(item.id), item])).values()
+    ).sort(
+      (a, b) =>
+        (Date.parse(b.createdAt ?? '') || 0) -
+        (Date.parse(a.createdAt ?? '') || 0)
+    );
+  }, [getNotifications]);
+
   /** Full detail — `GET /{id}`. */
   const getNotificationById = useCallback(
     async (id: number | string): Promise<NotificationItem> => {
@@ -98,6 +146,8 @@ export const useNotificationService = () => {
       getUnreadCount,
       getUpdates,
       getNotifications,
+      getInbox,
+      getActiveRecent,
       getNotificationById,
       markRead,
       archive,
@@ -106,6 +156,8 @@ export const useNotificationService = () => {
       getUnreadCount,
       getUpdates,
       getNotifications,
+      getInbox,
+      getActiveRecent,
       getNotificationById,
       markRead,
       archive,

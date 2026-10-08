@@ -41,8 +41,7 @@
 // import { Tooltip } from '@/components/ui/tooltip';
 // import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 // import { HiOutlineClipboardDocument } from 'react-icons/hi2';
-// import { AiTwotoneCloseCircle } from 'react-icons/ai';
-// const QuillEditor = dynamic(() => import('@/components/ui/quill-editor'), {
+// // const QuillEditor = dynamic(() => import('@/components/ui/quill-editor'), {
 //   ssr: false,
 // });
 //
@@ -429,7 +428,7 @@
 //             </div>
 //           )}
 //         </header>
-//         {showMessages ? (
+//         {showMessages && selectedTicket ? (
 //           <>
 //             <div className="[&_.simplebar-content]:grid [&_.simplebar-content]:gap-8 [&_.simplebar-content]:py-5">
 //               <SimpleBar className="@3xl:max-h-[calc(100dvh-29rem)] @4xl:max-h-[calc(100dvh-27rem)] @7xl:max-h-[calc(100dvh-26rem)]">
@@ -645,7 +644,6 @@ import {
   dataAtom,
   messageIdAtom,
   ticketInfoAtom,
-  ticketStatsAtom,
 } from '@/app/shared/support/inbox/message-list';
 import { SubmitHandler, Controller } from 'react-hook-form';
 import { Form } from '@/components/ui/form';
@@ -664,9 +662,9 @@ import { isUUID } from '@/utils/is-uuid';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 import { HiOutlineClipboardDocument } from 'react-icons/hi2';
-import { AiTwotoneCloseCircle } from 'react-icons/ai';
 import { useRouter } from 'next/navigation';
 import styles from './support-theme.module.css';
+import { uploadTicketMessageAttachments } from '@/services/ticket-attachments';
 const QuillEditor = dynamic(() => import('@/components/ui/quill-editor'), {
   ssr: false,
 });
@@ -687,30 +685,30 @@ const priorityOptions = [
     value: 'Low',
     name: 'Low',
     label: (
-        <div className="flex items-center gap-2 text-xs sm:text-sm">
-          <Badge renderAsDot color="success" />
-          <span>کم</span>
-        </div>
+      <div className="flex items-center gap-2 text-xs sm:text-sm">
+        <Badge renderAsDot color="success" />
+        <span>کم</span>
+      </div>
     ),
   },
   {
     value: 'Medium',
     name: 'Medium',
     label: (
-        <div className="flex items-center gap-2 text-xs sm:text-sm">
-          <Badge renderAsDot color="warning" />
-          <span>متوسط</span>
-        </div>
+      <div className="flex items-center gap-2 text-xs sm:text-sm">
+        <Badge renderAsDot color="warning" />
+        <span>متوسط</span>
+      </div>
     ),
   },
   {
     value: 'High',
     name: 'High',
     label: (
-        <div className="flex items-center gap-2 text-xs sm:text-sm">
-          <Badge renderAsDot color="danger" />
-          <span>بالا</span>
-        </div>
+      <div className="flex items-center gap-2 text-xs sm:text-sm">
+        <Badge renderAsDot color="danger" />
+        <span>بالا</span>
+      </div>
     ),
   },
 ];
@@ -720,46 +718,46 @@ const agents = [
     value: 'MANAGEMENT',
     name: 'مدیریت',
     label: (
-        <div className="flex items-center gap-2">
-          <Avatar
-              src="https://s3.amazonaws.com/redqteam.com/isomorphic-furyroad/public/avatars-blur/avatar-10.webp"
-              name="John Doe"
-              className="!h-6 !w-6 rounded-full"
-          />
-          <span className="whitespace-nowrap text-xs sm:text-sm">مدیریت</span>
-        </div>
+      <div className="flex items-center gap-2">
+        <Avatar
+          src="https://s3.amazonaws.com/redqteam.com/isomorphic-furyroad/public/avatars-blur/avatar-10.webp"
+          name="John Doe"
+          className="!h-6 !w-6 rounded-full"
+        />
+        <span className="whitespace-nowrap text-xs sm:text-sm">مدیریت</span>
+      </div>
     ),
   },
   {
     value: 'SUPPORT',
     name: 'پشتیبانی فنی',
     label: (
-        <div className="flex items-center gap-2">
-          <Avatar
-              src="https://s3.amazonaws.com/redqteam.com/isomorphic-furyroad/public/avatars-blur/avatar-13.webp"
-              name="John Doe"
-              className="!h-6 !w-6 rounded-full"
-          />
-          <span className="whitespace-nowrap text-xs sm:text-sm">
+      <div className="flex items-center gap-2">
+        <Avatar
+          src="https://s3.amazonaws.com/redqteam.com/isomorphic-furyroad/public/avatars-blur/avatar-13.webp"
+          name="John Doe"
+          className="!h-6 !w-6 rounded-full"
+        />
+        <span className="whitespace-nowrap text-xs sm:text-sm">
           پشتیبانی فنی
         </span>
-        </div>
+      </div>
     ),
   },
   {
     value: 'FINANCE',
     name: 'مالی و اعتباری',
     label: (
-        <div className="flex items-center gap-2">
-          <Avatar
-              src="https://s3.amazonaws.com/redqteam.com/isomorphic-furyroad/public/avatars-blur/avatar-04.webp"
-              name="John Doe"
-              className="!h-6 !w-6 rounded-full"
-          />
-          <span className="whitespace-nowrap text-xs sm:text-sm">
+      <div className="flex items-center gap-2">
+        <Avatar
+          src="https://s3.amazonaws.com/redqteam.com/isomorphic-furyroad/public/avatars-blur/avatar-04.webp"
+          name="John Doe"
+          className="!h-6 !w-6 rounded-full"
+        />
+        <span className="whitespace-nowrap text-xs sm:text-sm">
           مالی و اعتباری
         </span>
-        </div>
+      </div>
     ),
   },
 ];
@@ -824,7 +822,6 @@ export default function MessageDetails({ className }: { className?: string }) {
   const [priority, setPriority] = useState('');
   const messageId = useAtomValue(messageIdAtom);
   const storedTicket = useAtomValue(ticketInfoAtom);
-  const setTicketStats = useSetAtom(ticketStatsAtom);
   const router = useRouter();
   const scrollOnMessagesUpdateRef = useRef(false);
   const conversationScrollRef = useRef<HTMLDivElement>(null);
@@ -833,24 +830,32 @@ export default function MessageDetails({ className }: { className?: string }) {
     data?.find((t: any) => t.id === messageId) ||
     (storedTicket?.id === messageId ? storedTicket : undefined);
   const [agent, setAgent] = useState(
-      (selectedTicket &&
-          selectedTicket.department &&
-          agents.find((a) => a.value === selectedTicket?.department)) ||
+    (selectedTicket &&
+      selectedTicket.department &&
+      agents.find((a) => a.value === selectedTicket?.department)) ||
       null
   );
   const [contactStatus, setContactStatus] = useState(
-      (selectedTicket &&
-          selectedTicket.priority &&
-          contactStatuses.find((c) => c.value === selectedTicket?.priority)) ||
+    (selectedTicket &&
+      selectedTicket.priority &&
+      contactStatuses.find((c) => c.value === selectedTicket?.priority)) ||
       contactStatuses[0].value
   );
 
   const [messages, setMessages] = useState<any[]>([]);
+  const [messageError, setMessageError] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [attachments, setAttachments] = useState<File[]>([]);
   const [sendBtnLoading, setSendBtnLoading] = useState(false);
-  const [closeTicketLoading, setCloseTicketLoading] = useState(false);
+  const sendingRef = useRef(false);
+  const [pendingUploads, setPendingUploads] = useState<
+    {
+      ticketId: string;
+      messageId: string;
+      files: File[];
+    }[]
+  >([]);
   const [changed, setChanged] = useState<boolean>(false);
   const [formResetValues, setFormResetValues] = useState<FormValues | null>(
     null
@@ -859,59 +864,19 @@ export default function MessageDetails({ className }: { className?: string }) {
   const [showMessages, setShowMessages] = useState(false);
   const [state, copyToClipboard] = useCopyToClipboard();
   const [supportType, setSupportType] = useState<SupportType | string>(
-      supportTypes.Chat.value
+    supportTypes.Chat.value
   );
-
-  // Function to refresh ticket stats after closing a ticket
-  const refreshTicketStats = async () => {
-    try {
-      const response = await _axios.get(`/ticket/stats`);
-      if (response.data.status === 'SUCCESS') {
-        setTicketStats(response.data.data);
-      }
-    } catch (error) {
-      console.error('Error fetching ticket stats:', error);
-    }
-  };
-
-  // Handle closing a ticket
-  const handleCloseTicket = async () => {
-    if (!messageId) return;
-
-    try {
-      setCloseTicketLoading(true);
-      const response = await _axios.put(`/ticket/${messageId}/close`);
-
-      if (response.data.status === 'SUCCESS') {
-        toast.success('تیکت با موفقیت بسته شد');
-        // Update the ticket in the UI
-        if (selectedTicket) {
-          selectedTicket.status = "CLOSED";
-          selectedTicket.statusStr = "بسته";
-        }
-        // Refresh ticket stats to update counts
-        await refreshTicketStats();
-        // Force re-render
-        setChanged(!changed);
-        // Optionally refresh the page or redirect
-        // router.refresh();
-      } else {
-        throw new Error(response.data.message || 'خطا در بستن تیکت');
-      }
-    } catch (error) {
-      console.error('Error closing ticket:', error);
-      toast.error('خطا در بستن تیکت');
-    } finally {
-      setCloseTicketLoading(false);
-    }
-  };
 
   useEffect(() => {
     scrollOnMessagesUpdateRef.current = true;
   }, [messageId]);
 
   useEffect(() => {
-    if (!showMessages || messages.length === 0 || !scrollOnMessagesUpdateRef.current) {
+    if (
+      !showMessages ||
+      messages.length === 0 ||
+      !scrollOnMessagesUpdateRef.current
+    ) {
       return;
     }
 
@@ -927,16 +892,38 @@ export default function MessageDetails({ className }: { className?: string }) {
   }, [messages, showMessages]);
 
   useEffect(() => {
+    let cancelled = false;
+    setShowMessages(false);
+    setMessageError(false);
+    setMessages([]);
     const fetchTicketMessages = async () => {
       if (!messageId) return;
       try {
         const response = await _axios.get(`/ticket/${messageId}/messages`);
+        if (cancelled) return;
+        if (response.data.status !== 'SUCCESS')
+          throw new Error('Message fetch failed');
         if (response.data.status === 'SUCCESS') {
           setMessages(response.data.data);
+          const ticketMessages = response.data.data;
+          setData((tickets: any[]) =>
+            tickets.map((ticket: any) =>
+              ticket.id === messageId
+                ? {
+                    ...ticket,
+                    lastMessageFromEmployee:
+                      ticketMessages[ticketMessages.length - 1]
+                        ?.fromEmployee === true,
+                  }
+                : ticket
+            )
+          );
           setShowMessages(true);
           // setTotalItems(response.data.pagination.totalElements);
         }
       } catch (error) {
+        if (cancelled) return;
+        setMessageError(true);
         setShowMessages(false);
         console.error('Error fetching ticket data:', error);
         toast.error('خطا در دریافت تیکت‌ها');
@@ -944,7 +931,10 @@ export default function MessageDetails({ className }: { className?: string }) {
       return () => setShowMessages(false);
     };
     if (isUUID(messageId)) fetchTicketMessages();
-  }, [messageId, changed, _axios]);
+    return () => {
+      cancelled = true;
+    };
+  }, [messageId, changed, _axios, setData]);
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
@@ -978,35 +968,73 @@ export default function MessageDetails({ className }: { className?: string }) {
   }, []);
 
   const onSubmit: SubmitHandler<FormValues> = async (formData) => {
-    console.log(formData);
+    if (sendingRef.current) return;
+    sendingRef.current = true;
     setSendBtnLoading(true);
+    const ticketId = messageId;
+    const files = [...attachments];
     try {
-      const formDataPayload = new FormData();
-      formDataPayload.append('messageContent', formData.message);
-      attachments.forEach((file, index) => {
-        formDataPayload.append(`attachments`, file);
-      });
-
       const response = await _axios.post(
-          `/ticket/${messageId}/messages`,
-          formDataPayload
+        `/ticket/${ticketId}/messages`,
+        { messageContent: formData.message },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+        }
       );
 
       if (response.data.status === 'SUCCESS') {
-        toast.success('پیام با موفقیت ارسال شد');
         setAttachments([]);
         setFormResetValues({ message: '' });
         setData((prev: any[]) =>
           prev.map((ticket: any) =>
-            ticket.id === messageId
+            ticket.id === ticketId
               ? {
                   ...ticket,
                   status: 'PENDING',
                   statusStr: 'در انتظار پاسخ',
+                  lastMessageFromEmployee: false,
                 }
               : ticket
           )
         );
+        if (files.length > 0) {
+          const created = response.data.data;
+          const createdMessageId =
+            typeof created === 'string'
+              ? created
+              : created?.id ?? created?.messageId ?? created?.ticketMessageId;
+          if (!isUUID(createdMessageId)) {
+            setPendingUploads((previous) => [
+              ...previous,
+              { ticketId, messageId: '', files },
+            ]);
+            toast.error(
+              'پیام ثبت شد، اما شناسه پیام برای بارگذاری فایل دریافت نشد.'
+            );
+          } else {
+            const failed = await uploadTicketMessageAttachments(
+              _axios,
+              createdMessageId,
+              files
+            );
+            if (failed.length > 0) {
+              setPendingUploads((previous) => [
+                ...previous,
+                { ticketId, messageId: createdMessageId, files: failed },
+              ]);
+              toast.error(
+                'پیام ثبت شد؛ بارگذاری بعضی فایل‌ها انجام نشد. دوباره تلاش کنید.'
+              );
+            } else {
+              toast.success('پیام و فایل‌ها با موفقیت ارسال شدند');
+            }
+          }
+        } else {
+          toast.success('پیام با موفقیت ارسال شد');
+        }
         scrollOnMessagesUpdateRef.current = true;
         setChanged((current) => !current);
       } else {
@@ -1016,6 +1044,35 @@ export default function MessageDetails({ className }: { className?: string }) {
       console.error('Error sending message:', error);
       toast.error('خطا در ارسال پیام');
     } finally {
+      sendingRef.current = false;
+      setSendBtnLoading(false);
+    }
+  };
+  const retryAttachments = async (pending: (typeof pendingUploads)[number]) => {
+    if (sendingRef.current || !pending.messageId) return;
+    sendingRef.current = true;
+    setSendBtnLoading(true);
+    try {
+      const failed = await uploadTicketMessageAttachments(
+        _axios,
+        pending.messageId,
+        pending.files
+      );
+      setPendingUploads((previous) =>
+        previous.flatMap((item) =>
+          item === pending
+            ? failed.length
+              ? [{ ...item, files: failed }]
+              : []
+            : [item]
+        )
+      );
+      if (failed.length)
+        toast.error('بارگذاری بعضی فایل‌ها انجام نشد. دوباره تلاش کنید.');
+      else toast.success('فایل‌ها با موفقیت پیوست شدند');
+      setChanged((current) => !current);
+    } finally {
+      sendingRef.current = false;
       setSendBtnLoading(false);
     }
   };
@@ -1031,303 +1088,365 @@ export default function MessageDetails({ className }: { className?: string }) {
 
   if (isLoading) {
     return (
-        <div
-            className={cn(
-                '!grid h-full min-h-[128px] flex-grow place-content-center items-center justify-center',
-                className
-            )}
-        >
-          <Spinner size="xl" />
-        </div>
+      <div
+        className={cn(
+          '!grid h-full min-h-[128px] flex-grow place-content-center items-center justify-center',
+          className
+        )}
+      >
+        <Spinner size="xl" />
+      </div>
     );
   }
 
   if (!messages) {
     return (
-        <div
-            className={cn(
-                '!grid h-full min-h-[128px] flex-grow place-content-center items-center justify-center',
-                className
-            )}
-        >
-          <Empty
-              text="No conversations selected"
-              textClassName="mt-4 text-base text-gray-500"
-          />
-        </div>
+      <div
+        className={cn(
+          '!grid h-full min-h-[128px] flex-grow place-content-center items-center justify-center',
+          className
+        )}
+      >
+        <Empty
+          text="No conversations selected"
+          textClassName="mt-4 text-base text-gray-500"
+        />
+      </div>
     );
   }
 
   return (
-      <div
-          className={cn(
-              'relative overflow-hidden rounded-2xl border border-gray-200 bg-gray-0 shadow-sm dark:bg-gray-50',
-              className
-          )}
-      >
-        <div>
-          <header className="flex flex-col justify-between gap-3 border-b border-gray-100 bg-gray-50/60 px-4 py-4 sm:px-6 2xl:flex-row 2xl:items-center">
+    <div
+      className={cn(
+        'relative overflow-hidden rounded-2xl border border-gray-200 bg-gray-0 shadow-sm dark:bg-gray-50',
+        className
+      )}
+    >
+      <div>
+        {selectedTicket && (
+          <header className={styles.ticketHeader}>
             <div className="flex min-w-0 items-start gap-3">
               <span className="grid h-11 w-11 flex-none place-items-center rounded-xl bg-primary text-white shadow-sm">
                 <PiChatCircleDots className="h-5 w-5" />
               </span>
               {selectedTicket && (
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Text tag="h4" className="font-bold text-gray-900">
-                        {selectedTicket.subject}
-                      </Text>
-                      <Badge
-                          variant="outline"
-                          size="sm"
-                          className={cn(
-                            'w-auto min-w-min rounded-full px-2.5 py-1 text-[11px]',
-                            ticketStatusStyle(selectedTicket.status)
-                          )}
-                      >
-                        {selectedTicket?.statusStr || 'در انتظار پاسخ'}
-                      </Badge>
-                    </div>
-                    <span className="mt-1.5 flex items-center gap-1 text-xs text-gray-500">
-                      <PiHash className="h-3.5 w-3.5" />
-                      <span>{selectedTicket?.ticketRefId}</span>
-                      <Tooltip
-                          size="sm"
-                          rounded="sm"
-                          placement="top"
-                          content={() => (isCopied ? 'کپی شده' : 'کپی شود')}
-                      >
-                    <button
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Text
+                      tag="h4"
+                      className="break-words font-bold text-gray-900"
+                      dir="auto"
+                    >
+                      {selectedTicket.subject}
+                    </Text>
+                    <Badge
+                      variant="outline"
+                      size="sm"
+                      className={cn(
+                        'w-auto min-w-min rounded-full px-2.5 py-1 text-[11px]',
+                        ticketStatusStyle(selectedTicket.status)
+                      )}
+                    >
+                      {selectedTicket?.statusStr || 'در انتظار پاسخ'}
+                    </Badge>
+                  </div>
+                  <span className="mt-1.5 flex items-center gap-1 text-xs text-gray-500">
+                    <PiHash className="h-3.5 w-3.5" />
+                    <bdi>{selectedTicket?.ticketRefId}</bdi>
+                    <Tooltip
+                      size="sm"
+                      rounded="sm"
+                      placement="top"
+                      content={() => (isCopied ? 'کپی شده' : 'کپی شود')}
+                    >
+                      <button
                         type="button"
                         aria-label="کپی شماره تیکت"
                         onClick={() =>
-                            handleCopyToClipboard(selectedTicket?.ticketRefId)
+                          handleCopyToClipboard(selectedTicket?.ticketRefId)
                         }
                         className="rounded-md p-1 transition-colors hover:bg-gray-200"
-                    >
-                      {isCopied ? (
+                      >
+                        {isCopied ? (
                           <PiCheck className="h-4 w-4 text-green-dark" />
-                      ) : (
+                        ) : (
                           <HiOutlineClipboardDocument className="h-4 w-4" />
-                      )}
-                    </button>
-                  </Tooltip>
-                </span>
-                  </div>
+                        )}
+                      </button>
+                    </Tooltip>
+                  </span>
+                </div>
               )}
             </div>
 
-            {selectedTicket && (
-                <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                  <div className="flex flex-wrap gap-2 text-xs text-gray-600">
-                    <span className="rounded-lg border border-gray-200 bg-gray-0 px-3 py-2">
-                      {departmentNames[selectedTicket.department] ||
-                        selectedTicket.departmentStr ||
-                        'پشتیبانی'}
-                    </span>
-                    <span className="rounded-lg border border-gray-200 bg-gray-0 px-3 py-2">
-                      {categoryNames[selectedTicket.category] ||
-                        selectedTicket.categoryStr ||
-                        'عمومی'}
-                    </span>
-                    <span className="rounded-lg border border-gray-200 bg-gray-0 px-3 py-2">
-                      {priorityNames[selectedTicket.priority] ||
-                        selectedTicket.priorityStr ||
-                        'اولویت معمولی'}
-                    </span>
+            <dl className={styles.ticketMetadata} aria-label="جزئیات تیکت">
+              <div>
+                <dt>واحد پاسخ‌گو</dt>
+                <dd>
+                  {departmentNames[selectedTicket.department] ||
+                    selectedTicket.departmentStr ||
+                    'پشتیبانی'}
+                </dd>
+              </div>
+              <div>
+                <dt>دسته‌بندی</dt>
+                <dd>
+                  {categoryNames[selectedTicket.category] ||
+                    selectedTicket.categoryStr ||
+                    'عمومی'}
+                </dd>
+              </div>
+              <div>
+                <dt>اولویت</dt>
+                <dd>
+                  {selectedTicket.priorityStr ||
+                    priorityNames[selectedTicket.priority]?.replace(
+                      'اولویت ',
+                      ''
+                    ) ||
+                    'معمولی'}
+                </dd>
+              </div>
+            </dl>
+          </header>
+        )}
+        {showMessages ? (
+          <>
+            <div
+              className={`${styles.conversation} [&_.simplebar-content]:py-5`}
+            >
+              <SimpleBar
+                scrollableNodeProps={{
+                  ref: conversationScrollRef,
+                  tabIndex: 0,
+                  'aria-label': 'پیام‌های تیکت',
+                }}
+                className="max-h-[50vh] min-h-[300px] xl:h-[calc(100dvh-32rem)] xl:max-h-[600px] xl:min-h-[360px] [&_.simplebar-track.simplebar-vertical]:bottom-3 [&_.simplebar-track.simplebar-vertical]:top-3"
+                style={
+                  {
+                    '--scrollbar-width': '8px',
+                    '--scrollbar-thumb-bg': 'rgb(var(--gray-300))',
+                    '--scrollbar-thumb-hover-bg': 'rgb(var(--gray-400))',
+                    '--scrollbar-track-bg': 'rgb(var(--gray-100))',
+                  } as React.CSSProperties
+                }
+              >
+                <MessageBody messages={messages} />
+              </SimpleBar>
+            </div>
+
+            {selectedTicket && selectedTicket.status !== 'CLOSED' && (
+              <section className="border-t border-gray-100 bg-gray-50/70 px-4 py-4 sm:px-6 sm:py-5">
+                <div className="mb-2">
+                  <div>
+                    <Text
+                      tag="h4"
+                      className="text-sm font-semibold text-gray-900"
+                    >
+                      پاسخ شما
+                    </Text>
                   </div>
-                  {selectedTicket.status !== "CLOSED" && (
-                      <Button
-                          variant="outline"
-                          color="danger"
+                </div>
+
+                <Form<FormValues>
+                  onSubmit={onSubmit}
+                  validationSchema={FormSchema}
+                  resetValues={formResetValues}
+                >
+                  {({ control, watch, formState: { errors } }) => (
+                    <>
+                      <div className="overflow-hidden rounded-xl border border-gray-200 bg-gray-0 shadow-sm focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/10">
+                        <Controller
+                          control={control}
+                          name="message"
+                          render={({ field: { onChange, value } }) => (
+                            <QuillEditor
+                              value={value}
+                              onChange={onChange}
+                              placeholder="پاسخ خود را بنویسید…"
+                              modules={{
+                                toolbar: [
+                                  ['bold', 'italic'],
+                                  [{ list: 'bullet' }],
+                                  ['link'],
+                                ],
+                              }}
+                              className="border-0 bg-gray-0 [&>.ql-container]:border-0 [&>.ql-container_.ql-editor]:max-h-[160px] [&>.ql-container_.ql-editor]:min-h-[90px] [&>.ql-toolbar]:overflow-x-auto [&>.ql-toolbar]:whitespace-nowrap [&>.ql-toolbar]:border-0 [&>.ql-toolbar]:border-b [&>.ql-toolbar]:border-gray-100"
+                            />
+                          )}
+                        />
+                      </div>
+                      {errors.message?.message && (
+                        <p className="mt-1.5 text-xs text-red-light">
+                          {errors.message.message}
+                        </p>
+                      )}
+
+                      {attachments.length > 0 && (
+                        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                          {attachments.map((file, index) => (
+                            <div
+                              key={`${file.name}-${index}`}
+                              className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-0 p-2.5"
+                            >
+                              <span className="grid h-8 w-8 flex-none place-items-center rounded-lg bg-primary-lighter text-primary">
+                                <PiPaperclipLight className="h-4 w-4" />
+                              </span>
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate text-xs font-medium text-gray-700">
+                                  {file.name}
+                                </span>
+                                <span className="mt-0.5 block text-[10px] text-gray-400">
+                                  {(file.size / (1024 * 1024)).toLocaleString(
+                                    'fa-IR',
+                                    {
+                                      maximumFractionDigits: 1,
+                                    }
+                                  )}{' '}
+                                  مگابایت
+                                </span>
+                              </span>
+                              <button
+                                type="button"
+                                disabled={sendBtnLoading}
+                                aria-label={`حذف ${file.name}`}
+                                onClick={() => removeAttachment(index)}
+                                className="grid h-7 w-7 flex-none place-items-center rounded-lg text-gray-400 transition-colors hover:bg-red-lighter hover:text-red"
+                              >
+                                <PiXCircle className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="mt-3 flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="gap-2 rounded-lg"
+                            onClick={() =>
+                              document
+                                .getElementById(
+                                  'ticket-reply-attachment-upload'
+                                )
+                                ?.click()
+                            }
+                          >
+                            <PiPaperclipLight className="h-4 w-4" />
+                            افزودن فایل
+                          </Button>
+                          <input
+                            type="file"
+                            multiple
+                            accept=".png,.jpg,.jpeg,.pdf,.docx,.xlsx,.txt,.zip,.rar"
+                            onChange={handleFileUpload}
+                            className="hidden"
+                            id="ticket-reply-attachment-upload"
+                            disabled={sendBtnLoading}
+                          />
+                          <span className="inline-flex items-center gap-1 text-[10px] text-gray-400">
+                            <PiInfo className="h-3 w-3" />
+                            {attachments.length.toLocaleString('fa-IR')} از ۳
+                            فایل؛ هر فایل تا ۸ مگابایت
+                          </span>
+                        </div>
+                        <Button
+                          isLoading={sendBtnLoading}
+                          type="submit"
+                          size="sm"
+                          color="primary"
+                          disabled={!watch('message')?.trim() || sendBtnLoading}
+                          className="gap-2 rounded-lg px-5"
+                        >
+                          {!sendBtnLoading && (
+                            <PiPaperPlaneRightFill className="h-4 w-4 rotate-180" />
+                          )}
+                          ارسال پاسخ
+                        </Button>
+                      </div>
+                    </>
+                  )}
+                </Form>
+                {pendingUploads
+                  .filter((pending) => pending.ticketId === messageId)
+                  .map((pending, index) => (
+                    <div
+                      key={`${pending.messageId}-${index}`}
+                      role="alert"
+                      className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-orange/30 bg-orange-lighter p-3 text-xs text-orange-dark"
+                    >
+                      <span>
+                        پیام ثبت شده؛{' '}
+                        {pending.files.map((file) => file.name).join('، ')}{' '}
+                        پیوست نشده است.
+                        {!pending.messageId &&
+                          ' شناسه پیام در پاسخ سرور موجود نیست.'}
+                      </span>
+                      {pending.messageId && (
+                        <Button
                           type="button"
                           size="sm"
-                          className="group flex items-center gap-1 rounded-lg"
-                          isLoading={closeTicketLoading}
-                          onClick={handleCloseTicket}
-                      >
-                        بستن تیکت
-                        {!closeTicketLoading && (
-                            <AiTwotoneCloseCircle
-                                className="text-red-light transition-all group-hover:scale-110 group-active:scale-95"
-                                size={20}
-                            />
-                        )}
-                      </Button>
-                  )}
-                </div>
-            )}
-          </header>
-          {showMessages ? (
-              <>
-                <div className={`${styles.conversation} [&_.simplebar-content]:py-5`}>
-                  <SimpleBar 
-                    scrollableNodeProps={{ ref: conversationScrollRef, tabIndex: 0, 'aria-label': 'پیام‌های تیکت' }}
-                    className="min-h-[300px] max-h-[50vh] xl:h-[calc(100dvh-32rem)] xl:min-h-[360px] xl:max-h-[600px] [&_.simplebar-track.simplebar-vertical]:bottom-3 [&_.simplebar-track.simplebar-vertical]:top-3"
-                    style={{
-                      '--scrollbar-width': '8px',
-                      '--scrollbar-thumb-bg': 'rgb(var(--gray-300))',
-                      '--scrollbar-thumb-hover-bg': 'rgb(var(--gray-400))',
-                      '--scrollbar-track-bg': 'rgb(var(--gray-100))',
-                    } as React.CSSProperties}
-                  >
-                    <MessageBody messages={messages} />
-                  </SimpleBar>
-                </div>
-
-                {selectedTicket && selectedTicket.status !== "CLOSED" && (
-                  <section className="border-t border-gray-100 bg-gray-50/70 px-4 py-4 sm:px-6 sm:py-5">
-                    <div className="mb-3">
-                      <div>
-                        <Text tag="h4" className="font-bold text-gray-900">
-                          پاسخ به تیکت
-                        </Text>
-                        <p className="mt-1 text-xs text-gray-500">
-                          پاسخ شما در ادامه همین گفت‌وگو ثبت می‌شود.
-                        </p>
-                      </div>
-                    </div>
-
-                    <Form<FormValues>
-                      onSubmit={onSubmit}
-                      validationSchema={FormSchema}
-                      resetValues={formResetValues}
-                    >
-                      {({ control, watch, formState: { errors } }) => (
-                        <>
-                          <div className="overflow-hidden rounded-xl border border-gray-200 bg-gray-0 shadow-sm focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/10">
-                            <Controller
-                              control={control}
-                              name="message"
-                              render={({ field: { onChange, value } }) => (
-                                <QuillEditor
-                                  value={value}
-                                  onChange={onChange}
-                                  className="border-0 bg-gray-0 [&>.ql-container]:border-0 [&>.ql-container_.ql-editor]:min-h-[90px] [&>.ql-container_.ql-editor]:max-h-[160px] [&>.ql-toolbar]:overflow-x-auto [&>.ql-toolbar]:border-0 [&>.ql-toolbar]:border-b [&>.ql-toolbar]:border-gray-100 [&>.ql-toolbar]:whitespace-nowrap"
-                                />
-                              )}
-                            />
-                          </div>
-                          {errors.message?.message && (
-                            <p className="mt-1.5 text-xs text-red-light">
-                              {errors.message.message}
-                            </p>
-                          )}
-
-                          {attachments.length > 0 && (
-                            <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                              {attachments.map((file, index) => (
-                                <div
-                                  key={`${file.name}-${index}`}
-                                  className="flex items-center gap-2 rounded-xl border border-gray-200 bg-gray-0 p-2.5"
-                                >
-                                  <span className="grid h-8 w-8 flex-none place-items-center rounded-lg bg-primary-lighter text-primary">
-                                    <PiPaperclipLight className="h-4 w-4" />
-                                  </span>
-                                  <span className="min-w-0 flex-1">
-                                    <span className="block truncate text-xs font-medium text-gray-700">
-                                      {file.name}
-                                    </span>
-                                    <span className="mt-0.5 block text-[10px] text-gray-400">
-                                      {(file.size / (1024 * 1024)).toLocaleString('fa-IR', {
-                                        maximumFractionDigits: 1,
-                                      })}{' '}
-                                      مگابایت
-                                    </span>
-                                  </span>
-                                  <button
-                                    type="button"
-                                    aria-label={`حذف ${file.name}`}
-                                    onClick={() => removeAttachment(index)}
-                                    className="grid h-7 w-7 flex-none place-items-center rounded-lg text-gray-400 transition-colors hover:bg-red-lighter hover:text-red"
-                                  >
-                                    <PiXCircle className="h-4 w-4" />
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-
-                          <div className="mt-3 flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
-                            <div className="flex items-center gap-2">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                className="gap-2 rounded-lg"
-                                onClick={() =>
-                                  document
-                                    .getElementById('ticket-reply-attachment-upload')
-                                    ?.click()
-                                }
-                              >
-                                <PiPaperclipLight className="h-4 w-4" />
-                                افزودن فایل
-                              </Button>
-                              <input
-                                type="file"
-                                multiple
-                                accept=".png,.jpg,.jpeg,.pdf,.docx,.xlsx,.txt,.zip,.rar"
-                                onChange={handleFileUpload}
-                                className="hidden"
-                                id="ticket-reply-attachment-upload"
-                              />
-                              <span className="inline-flex items-center gap-1 text-[10px] text-gray-400">
-                                <PiInfo className="h-3 w-3" />
-                                {attachments.length.toLocaleString('fa-IR')} از ۳ فایل؛ هر فایل تا ۸ مگابایت
-                              </span>
-                            </div>
-                            <Button
-                              isLoading={sendBtnLoading}
-                              type="submit"
-                              size="sm"
-                              color="primary"
-                              disabled={!watch('message')?.trim() || sendBtnLoading}
-                              className="gap-2 rounded-lg px-5"
-                            >
-                              {!sendBtnLoading && (
-                                <PiPaperPlaneRightFill className="h-4 w-4 rotate-180" />
-                              )}
-                              ارسال پاسخ
-                            </Button>
-                          </div>
-                        </>
+                          variant="outline"
+                          disabled={sendBtnLoading}
+                          onClick={() => retryAttachments(pending)}
+                        >
+                          تلاش مجدد برای پیوست فایل
+                        </Button>
                       )}
-                    </Form>
-                  </section>
-                )}
-              </>
-          ) : (
-              <div className="grid min-h-[430px] place-items-center p-8 text-center">
-                <div>
-                  <span className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-primary-lighter text-primary">
-                    <PiChatCircleDots className="h-8 w-8" />
-                  </span>
-                  <Text tag="h4" className="mt-4 font-bold text-gray-800">
-                    یک تیکت را انتخاب کنید
-                  </Text>
-                  <p className="mt-2 text-sm leading-6 text-gray-500">
-                    گفتگو و جزئیات درخواست انتخاب‌شده اینجا نمایش داده می‌شود.
-                  </p>
-                </div>
-              </div>
-          )}
-        </div>
+                    </div>
+                  ))}
+              </section>
+            )}
+          </>
+        ) : (
+          <div className="grid min-h-[430px] place-items-center p-8 text-center">
+            <div>
+              <span className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-primary-lighter text-primary">
+                <PiChatCircleDots className="h-8 w-8" />
+              </span>
+              <Text tag="h4" className="mt-4 font-bold text-gray-800">
+                {selectedTicket
+                  ? messageError
+                    ? 'دریافت گفت‌وگو انجام نشد'
+                    : 'در حال دریافت گفت‌وگو…'
+                  : 'یک تیکت را انتخاب کنید'}
+              </Text>
+              <p className="mt-2 text-sm leading-6 text-gray-500">
+                {selectedTicket
+                  ? 'پیام‌های این درخواست در همین بخش نمایش داده می‌شوند.'
+                  : 'برای مشاهده پیام‌ها، تیکت موردنظر را از فهرست انتخاب کنید.'}
+              </p>
+              {messageError && (
+                <Button
+                  className="mt-4"
+                  variant="outline"
+                  onClick={() => setChanged((value) => !value)}
+                >
+                  تلاش مجدد
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
+    </div>
   );
 }
 
 export function DotSeparator({ ...props }) {
   return (
-      <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="4"
-          height="4"
-          viewBox="0 0 4 4"
-          fill="none"
-          {...props}
-      >
-        <circle cx="2" cy="2" r="2" fill="#D9D9D9" />
-      </svg>
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="4"
+      height="4"
+      viewBox="0 0 4 4"
+      fill="none"
+      {...props}
+    >
+      <circle cx="2" cy="2" r="2" fill="#D9D9D9" />
+    </svg>
   );
 }

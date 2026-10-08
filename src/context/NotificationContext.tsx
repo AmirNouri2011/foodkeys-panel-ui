@@ -4,6 +4,7 @@ import React, {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -46,11 +47,13 @@ interface NotificationContextValue {
   archiveItem: (id: number | string) => Promise<void>;
   /** Navigate to the notifications list, invalidating cache only when needed. */
   goToNotificationCenter: () => void;
-  /** Open a notification: mark read (optimistic) then go to the notifications page. */
+  /** Navigate directly to this notification's details. */
   openNotification: (item: NotificationItem) => void;
 }
 
-const NotificationContext = createContext<NotificationContextValue | null>(null);
+const NotificationContext = createContext<NotificationContextValue | null>(
+  null
+);
 
 /* -------------------------------------------------------------------------- */
 /* localStorage helpers (safe for SSR / disabled storage)                     */
@@ -89,7 +92,10 @@ function readCachedRecent(): NotificationPage | undefined {
 function writeCachedRecent(page: NotificationPage) {
   try {
     if (typeof window !== 'undefined') {
-      window.localStorage.setItem(NOTIFICATIONS_CACHE_KEY, JSON.stringify(page));
+      window.localStorage.setItem(
+        NOTIFICATIONS_CACHE_KEY,
+        JSON.stringify(page)
+      );
     }
   } catch {
     /* ignore */
@@ -137,9 +143,8 @@ function NotificationInner({ children }: { children: React.ReactNode }) {
         });
       }
       if (wasUnread) {
-        queryClient.setQueryData<number>(
-          notificationKeys.unreadCount(),
-          (c) => Math.max(0, (Number(c) || 0) - 1)
+        queryClient.setQueryData<number>(notificationKeys.unreadCount(), (c) =>
+          Math.max(0, (Number(c) || 0) - 1)
         );
       }
 
@@ -167,10 +172,14 @@ function NotificationInner({ children }: { children: React.ReactNode }) {
 
   const openNotification = useCallback(
     (item: NotificationItem) => {
-      if (item?.id != null) void markAsRead(item.id);
-      goToNotificationCenter();
+      if (item?.id == null) return;
+      router.push(
+        `${routes.notificationCenter}?notification=${encodeURIComponent(
+          String(item.id)
+        )}`
+      );
     },
-    [markAsRead, goToNotificationCenter]
+    [router]
   );
 
   /** Show a toast card for a freshly delivered notification. */
@@ -226,14 +235,39 @@ function NotificationInner({ children }: { children: React.ReactNode }) {
   /* ---------------------------------------------------------------------- */
   const recentQuery = useQuery(
     notificationKeys.recent(),
-    () => service.getNotifications(1, NOTIFICATIONS_DROPDOWN_SIZE, false),
+    service.getActiveRecent,
     {
       enabled,
       staleTime: 10 * 60 * 1000,
+      refetchInterval: NOTIFICATIONS_POLL_INTERVAL_MS,
       initialData: readCachedRecent,
       onSuccess: (page) => writeCachedRecent(page),
     }
   );
+
+  // Observe the page's cache as well, so successful reads disappear immediately
+  // even when a server refetch still returns the old asynchronous read status.
+  const inboxQuery = useQuery(notificationKeys.inbox(), service.getInbox, {
+    enabled: false,
+  });
+  const recentItems = useMemo(() => {
+    const inboxById = new Map(
+      (inboxQuery.data ?? []).map((item) => [String(item.id), item])
+    );
+    return (recentQuery.data?.data ?? [])
+      .filter((item) => {
+        const latest = inboxById.get(String(item.id));
+        return (
+          !item.isRead && !item.archived && !latest?.isRead && !latest?.archived
+        );
+      })
+      .slice(0, NOTIFICATIONS_DROPDOWN_SIZE);
+  }, [recentQuery.data, inboxQuery.data]);
+
+  useEffect(() => {
+    if (recentQuery.data)
+      writeCachedRecent({ ...recentQuery.data, data: recentItems });
+  }, [recentQuery.data, recentItems]);
 
   /* ---------------------------------------------------------------------- */
   /* Updates poll — drives toasts + cache invalidation                       */
@@ -244,7 +278,9 @@ function NotificationInner({ children }: { children: React.ReactNode }) {
       const t = n.createdAt ? Date.parse(n.createdAt) : NaN;
       if (!Number.isNaN(t) && t > newest) newest = t;
     });
-    const next = newest ? new Date(newest).toISOString() : new Date().toISOString();
+    const next = newest
+      ? new Date(newest).toISOString()
+      : new Date().toISOString();
     sinceRef.current = next;
     writeLastSeen(next);
   }, []);
@@ -311,12 +347,38 @@ function NotificationInner({ children }: { children: React.ReactNode }) {
         data: prev.data.map((n) => ({ ...n, isRead: true })),
       });
     }
-    queryClient.setQueryData<number>(notificationKeys.unreadCount(), 0);
+    queryClient.setQueryData<number>(notificationKeys.unreadCount(), (count) =>
+      Math.max(0, (Number(count) || 0) - unread.length)
+    );
 
-    await Promise.allSettled(unread.map((n) => service.markRead(n.id)));
+    const results = await Promise.allSettled(
+      unread.map((n) => service.markRead(n.id))
+    );
+    const readIds = new Set(
+      unread
+        .filter((_, index) => results[index].status === 'fulfilled')
+        .map((item) => String(item.id))
+    );
+    queryClient.setQueryData<NotificationItem[]>(
+      notificationKeys.inbox(),
+      (items) =>
+        items?.map((item) =>
+          readIds.has(String(item.id)) ? { ...item, isRead: true } : item
+        )
+    );
+    if (prev) {
+      queryClient.setQueryData<NotificationPage>(recentKey, {
+        ...prev,
+        data: prev.data.map((item) =>
+          readIds.has(String(item.id)) ? { ...item, isRead: true } : item
+        ),
+      });
+    }
+    if (readIds.size < unread.length)
+      toast.error('خوانده‌شدن بعضی اعلان‌ها ثبت نشد؛ دوباره تلاش کنید');
 
     queryClient.invalidateQueries(notificationKeys.unreadCount());
-    queryClient.invalidateQueries(notificationKeys.lists());
+    queryClient.invalidateQueries(notificationKeys.recent());
   }, [queryClient, service]);
 
   const archiveItem = useCallback(
@@ -350,7 +412,7 @@ function NotificationInner({ children }: { children: React.ReactNode }) {
   const value = useMemo<NotificationContextValue>(
     () => ({
       unreadCount: Number(unreadCountQuery.data) || 0,
-      recentItems: recentQuery.data?.data ?? [],
+      recentItems,
       isLoading: recentQuery.isLoading || unreadCountQuery.isLoading,
       refresh,
       markAsRead,
@@ -362,7 +424,7 @@ function NotificationInner({ children }: { children: React.ReactNode }) {
     [
       unreadCountQuery.data,
       unreadCountQuery.isLoading,
-      recentQuery.data,
+      recentItems,
       recentQuery.isLoading,
       refresh,
       markAsRead,
@@ -412,7 +474,9 @@ export function NotificationProvider({
 export function useNotifications(): NotificationContextValue {
   const ctx = useContext(NotificationContext);
   if (!ctx) {
-    throw new Error('useNotifications must be used within a NotificationProvider');
+    throw new Error(
+      'useNotifications must be used within a NotificationProvider'
+    );
   }
   return ctx;
 }

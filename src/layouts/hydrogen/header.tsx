@@ -4,9 +4,8 @@ import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { ActionIcon } from '@/components/ui/action-icon';
 import RingBellSolidIcon from '@/components/icons/ring-bell-solid';
-import SearchWidget from '@/components/search/search';
 import NotificationDropdown from '@/layouts/notification-dropdown';
-import ProfileMenu from '@/layouts/profile-menu';
+import { useAuth } from '@/context/AuthContext';
 import SettingsButton from '@/components/settings/settings-button';
 import { useIsMounted } from '@/hooks/use-is-mounted';
 import { useWindowScroll } from '@/hooks/use-window-scroll';
@@ -16,7 +15,7 @@ import Logo from '@/components/logo';
 import { Button } from 'rizzui';
 import { useEffect, useState } from 'react';
 import WalletTopUpModal from '@/components/wallet-top-up-modal';
-import { PiPlusBold, PiWalletFill } from 'react-icons/pi';
+import { PiPlusBold, PiSignOutBold, PiWalletDuotone } from 'react-icons/pi';
 import useAxiosPrivate from '@/hooks/use-axios-private';
 import { useNotifications } from '@/context/NotificationContext';
 import { useDispatch, useSelector } from 'react-redux';
@@ -28,6 +27,7 @@ const formatCredit = (value: number) =>
   new Intl.NumberFormat('fa-IR').format(Number.isFinite(value) ? value : 0);
 
 function HeaderMenuRight() {
+  const auth = useAuth() as { logout: () => void } | null;
   const [isOpen, setIsOpen] = useState(false);
   const { unreadCount } = useNotifications();
   const _axios = useAxiosPrivate();
@@ -56,7 +56,7 @@ function HeaderMenuRight() {
   }, [_axios, dispatch]);
 
   return (
-    <div className="ms-auto flex h-14 shrink-0 items-center gap-1 rounded-2xl border border-gray-200/80 bg-white/90 p-1.5 text-gray-700 shadow-sm ring-1 ring-black/[0.02] backdrop-blur-xl dark:border-gray-700 dark:bg-gray-900/90 print:hidden">
+    <div className="ms-auto flex h-16 shrink-0 items-center gap-1 rounded-2xl border border-gray-200/70 bg-gray-0 p-2 text-gray-600 shadow-sm print:hidden sm:gap-2">
       {/* Notification Bell with unread badge (polling-driven) */}
       <NotificationDropdown>
         <ActionIcon
@@ -66,7 +66,7 @@ function HeaderMenuRight() {
               : 'اعلان‌ها'
           }
           variant="text"
-          className="relative h-10 w-10 rounded-xl bg-transparent shadow-none transition-colors hover:bg-gray-100 dark:bg-transparent dark:hover:bg-gray-800"
+          className="relative h-10 w-10 shrink-0 rounded-xl bg-transparent shadow-none transition-colors hover:bg-gray-100 focus-visible:ring-2 focus-visible:ring-primary/40"
         >
           <RingBellSolidIcon
             aria-hidden="true"
@@ -80,54 +80,72 @@ function HeaderMenuRight() {
               size="sm"
               color="danger"
               enableOutlineRing
-              className="absolute -right-1 -top-1 min-w-[18px] justify-center px-1 text-[10px] leading-none"
+              className="absolute -end-0.5 -top-0.5 h-[18px] min-w-[18px] justify-center px-1 text-[10px] font-semibold leading-none"
             >
-              {unreadCount > 99 ? '99+' : unreadCount}
+              <span dir="ltr">
+                {unreadCount > 99 ? '۹۹+' : formatCredit(unreadCount)}
+              </span>
             </Badge>
           ) : null}
         </ActionIcon>
       </NotificationDropdown>
 
-      {/* Prominent wallet credit and top-up action */}
+      {/* Wallet summary and top-up action */}
       <WalletTopUpModal isOpen={isOpen} onClose={() => setIsOpen(false)} />
-      <div className="flex h-11 items-center gap-2 rounded-xl border border-primary/20 bg-gradient-to-l from-primary-lighter/70 to-primary-lighter/25 px-1.5 dark:from-primary/20 dark:to-primary/5 sm:px-2">
-        <div className="hidden min-w-0 items-center gap-2 lg:flex">
-          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-black text-white shadow-sm">
-            <PiWalletFill className="h-[18px] w-[18px]" />
+      <div className="flex h-12 items-center gap-2 rounded-xl bg-gray-50 px-1.5 sm:gap-3 sm:px-2">
+        <div className="hidden min-w-0 items-center gap-2.5 sm:flex">
+          <span className="hidden h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary lg:grid">
+            <PiWalletDuotone aria-hidden="true" className="h-5 w-5" />
           </span>
-          <div className="flex items-baseline gap-1 whitespace-nowrap leading-none">
-            <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-              اعتبار شما:
+          <div className="flex flex-col gap-1 whitespace-nowrap text-start">
+            <span className="text-[10px] font-medium leading-3 text-gray-500">
+              موجودی کیف پول
             </span>
-            <strong className="text-sm font-extrabold text-gray-900 dark:text-white xl:text-base">
-              {formatCredit(credit)}
-            </strong>
-            <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-              تومان
-            </span>
+            <div className="flex items-baseline gap-1.5 leading-4">
+              <strong
+                dir="ltr"
+                className="text-sm font-bold tabular-nums text-gray-900"
+              >
+                {formatCredit(credit)}
+              </strong>
+              <span className="text-[10px] font-normal text-gray-500">
+                تومان
+              </span>
+            </div>
           </div>
         </div>
         <Button
           type="button"
           size="sm"
+          variant="text"
           onClick={() => setIsOpen(true)}
-          className="h-8 gap-1.5 whitespace-nowrap rounded-lg px-2.5 text-xs font-bold shadow-sm sm:px-3"
+          className="border-primary/15 h-9 gap-1.5 whitespace-nowrap rounded-lg border bg-primary/10 px-2.5 text-xs font-semibold text-primary shadow-none transition-colors hover:bg-primary/20 focus-visible:ring-2 focus-visible:ring-primary/40 sm:px-3"
           aria-label={`افزایش اعتبار؛ اعتبار فعلی ${formatCredit(
             credit
           )} تومان`}
         >
-          <PiPlusBold className="h-4 w-4" />
+          <PiPlusBold aria-hidden="true" className="h-3.5 w-3.5" />
           <span className="hidden xs:inline">افزایش اعتبار</span>
           <span className="xs:hidden">افزایش</span>
         </Button>
       </div>
 
-      <div className="mx-0.5 hidden h-6 w-px bg-gray-200 dark:bg-gray-700 sm:block" />
-      <SettingsButton className="h-10 w-10 rounded-xl bg-transparent shadow-none hover:bg-gray-100 dark:bg-transparent dark:hover:bg-gray-800" />
-      <ProfileMenu
-        buttonClassName="grid h-10 w-10 place-items-center rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800"
-        avatarClassName="!h-8 !w-8 border-0 shadow-none sm:!h-8 sm:!w-8"
+      <div
+        aria-hidden="true"
+        className="mx-0.5 hidden h-6 w-px bg-gray-200 sm:block"
       />
+      <SettingsButton className="h-10 w-10 shrink-0 rounded-xl bg-transparent shadow-none hover:bg-gray-100 focus-visible:ring-2 focus-visible:ring-primary/40 dark:bg-transparent md:h-10 md:w-10 [&>svg]:h-5 [&>svg]:animate-none" />
+      <Button
+        type="button"
+        variant="text"
+        size="sm"
+        aria-label="خروج از حساب کاربری"
+        onClick={() => auth?.logout()}
+        className="h-10 shrink-0 gap-1.5 rounded-xl px-2 text-xs font-semibold text-red transition-colors hover:bg-red/10 focus-visible:ring-2 focus-visible:ring-red/40 sm:px-3"
+      >
+        <PiSignOutBold aria-hidden="true" className="h-[18px] w-[18px]" />
+        <span>خروج</span>
+      </Button>
     </div>
   );
 }
@@ -142,12 +160,11 @@ export default function Header() {
         ((isMounted && windowScroll.y) as number) > 2 ? 'card-shadow' : ''
       )}
     >
-      <div className="flex min-w-0 flex-1 items-center xl:max-w-2xl">
+      <div className="flex shrink-0 items-center xl:hidden">
         <HamburgerButton />
         <Link href={'/'} className="me-4 w-9 shrink-0 lg:me-5 xl:hidden">
           <Logo iconOnly={true} />
         </Link>
-        <SearchWidget />
       </div>
       <HeaderMenuRight />
     </header>

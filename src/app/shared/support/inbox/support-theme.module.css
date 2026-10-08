@@ -28,7 +28,11 @@
   padding: 24px;
   border: 1px solid rgb(var(--gray-200));
   border-radius: 16px;
-  background: linear-gradient(110deg, rgb(var(--gray-50)), rgb(var(--primary-lighter)));
+  background: linear-gradient(
+    110deg,
+    rgb(var(--gray-50)),
+    rgb(var(--primary-lighter))
+  );
 }
 
 .pending {
@@ -83,5 +87,132 @@
 }
 
 @media (max-width: 639px) {
-  .hero { padding: 18px; }
+  .hero {
+    padding: 18px;
+  }
+}
+.inboxHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  margin: 6px 0 24px;
+}
+.inboxHeader h1 {
+  color: rgb(var(--gray-900));
+  font-size: 25px;
+  font-weight: 800;
+}
+.inboxHeader p {
+  color: rgb(var(--gray-500));
+  font-size: 12px;
+  line-height: 2;
+  margin-top: 6px;
+}
+.newTicket {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-shrink: 0;
+  padding: 12px 18px;
+  border-radius: 10px;
+  background: rgb(var(--primary-default));
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+}
+.newTicket:hover {
+  background: rgb(var(--primary-dark));
+}
+.statusTabs {
+  display: flex;
+  gap: 20px;
+  border-bottom: 1px solid rgb(var(--gray-200));
+  overflow-x: auto;
+}
+.statusTabs button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 4px;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  color: rgb(var(--gray-500));
+  font-size: 12px;
+}
+.statusTabs button:hover {
+  color: rgb(var(--primary-default));
+}
+.statusTabs button.selectedTab {
+  color: rgb(var(--primary-default));
+  font-weight: 700;
+  border-bottom-color: rgb(var(--primary-default));
+}
+.statusTabs button span {
+  min-width: 23px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgb(var(--gray-100));
+  font-size: 11px;
+}
+.statusTabs button.selectedTab span {
+  background: rgb(var(--primary-lighter));
+}
+@media (max-width: 640px) {
+  .inboxHeader {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .inboxHeader h1 {
+    font-size: 22px;
+  }
+  .statusTabs {
+    gap: 12px;
+  }
+  .statusTabs button {
+    font-size: 11px;
+    gap: 5px;
+  }
+}
+.ticketHeader {
+  padding: 20px 24px 0;
+  border-bottom: 1px solid rgb(var(--gray-200));
+  background: rgb(var(--gray-50) / 60%);
+}
+.ticketMetadata {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+  padding: 16px 0;
+  border-top: 1px solid rgb(var(--gray-200));
+}
+.ticketMetadata > div + div {
+  border-inline-start: 1px solid rgb(var(--gray-200));
+  padding-inline-start: 16px;
+}
+.ticketMetadata dt {
+  margin-bottom: 6px;
+  font-size: 11px;
+  color: rgb(var(--gray-500));
+}
+.ticketMetadata dd {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgb(var(--gray-800));
+  overflow-wrap: anywhere;
+}
+@media (max-width: 480px) {
+  .ticketHeader {
+    padding: 16px 14px 0;
+  }
+  .ticketMetadata {
+    gap: 10px;
+  }
+  .ticketMetadata > div + div {
+    padding-inline-start: 10px;
+  }
 }

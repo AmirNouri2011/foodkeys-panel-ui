@@ -9,6 +9,7 @@ import {
   PiArrowRight,
   PiCaretDownBold,
   PiChatCircleDots,
+  PiChatCircleDotsFill,
   PiHash,
   PiMagnifyingGlass,
   PiX,
@@ -53,15 +54,6 @@ const departmentLabels: Record<string, string> = {
   FINANCE: 'مالی و اعتباری',
 };
 
-const priorityLabels: Record<string, string> = {
-  LOW: 'اولویت کم',
-  Low: 'اولویت کم',
-  MEDIUM: 'اولویت متوسط',
-  Medium: 'اولویت متوسط',
-  HIGH: 'اولویت بالا',
-  High: 'اولویت بالا',
-};
-
 function getStatusLabel(message: any) {
   if (message.statusStr) return message.statusStr;
   if (message.status === 'ANSWERED') return 'پاسخ داده شده';
@@ -75,10 +67,7 @@ export function MessageItem({ className, message }: MessageItemProps) {
   const [messageId, setMessageId] = useAtom(messageIdAtom);
   const [, setTicketInfo] = useAtom(ticketInfoAtom);
   const isActive = messageId === message.id;
-  const department =
-    message.departmentStr || departmentLabels[message.department] || 'پشتیبانی';
-  const priority =
-    message.priorityStr || priorityLabels[message.priority] || 'اولویت معمولی';
+  const needsUserReply = message.lastMessageFromEmployee === true;
 
   function handleChange() {
     setMessageId(message.id);
@@ -106,16 +95,6 @@ export function MessageItem({ className, message }: MessageItemProps) {
         )}
       />
       <span className="flex items-start gap-3">
-        <span
-          className={cn(
-            'mt-0.5 grid h-10 w-10 flex-none place-items-center rounded-xl border transition-colors',
-            isActive
-              ? 'border-primary/20 bg-primary text-white'
-              : 'border-gray-200 bg-gray-0 text-gray-500 group-hover:text-primary'
-          )}
-        >
-          <PiChatCircleDots className="h-5 w-5" />
-        </span>
         <span className="min-w-0 flex-1">
           <span className="flex items-start justify-between gap-3">
             <Text
@@ -125,30 +104,41 @@ export function MessageItem({ className, message }: MessageItemProps) {
               {message.subject}
             </Text>
             <span
+              title={
+                needsUserReply
+                  ? 'پاسخ جدید از مدیریت؛ پیام را بررسی کنید و پاسخ دهید'
+                  : undefined
+              }
               className={cn(
-                'flex-none rounded-full border px-2 py-1 text-[10px] font-medium',
-                statusStyles[message.status] || statusStyles.PENDING
+                'inline-flex flex-none items-center gap-1 rounded-full border px-2 py-1 text-[10px] font-medium',
+                needsUserReply
+                  ? 'border-orange/30 bg-orange-lighter text-orange-dark'
+                  : statusStyles[message.status] || statusStyles.PENDING
               )}
             >
-              {getStatusLabel(message)}
+              {needsUserReply && (
+                <PiChatCircleDotsFill
+                  aria-hidden="true"
+                  className="h-3.5 w-3.5"
+                />
+              )}
+              {needsUserReply ? 'پاسخ جدید' : getStatusLabel(message)}
+              {needsUserReply && (
+                <span className="sr-only">
+                  از مدیریت؛ نیازمند بررسی و پاسخ شما
+                </span>
+              )}
             </span>
           </span>
 
-          <span className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-gray-500">
+          <span className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[11px] text-gray-500">
             {message.ticketRefId && (
               <span className="inline-flex items-center gap-1 font-medium text-gray-600">
                 <PiHash className="h-3.5 w-3.5" />
                 {message.ticketRefId}
               </span>
             )}
-            <span>{department}</span>
-            <span className="h-1 w-1 rounded-full bg-gray-300" />
-            <span>{priority}</span>
-          </span>
-
-          <span className="mt-1.5 flex items-center justify-between gap-3">
-            <span className="text-[11px] text-gray-400">آخرین به‌روزرسانی</span>
-            <span className="text-xs font-medium text-gray-600">
+            <span className="ms-auto text-left text-xs font-medium text-gray-600">
               {message.updatedAtStr || '—'}
             </span>
           </span>
@@ -187,6 +177,8 @@ export default function MessageList({
   const [isLoading, setIsLoading] = useState(true);
   const [sortBy, setSortBy] = useState<SortByType>(sortOptions.desc);
   const [search, setSearch] = useState('');
+  const [loadError, setLoadError] = useState(false);
+  const [retry, setRetry] = useState(0);
   const [totalItems, setTotalItems] = useState(0);
   const [pageSize] = useState(5);
   const [currentPage, setCurrentPage] = useState(1);
@@ -211,6 +203,14 @@ export default function MessageList({
         )
     );
   }, [data, search]);
+
+  useEffect(() => {
+    setMessageId((current) =>
+      visibleTickets.some((ticket) => ticket.id === current)
+        ? current
+        : visibleTickets[0]?.id || ''
+    );
+  }, [visibleTickets, setMessageId]);
 
   useEffect(() => {
     const fetchTicketStats = async () => {
@@ -239,13 +239,21 @@ export default function MessageList({
     const fetchTickets = async () => {
       try {
         setIsLoading(true);
+        setLoadError(false);
         const status =
           tab === 'open' ? 'PENDING' : tab === 'closed' ? 'CLOSED' : null;
         const response = await _axios.get('/ticket/', {
-          params: { status, sortDir: sortBy, page: currentPage, size: pageSize },
+          params: {
+            status,
+            sortDir: sortBy,
+            page: currentPage,
+            size: pageSize,
+          },
         });
 
         if (requestId !== latestRequestRef.current) return;
+        if (response.data.status !== 'SUCCESS')
+          throw new Error('Ticket fetch failed');
         if (response.data.status === 'SUCCESS') {
           const tickets = response.data.data || [];
           const pageTickets =
@@ -255,12 +263,39 @@ export default function MessageList({
                   currentPage * pageSize
                 )
               : tickets;
-          setData(pageTickets);
-          setTotalItems(response.data.pagination?.totalElements || tickets.length);
+          const messageResults = await Promise.allSettled(
+            pageTickets.map((ticket: any) =>
+              _axios.get(`/ticket/${ticket.id}/messages`)
+            )
+          );
+          if (requestId !== latestRequestRef.current) return;
+          setData(
+            pageTickets.map((ticket: any, index: number) => {
+              const result = messageResults[index];
+              const ticketMessages =
+                result.status === 'fulfilled' &&
+                result.value.data.status === 'SUCCESS' &&
+                Array.isArray(result.value.data.data)
+                  ? result.value.data.data
+                  : [];
+              return {
+                ...ticket,
+                lastMessageFromEmployee:
+                  ticketMessages[ticketMessages.length - 1]?.fromEmployee ===
+                  true,
+              };
+            })
+          );
+          setTotalItems(
+            response.data.pagination?.totalElements || tickets.length
+          );
           setMessageId(pageTickets[0]?.id || '');
         }
       } catch (error) {
         if (requestId !== latestRequestRef.current) return;
+        setLoadError(true);
+        setData([]);
+        setMessageId('');
         console.error('Error fetching ticket data:', error);
         toast.error('خطا در دریافت تیکت‌ها');
       } finally {
@@ -272,6 +307,7 @@ export default function MessageList({
   }, [
     _axios,
     currentPage,
+    retry,
     pageSize,
     refetchTickets,
     tab,
@@ -342,6 +378,18 @@ export default function MessageList({
             {rangeMap(5, (index) => (
               <MessageLoader key={index} />
             ))}
+          </div>
+        ) : loadError ? (
+          <div className="p-8 text-center" role="alert">
+            <p className="mb-4 text-sm text-gray-600">
+              دریافت تیکت‌ها انجام نشد.
+            </p>
+            <Button
+              variant="outline"
+              onClick={() => setRetry((value) => value + 1)}
+            >
+              تلاش مجدد
+            </Button>
           </div>
         ) : visibleTickets.length > 0 ? (
           visibleTickets.map((message) => (

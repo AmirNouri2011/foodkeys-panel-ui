@@ -1,7 +1,8 @@
 import './src/env.mjs';
 
 function getStaticFilesRemotePattern() {
-  const url = process.env.NEXT_PUBLIC_STATIC_FILES_URL || 'http://localhost:8080';
+  const url =
+    process.env.NEXT_PUBLIC_STATIC_FILES_URL || 'http://localhost:8080';
   try {
     const parsed = new URL(url);
     return {
@@ -37,7 +38,6 @@ const nextConfig = {
   },
   eslint: {
     ignoreDuringBuilds: true,
-    ignoreBuildErrors: true
   },
   images: {
     unoptimized: true,
@@ -108,16 +108,16 @@ const nextConfig = {
       {
         protocol: 'http',
         hostname: 'localhost',
-        port: '3000'
+        port: '3000',
       },
       {
         protocol: 'http',
         hostname: 'foodkeys-userpanel-dev',
-        port: '3000'
+        port: '3000',
       },
       {
         protocol: 'http',
-        hostname: 'foodkeys-userpanel-dev:3000'
+        hostname: 'foodkeys-userpanel-dev:3000',
       },
       {
         protocol: 'https',

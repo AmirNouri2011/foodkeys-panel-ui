@@ -26,7 +26,8 @@ type TicketAttachment = {
 };
 
 type TicketMessage = {
-  fromEmployee: boolean;
+  ticketDirection?: 'RECEIVED_FROM_ADMIN' | 'SENT_TO_SUPPORT';
+  fromEmployee?: boolean;
   id: Key;
   senderAvatar?: string;
   senderName?: string;
@@ -89,7 +90,12 @@ export default function MessageBody({ messages }: { messages: TicketMessage[] })
   return (
     <div className="space-y-5 px-5 pb-8 pt-1 sm:px-8 sm:pb-10">
       {messages.map((message) => {
-        const isSupport = message.fromEmployee;
+        const isSupport =
+          message.ticketDirection === 'RECEIVED_FROM_ADMIN'
+            ? true
+            : message.ticketDirection === 'SENT_TO_SUPPORT'
+            ? false
+            : message.fromEmployee === true;
         const sanitizedContent = DOMPurify.sanitize(message.messageContent);
         const avatarUrl = message.senderAvatar
           ? `${process.env.NEXT_PUBLIC_STATIC_FILES_URL || STATIC_FILES_URL}${message.senderAvatar}`
@@ -136,12 +142,7 @@ export default function MessageBody({ messages }: { messages: TicketMessage[] })
                   isSupport ? 'text-right' : 'text-right'
                 )}
               >
-                <div
-                  className={cn(
-                    'mb-1.5 flex items-center gap-2 px-1',
-                    isSupport ? 'justify-start' : 'justify-end'
-                  )}
-                >
+                <div className="mb-1.5 flex items-center justify-start gap-2 px-1">
                   <Text tag="h3" className="text-xs font-semibold text-gray-700">
                     {isSupport ? message.senderName || 'کارشناس پشتیبانی' : 'شما'}
                   </Text>

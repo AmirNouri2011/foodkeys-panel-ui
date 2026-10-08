@@ -1,0 +1,61 @@
+.row {
+  display: grid;
+  grid-template-rows: 1fr;
+  min-width: 0;
+}
+
+.archiving {
+  pointer-events: none;
+  animation: archive-row 1100ms ease-in-out forwards;
+}
+
+.archiveOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: inherit;
+  background: #111827;
+  color: #fff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  animation: darken-row 300ms ease-out both;
+}
+
+@keyframes darken-row {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 0.94;
+  }
+}
+
+@keyframes archive-row {
+  0%,
+  60% {
+    grid-template-rows: 1fr;
+    opacity: 1;
+    transform: translateX(0);
+  }
+  85% {
+    grid-template-rows: 1fr;
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+  100% {
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .archiving,
+  .archiveOverlay {
+    animation-duration: 1ms;
+  }
+}

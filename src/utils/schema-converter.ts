@@ -1,4 +1,4 @@
-import { getLocationKind, isLocationPlaceholder } from '@/utils/iran-locations';
+import { getLocationKind, isLocationPlaceholder, locationSelections } from '@/utils/iran-locations';
 
 export type FieldType = {
     id: string;
@@ -17,6 +17,7 @@ export type FieldType = {
     minItems?: number;
     maxItems?: number;
     itemType?: string;
+    itemFields?: FieldType[];
     itemMinLength?: number;
     itemMaxLength?: number;
     itemPattern?: string;
@@ -36,6 +37,10 @@ export type FieldType = {
     longitudeField?: string;
     currency?: string;
     displayCurrency?: string;
+    multiple?: boolean;
+    optionsSource?: string;
+    dependsOn?: string;
+    requiredOneOf?: string[];
 };
 
 const USER_PANEL = 'USER_PANEL';
@@ -48,6 +53,26 @@ export function hasFormValue(value: any): boolean {
     return true;
 }
 
+export function prefixSchemaFields(fields: FieldType[], prefix: string): FieldType[] {
+    return fields.map((field) => ({
+        ...field,
+        id: `${prefix}.${field.id}`,
+        name: `${prefix}.${field.name}`,
+        fields: field.fields ? prefixSchemaFields(field.fields, prefix) : undefined,
+        dependsOn: field.dependsOn ? `${prefix}.${field.dependsOn}` : undefined,
+        requiredOneOf: field.requiredOneOf?.map((name) => `${prefix}.${name}`),
+    }));
+}
+
+export function objectArrayDefaults(fields: FieldType[]): Record<string, any> {
+    return Object.fromEntries(fields.map((field) => [
+        field.name.split('.').pop()!,
+        field.defaultValue !== undefined ? JSON.parse(JSON.stringify(field.defaultValue)) :
+            field.type === 'object' ? objectArrayDefaults(field.fields || []) :
+            field.type === 'array' ? [] : field.type === 'checkbox' ? false : '',
+    ]));
+}
+
 // A required child belongs to an optional object only after that object is filled.
 export function resolveFieldRequirements(
     fields: FieldType[],
@@ -57,6 +82,15 @@ export function resolveFieldRequirements(
     return fields.map((field) => {
         const value = field.name.split('.').reduce((current, key) => current?.[key], values);
         const required = parentActive && Boolean(field.required);
+        if (field.type === 'array' && field.itemType === 'object') {
+            return {
+                ...field,
+                required,
+                fields: (Array.isArray(value) ? value : []).flatMap((_, index) =>
+                    resolveFieldRequirements(prefixSchemaFields(field.itemFields || [], `${field.name}.${index}`), values)
+                ),
+            };
+        }
         return {
             ...field,
             required,
@@ -161,6 +195,17 @@ export function convertSchemaToFields(
 
     const fields: FieldType[] = [];
     const requiredFields = schema.required || [];
+    // Mirror a schema requirement to select at least one of several arrays.
+    const alternatives = schema.anyOf;
+    const requiredOneOf = Array.isArray(alternatives) && alternatives.length > 0 &&
+        alternatives.every((branch: any) => {
+            const name = branch.required?.[0];
+            return branch.required?.length === 1 && schema.properties[name]?.type === 'array' &&
+                branch.properties?.[name]?.minItems === 1 &&
+                Object.keys(branch).every((key) => ['required', 'properties'].includes(key)) &&
+                Object.keys(branch.properties).length === 1 &&
+                Object.keys(branch.properties[name]).length === 1;
+        }) ? alternatives.map((branch: any) => branch.required[0]) : undefined;
 
     Object.entries(schema.properties).forEach(([name, property]: [string, any]) => {
         // Upload fields render their companion descriptions beside each file.
@@ -212,7 +257,12 @@ export function convertSchemaToFields(
             currency: property.currency ?? property.uniforms?.currency ?? property['x-currency']?.currency,
             displayCurrency: property.displayCurrency ?? property.uniforms?.displayCurrency ?? property['x-currency']?.displayCurrency,
             validationMessage: validations[name],
-            enum: property.enum
+            enum: property.enum,
+            multiple: typeof property.multiple === 'boolean' ? property.multiple : undefined,
+            optionsSource: property.optionsSource,
+            dependsOn: typeof property.dependsOn === 'string' && property.dependsOn.trim()
+                ? property.dependsOn : undefined,
+            requiredOneOf: requiredOneOf?.includes(name) ? requiredOneOf : undefined,
         };
 
         if (property.type === 'object') {
@@ -221,11 +271,7 @@ export function convertSchemaToFields(
                 field.latitudeField = property['x-map']?.latitudeField || 'lat';
                 field.longitudeField = property['x-map']?.longitudeField || 'lng';
             }
-            field.fields = convertSchemaToFields(property, validations).map((child) => ({
-                ...child,
-                id: `${name}.${child.id}`,
-                name: `${name}.${child.name}`,
-            }));
+            field.fields = prefixSchemaFields(convertSchemaToFields(property, validations), name);
         }
 
         // Handle enum for select/radio options
@@ -243,6 +289,10 @@ export function convertSchemaToFields(
 
         // Handle number validations
         if (property.type === 'number' || property.type === 'integer') {
+            // Our service schemas also use string constraints for numeric codes/years.
+            if (property.minLength !== undefined) field.minLength = property.minLength;
+            if (property.maxLength !== undefined) field.maxLength = property.maxLength;
+            if (property.pattern) field.pattern = property.pattern;
             if (property.minimum !== undefined) field.min = property.minimum;
             if (property.maximum !== undefined) field.max = property.maximum;
         }
@@ -253,6 +303,9 @@ export function convertSchemaToFields(
             if (property.maxItems !== undefined) field.maxItems = property.maxItems;
 
             if (property.items) {
+                if (property.items.type === 'object') {
+                    field.itemFields = convertSchemaToFields(property.items, validations);
+                }
                 field.itemType = mapJsonSchemaTypeToFieldType(
                     property.items.type,
                     property.items.format,
@@ -391,22 +444,25 @@ export function formatFormDataForApi(formData: any, schema: any): any {
             property.uniforms?.component === 'FileUpload' ||
             property.uniforms?.component === 'MultiFileUpload' ||
             Boolean(property['x-file']);
-        if (getLocationKind(name, property.title) && !isFileField) {
+        if ((['cities', 'provinces'].includes(property.optionsSource) || getLocationKind(name, property.title)) && !isFileField) {
             if (property.type === 'string') {
                 const value = typeof formData[name] === 'string' ? formData[name].trim() : formData[name];
                 if (isLocationPlaceholder(value)) delete result[name];
                 else result[name] = value;
                 return;
             }
-            if (property.type === 'array' && property.items?.type === 'string' && Array.isArray(formData[name])) {
-                result[name] = formData[name]
-                    .filter((value: any) => typeof value === 'string' && value.trim() && !isLocationPlaceholder(value))
-                    .map((value: string) => value.trim());
+            if (property.type === 'array' && property.items?.type === 'string') {
+                result[name] = locationSelections(formData[name]);
                 return;
             }
         }
         if (isFileField && formData[name] === '') {
             delete result[name];
+            return;
+        }
+
+        if (!isFileField && property.type === 'array' && property.items?.type === 'object' && Array.isArray(formData[name])) {
+            result[name] = formData[name].map((item: any) => formatFormDataForApi(item, property.items));
             return;
         }
 

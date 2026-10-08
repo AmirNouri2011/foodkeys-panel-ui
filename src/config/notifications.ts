@@ -62,6 +62,7 @@ export const notificationKeys = {
   recent: () => [...notificationKeys.all, 'recent'] as const,
   updates: () => [...notificationKeys.all, 'updates'] as const,
   lists: () => [...notificationKeys.all, 'list'] as const,
+  inbox: () => [...notificationKeys.lists(), 'inbox'] as const,
   list: (archived: boolean, page: number) =>
     [
       ...notificationKeys.all,

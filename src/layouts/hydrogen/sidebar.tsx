@@ -19,7 +19,6 @@ import {
   ReceiptText,
   Search,
   Sprout,
-  Tractor,
   UserRound,
   Wallet,
   X,
@@ -30,7 +29,7 @@ import type { RootState } from '@/store/store';
 import { useDrawer } from '@/app/shared/drawer-views/use-drawer';
 import { useServiceSubcategories } from '@/hooks/use-service-subcategories';
 import { routes } from '@/config/routes';
-import { CLIENT_WEBSITE_URL } from '@/config/api.config';
+import { CLIENT_WEBSITE_URL, STATIC_FILES_URL } from '@/config/api.config';
 import { normalizeSearch } from '@/app/shared/dashboard2/dashboard-data';
 import CreateBusinessDialog from '@/app/shared/dashboard2/create-business-dialog';
 import cn from '@/utils/class-names';
@@ -124,6 +123,14 @@ export default function Sidebar({ className }: { className?: string }) {
   const pathname = usePathname();
   const { subcategories } = useServiceSubcategories();
   const user = useSelector((state: RootState) => state.user);
+  const avatarPath =
+    typeof user.avatar === 'string' ? user.avatar : user.avatar?.filePath;
+  const avatarUrl = avatarPath
+    ? /^(https?:\/\/|data:|blob:)/i.test(avatarPath)
+      ? avatarPath
+      : `${STATIC_FILES_URL}/${avatarPath.replace(/^\/+/, '')}`
+    : null;
+  const [failedAvatarUrl, setFailedAvatarUrl] = useState<string | null>(null);
   const { closeDrawer } = useDrawer();
   const [search, setSearch] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
@@ -198,29 +205,6 @@ export default function Sidebar({ className }: { className?: string }) {
           ],
         },
         {
-          id: 'machinery',
-          label: 'ماشین‌آلات دست دوم',
-          icon: Tractor,
-          children: [
-            {
-              label: 'خریداران ماشین‌آلات',
-              href: '/info/used_machinery/buying',
-            },
-            {
-              label: 'فروشندگان ماشین‌آلات',
-              href: '/info/used_machinery/selling',
-            },
-            {
-              label: 'ثبت درخواست خرید',
-              href: '/info/used_machinery/buying/create',
-            },
-            {
-              label: 'ثبت آگهی فروش',
-              href: '/info/used_machinery/selling/create',
-            },
-          ],
-        },
-        {
           id: 'media',
           label: 'رسانه و آموزش',
           icon: Library,
@@ -266,14 +250,21 @@ export default function Sidebar({ className }: { className?: string }) {
         {
           id: 'profile',
           label: 'حساب کاربری',
-          href: routes.profile,
           icon: UserRound,
+          children: [
+            { label: 'پروفایل', href: routes.profile },
+            { label: 'تغییر رمز عبور', href: routes.info.profilePassword },
+            { label: 'اطلاعات صورت حساب', href: '/profile/billing' },
+          ],
         },
         {
           id: 'support',
           label: 'تیکت‌های پشتیبانی',
-          href: routes.support.ticket,
           icon: Headphones,
+          children: [
+            { label: 'ثبت تیکت جدید', href: routes.support.createTicket },
+            { label: 'پیگیری تیکت ها', href: routes.support.ticket },
+          ],
         },
       ],
     },
@@ -384,7 +375,18 @@ export default function Sidebar({ className }: { className?: string }) {
             className={styles.account}
           >
             <span className={styles.avatar}>
-              {user.firstName?.slice(0, 1) || <UserRound size={18} />}
+              {avatarUrl && avatarUrl !== failedAvatarUrl ? (
+                <Image
+                  src={avatarUrl}
+                  alt="عکس پروفایل"
+                  width={35}
+                  height={35}
+                  unoptimized
+                  onError={() => setFailedAvatarUrl(avatarUrl)}
+                />
+              ) : (
+                user.firstName?.slice(0, 1) || <UserRound size={18} />
+              )}
             </span>
             <div>
               <strong>

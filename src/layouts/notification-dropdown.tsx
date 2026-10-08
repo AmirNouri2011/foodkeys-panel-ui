@@ -35,7 +35,7 @@ function NotificationsList({
     isLoading,
     markAllAsRead,
     openNotification,
-      goToNotificationCenter
+    goToNotificationCenter,
   } = useNotifications();
 
   const hasUnread = recentItems.some((n) => !n.isRead);

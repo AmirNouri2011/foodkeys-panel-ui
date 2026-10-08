@@ -418,6 +418,7 @@ export const routes = {
     viewTemplate: (id: string) => `/support/templates/${id}`,
     editTemplate: (id: string) => `/support/templates/${id}/edit`,
     ticket: '/support/ticket',
+    createTicket: '/support/ticket/create',
   },
   logistics: {
     dashboard: '/logistics',

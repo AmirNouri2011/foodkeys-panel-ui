@@ -1282,7 +1282,10 @@ import { Input, Textarea } from '@/components/ui/outlined-text-field';
 import SchemaDatePicker from '@/components/ui/schema-date-picker';
 import SchemaPriceField from '@/components/ui/schema-price-field';
 import SchemaLocationField from '@/components/ui/schema-location-field';
-import { findProvinceField, getLocationKind } from '@/utils/iran-locations';
+import SchemaLocationMultiField from '@/components/ui/schema-location-multi-field';
+import SchemaObjectArrayField from '@/components/ui/schema-object-array-field';
+import { editNumericDigits, hasNumericLengthConstraint, validateNumericText } from '@/utils/schema-number-input';
+import { getLocationFieldConfig } from '@/utils/iran-locations';
 import FileUpload from '@/components/ui/file-upload';
 import LogoUpload from '@/components/ui/logo-upload';
 import { Plus, CheckCircle, XCircle, Image, FileText, X } from 'lucide-react';
@@ -1322,7 +1325,7 @@ const MiniMap = dynamic(() => import('@/app/shared/mini-map/MiniMap'), {
 
 const getLeafFields = (fields: FieldType[]): FieldType[] =>
   fields.flatMap((field) =>
-    field.fields?.length ? getLeafFields(field.fields) : [field]
+    field.fields?.length ? [...(field.type === 'array' ? [field] : []), ...getLeafFields(field.fields)] : [field]
   );
 
 export type DynamicFormValidationItem = {
@@ -1730,14 +1733,18 @@ export default function DynamicForm({
       Object.assign(rules, getRhfWebsiteRules(field.required));
     }
 
-    if (field.minLength && field.type !== 'tel') {
+    if (field.type === 'number') {
+      rules.validate = (value: unknown) => validateNumericText(value, field);
+    }
+
+    if (field.minLength && field.type !== 'tel' && field.type !== 'number') {
       rules.minLength = {
         value: field.minLength,
         message: `حداقل ${field.minLength} کاراکتر وارد کنید`,
       };
     }
 
-    if (field.maxLength && field.type !== 'tel') {
+    if (field.maxLength && field.type !== 'tel' && field.type !== 'number') {
       rules.maxLength = {
         value: field.maxLength,
         message: `حداکثر ${field.maxLength} کاراکتر مجاز است`,
@@ -1764,7 +1771,7 @@ export default function DynamicForm({
       };
     }
 
-    if (field.pattern && field.type !== 'tel') {
+    if (field.pattern && field.type !== 'tel' && field.type !== 'number') {
       rules.pattern = {
         value: new RegExp(field.pattern),
         message: validationMessages.invalidFormat,
@@ -1789,6 +1796,7 @@ export default function DynamicForm({
             : `حداقل ${minimumItems} مورد الزامی است`;
         },
         itemFormat: (value: any[]) => {
+          if (field.itemType === 'object') return true;
           const completedItems = Array.isArray(value)
             ? value
                 .map((item, index) => ({ item, index }))
@@ -1806,6 +1814,8 @@ export default function DynamicForm({
 
           return true;
         },
+        maxItems: (value: any[]) => field.maxItems === undefined || !Array.isArray(value) ||
+          value.length <= field.maxItems || `حداکثر ${field.maxItems} مورد مجاز است`,
       };
     }
 
@@ -1832,6 +1842,10 @@ export default function DynamicForm({
     const fieldLabel = field.required
       ? `${field.label || field.name} *`
       : field.label;
+    if (field.type === 'array' && field.itemType === 'object') {
+      return <SchemaObjectArrayField field={field} control={control}
+        rules={validationRules} disabled={loading} renderField={renderField} />;
+    }
     if (field.currency || field.displayCurrency || field.component === 'PriceField' || field.component === 'CurrencyField') {
       return (
         <Controller
@@ -1851,14 +1865,22 @@ export default function DynamicForm({
         />
       );
     }
-    const locationKind = ['text', 'textarea', 'select'].includes(field.type)
-      ? getLocationKind(field.name, field.label)
+    const locationConfig = getLocationFieldConfig(field);
+    const locationKind = ['text', 'textarea', 'select', 'array'].includes(field.type)
+      ? locationConfig.kind
       : undefined;
-    if (locationKind) {
+    if (locationKind && locationConfig.multiple && field.itemType === 'text') {
+      return <SchemaLocationMultiField name={field.name} control={control}
+        kind={locationKind} label={fieldLabel} description={field.description}
+        disabled={loading} rules={validationRules} maxItems={field.maxItems}
+        requireOneOf={field.requiredOneOf}
+        provinceFieldName={locationConfig.provinceFieldName} />;
+    }
+    if (locationKind && field.type !== 'array') {
       return <SchemaLocationField name={field.name} control={control}
         kind={locationKind} label={fieldLabel} description={field.description}
         disabled={loading} rules={validationRules}
-        provinceFieldName={locationKind === 'city' ? findProvinceField(field.name, getLeafFields(fields)) : undefined} />;
+        provinceFieldName={locationConfig.provinceFieldName} />;
     }
     if (field.type === 'object' || field.type === 'map') {
       const children = field.fields || [];
@@ -2240,12 +2262,18 @@ export default function DynamicForm({
             rules={validationRules}
             render={({ field: { value, onChange, onBlur } }) => (
               <Input
-                type="number"
+                type={hasNumericLengthConstraint(field) ? 'text' : 'number'}
+                inputMode={hasNumericLengthConstraint(field) ? 'numeric' : 'decimal'}
+                maxLength={field.maxLength}
                 step="any"
                 label={fieldLabel}
                 placeholder={fieldPlaceholder}
                 value={value === undefined || value === null ? '' : value}
                 onChange={(e) => {
+                  if (hasNumericLengthConstraint(field)) {
+                    onChange(editNumericDigits(e.target.value, value, field.maxLength));
+                    return;
+                  }
                   const val =
                     e.target.value === '' ? '' : Number(e.target.value);
                   onChange(val);
@@ -2462,14 +2490,14 @@ export default function DynamicForm({
                         <span className="min-w-6 mt-2.5 flex h-6 items-center justify-center rounded-lg bg-gray-100 px-1 text-xs font-semibold text-gray-500">
                           {index + 1}
                         </span>
-                        {getLocationKind(field.name, field.label) && field.itemType === 'text' ? (
+                        {locationKind && field.itemType === 'text' ? (
                           <div className="flex-1">
                             <SchemaLocationField name={`${field.name}.${index}`} control={control}
-                              kind={getLocationKind(field.name, field.label)!}
+                              kind={locationKind}
                               label={`${field.label || 'مورد'} ${index + 1}`}
                               disabled={loading}
                               rules={{ minLength: field.itemMinLength, maxLength: field.itemMaxLength }}
-                              provinceFieldName={findProvinceField(field.name, getLeafFields(fields))} />
+                              provinceFieldName={locationConfig.provinceFieldName} />
                           </div>
                         ) : <Input
                           type={isLandlineField || field.itemType === 'tel' ? 'tel' : field.itemType === 'email' ? 'email' : 'text'}

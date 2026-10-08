@@ -7,6 +7,18 @@ export const OTHER_LOCATION = '__other_location__';
 export const normalizeLocationName = (value: string) =>
   value.replace(/ي/g, 'ی').replace(/ك/g, 'ک').replace(/[\s\u200c]+/g, ' ').trim();
 
+export function locationSelections(value: unknown): string[] {
+  const values = Array.isArray(value) ? value : typeof value === 'string' ? [value] : [];
+  const seen = new Set<string>();
+  return values.filter((item): item is string => {
+    if (typeof item !== 'string' || !item.trim() || isLocationPlaceholder(item)) return false;
+    const normalized = normalizeLocationName(item);
+    if (seen.has(normalized)) return false;
+    seen.add(normalized);
+    return true;
+  }).map((item) => item.trim());
+}
+
 // Match schema property tokens, not words such as capacity or city IDs.
 export function getLocationKind(name: string, label = ''): LocationKind | undefined {
   const leaf = name.split('.').pop() || name;
@@ -16,16 +28,29 @@ export function getLocationKind(name: string, label = ''): LocationKind | undefi
   if (tokens.some((token) => ['city', 'cities'].includes(token)) || /(^|\s)شهر($|\s)/.test(label)) return 'city';
 }
 
+export function getLocationFieldConfig(field: {
+  name: string; label?: string; type: string;
+  optionsSource?: string; multiple?: boolean; dependsOn?: string;
+}) {
+  const kind = field.optionsSource === 'cities' ? 'city' :
+    field.optionsSource === 'provinces' ? 'province' : getLocationKind(field.name, field.label);
+  return {
+    kind,
+    multiple: field.type === 'array' && (field.multiple ?? true),
+    // A matching field name alone does not establish a province/city relation.
+    provinceFieldName: kind === 'city' ? field.dependsOn : undefined,
+  };
+}
+
 export const provinceOptions = provinces
   .map(({ name }) => ({ label: name, value: name }))
   .sort((a, b) => a.label.localeCompare(b.label, 'fa'));
 
-export function getCityOptions(province?: string) {
-  const selectedProvince = provinces.find(({ name }) =>
-    normalizeLocationName(name) === normalizeLocationName(province || '')
-  );
+export function getCityOptions(province?: string | string[]) {
+  const names = (Array.isArray(province) ? province : [province || '']).map(normalizeLocationName);
+  const selectedProvinces = provinces.filter(({ name }) => names.includes(normalizeLocationName(name)));
   return Array.from(new Set(cities
-    .filter((city) => !selectedProvince || city.province_id === selectedProvince.id)
+    .filter((city) => !selectedProvinces.length || selectedProvinces.some((province) => city.province_id === province.id))
     .map(({ name }) => name)))
     .sort((a, b) => a.localeCompare(b, 'fa'))
     .map((name) => ({ label: name, value: name }));
@@ -50,7 +75,6 @@ export function validateLocationValue(value: unknown, custom = false): true | st
 export function findProvinceField(name: string, fields: { name: string; label?: string; type: string }[]) {
   const parent = name.slice(0, name.lastIndexOf('.') + 1);
   const candidates = fields.filter((field) =>
-    field.type !== 'array' &&
     getLocationKind(field.name, field.label) === 'province' &&
     field.name.slice(0, field.name.lastIndexOf('.') + 1) === parent
   );
