@@ -18,9 +18,18 @@ export const usePresets = () => {
 
   return [
     {
+      name: 'Teal',
+      colors: {
+        // Default primary colors, also defined in globals.css.
+        lighter: '#ccfbf1', // Teal 100
+        light: '#5eead4', // Teal 300
+        default: '#0d9488', // Teal 600
+        dark: '#115e59', // Teal 800
+      },
+    },
+    {
       name: 'Blue',
       colors: {
-        // defaults from global css line 38
         lighter: '#d7e3fe',
         light: '#608efb',
         default: '#3872fa',
@@ -34,15 +43,6 @@ export const usePresets = () => {
         light: theme === 'light' ? presetLight.light : presetDark.light, // gray 500
         default: theme === 'light' ? presetLight.default : presetDark.default, // gray 900
         dark: theme === 'light' ? presetLight.dark : presetDark.dark, // gray 1000
-      },
-    },
-    {
-      name: 'Teal',
-      colors: {
-        lighter: '#ccfbf1', // Teal 100
-        light: '#5eead4', // Teal 300
-        default: '#0d9488', // Teal 600
-        dark: '#115e59', // Teal 800
       },
     },
     {

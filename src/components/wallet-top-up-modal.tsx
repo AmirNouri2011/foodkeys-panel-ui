@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { numberToWords } from '@persian-tools/persian-tools';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
@@ -8,8 +8,8 @@ import { Input } from '@/components/ui/input';
 import { ActionIcon } from '@/components/ui/action-icon';
 import { Button, Modal } from 'rizzui';
 import { HiXMark } from 'react-icons/hi2';
-import toast from 'react-hot-toast';
-import useAxiosPrivate from '@/hooks/use-axios-private';
+import useWalletTopUp from '@/hooks/use-wallet-top-up';
+import WalletTopUpErrorModal from '@/components/wallet-top-up-error-modal';
 import addCreditImg2 from 'public/addCreditLogo.webp';
 
 const normalizeAmount = (value: string) =>
@@ -28,12 +28,11 @@ export default function WalletTopUpModal({
   onClose: () => void;
   initialAmount?: number;
 }) {
-  const _axios = useAxiosPrivate();
-  const [loading, setLoading] = useState(false);
+  const { startPayment, loading, paymentError, dismissPaymentError } =
+    useWalletTopUp();
   const [amount, setAmount] = useState(String(initialAmount));
   const [amountError, setAmountError] = useState('');
   const numericAmount = Number(amount || 0);
-  const paymentLock = useRef(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -48,47 +47,25 @@ export default function WalletTopUpModal({
   };
 
   const handleSubmit = async () => {
-    if (paymentLock.current) return;
-    if (!Number.isSafeInteger(numericAmount) || numericAmount <= 0) {
+    if (!Number.isSafeInteger(numericAmount * 10) || numericAmount <= 0) {
       setAmountError('لطفاً یک مبلغ معتبر و بزرگ‌تر از صفر وارد کنید');
       return;
     }
-    const startPayment = async () => {
-      const API_URL = '/payment/start/3';
-      try {
-        const response = await _axios.post(API_URL, {
-          amount: numericAmount * 10,
-          redirectUrl: '/api/v1/client/panel/payment/callback',
-          description: 'افزایش شارژ کیف پول',
-          mobile: '09352388350',
-          email: 'arminm4@gmail.com',
-        });
-
-        if (response.data.statusCode === 200) {
-          return {
-            data: response.data.data,
-          };
-        } else {
-          toast.error('خطا در افزایش اعتبار');
-        }
-      } catch (error) {
-        toast.error('خطا در افزایش اعتبار');
-        console.error('Failed to start payment', error);
-      }
-    };
-    paymentLock.current = true;
-    setLoading(true);
-    let response = await startPayment();
-    if (response?.data?.url) window.location.href = response?.data?.url;
-    else toast.error('خطا در افزایش اعتبار');
-    paymentLock.current = false;
-    setLoading(false);
+    await startPayment(numericAmount);
   };
   const defaultAmounts = [1, 5, 10];
 
   return (
     <>
-      <Modal isOpen={isOpen} onClose={() => onClose()} customSize="1080px">
+      <WalletTopUpErrorModal
+        isOpen={isOpen && paymentError}
+        onClose={dismissPaymentError}
+      />
+      <Modal
+        isOpen={isOpen && !paymentError}
+        onClose={() => onClose()}
+        customSize="1080px"
+      >
         <div className="m-auto rounded-xl bg-gray-50 px-7 pt-8 dark:bg-gray-100 dark:text-white">
           <div className="flex items-center justify-between">
             <h3>افزایش اعتبار کیف پول</h3>

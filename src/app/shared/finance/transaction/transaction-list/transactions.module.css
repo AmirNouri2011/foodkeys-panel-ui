@@ -390,6 +390,16 @@
   color: var(--brand);
   background: var(--soft);
 }
+.downloadButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: auto;
+  padding: 0 10px;
+  white-space: nowrap;
+  font-size: 11px;
+}
 .footer {
   display: flex;
   justify-content: space-between;
@@ -716,4 +726,57 @@
 .details dd[dir='ltr'] {
   font-family: monospace;
   font-size: 11px;
+}
+
+.credit {
+  --type-color: #147348;
+  --type-bg: #eaf8ef;
+  --type-border: #b9e2c9;
+}
+.debit {
+  --type-color: #bc3434;
+  --type-bg: #fff0ef;
+  --type-border: #f4c5c1;
+}
+.subscription {
+  --type-color: #7540b0;
+  --type-bg: #f4edff;
+  --type-border: #dcc9f4;
+}
+.unknown {
+  --type-color: rgb(var(--gray-600));
+  --type-bg: rgb(var(--gray-100));
+  --type-border: rgb(var(--gray-200));
+}
+.rowIcon {
+  flex-shrink: 0;
+  color: var(--type-color);
+  background: var(--type-bg);
+  border-color: var(--type-border);
+}
+.typeLabel,
+.amount {
+  color: var(--type-color);
+}
+.amount {
+  display: inline-block;
+}
+.detailAmount {
+  color: var(--type-color);
+  background: var(--type-bg);
+}
+:global(.dark) .credit {
+  --type-color: #7ee0ac;
+  --type-bg: #163b2a;
+  --type-border: #2b6347;
+}
+:global(.dark) .debit {
+  --type-color: #ffaaa2;
+  --type-bg: #492625;
+  --type-border: #75403c;
+}
+:global(.dark) .subscription {
+  --type-color: #d0b1ff;
+  --type-bg: #35254c;
+  --type-border: #604780;
 }

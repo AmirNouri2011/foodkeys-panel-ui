@@ -32,6 +32,7 @@ export type FieldType = {
     validationMessage?: string;
     component?: string;
     enum?: string[];
+    enumValues?: Array<string | number>;
     fields?: FieldType[];
     latitudeField?: string;
     longitudeField?: string;
@@ -276,7 +277,14 @@ export function convertSchemaToFields(
 
         // Handle enum for select/radio options
         if (property.enum) {
-            field.options = property.enum;
+            const labels = property.enumNames ?? property['x-enumNames'];
+            field.enum = property.enum.map((option: any, index: number) =>
+                String(labels?.[index] ?? option));
+            field.options = field.enum;
+            // Legacy numeric selects contain labels in enum, with zero-based
+            // indices as their API values (e.g. education attendance type).
+            field.enumValues = getSchemaEnumValues(property);
+            field.type = 'select';
         }
 
         // Handle string validations
@@ -418,13 +426,51 @@ function mapJsonSchemaTypeToFieldType(
     return 'text';
 }
 
-/**
- * Formats form data for API submission based on schema
- * @param formData Form data object
- * @param schema JSON schema object
- * @returns Processed form data
- */
-export function formatFormDataForApi(formData: any, schema: any): any {
+export function formatServiceFormData(formData: any, schema: any) {
+    const ids = new Set<string>();
+    const data = formatFormDataForApi(formData, schema, { useFilePath: true, ids });
+    return { data, galleryFiles: Array.from(ids, (id) => ({ id })) };
+}
+
+// Restore metadata for older records that stored only a file ID. Keep path
+// strings intact so reopening and saving does not erase existing previews.
+export function restoreServiceFileMetadata(formData: any, schema: any, files: Array<{ id: string; filePath?: string }>): any {
+    if (!formData || !schema?.properties) return formData;
+    const result = { ...formData };
+    Object.entries(schema.properties).forEach(([name, property]: [string, any]) => {
+        const value = formData[name];
+        if (value == null) return;
+        const isFile = property.format === 'file' || property.items?.format === 'file' ||
+            ['FileUpload', 'MultiFileUpload'].includes(property.uniforms?.component) || Boolean(property['x-file']);
+        if (isFile) {
+            const restore = (file: any) => {
+                const id = typeof file === 'string' ? file : file?.id;
+                const metadata = files.find((candidate) => candidate.id === id);
+                return metadata?.filePath ? { ...(typeof file === 'object' ? file : {}), ...metadata } : file;
+            };
+            result[name] = Array.isArray(value) ? value.map(restore) : restore(value);
+        } else if (property.type === 'object') {
+            result[name] = restoreServiceFileMetadata(value, property, files);
+        } else if (property.type === 'array' && property.items?.type === 'object' && Array.isArray(value)) {
+            result[name] = value.map((item) => restoreServiceFileMetadata(item, property.items, files));
+        }
+    });
+    return result;
+}
+
+export function getSchemaEnumValues(property: any): Array<string | number> {
+    const options = property.enum || [];
+    const indexed = (property.type === 'integer' || property.type === 'number') &&
+        options.some((option: any) => typeof option === 'string' && !Number.isFinite(Number(option)));
+    return options.map((option: any, index: number) => indexed ? index : option);
+}
+
+/** Formats form data for API submission based on schema. */
+export function formatFormDataForApi(
+    formData: any,
+    schema: any,
+    fileOptions?: { useFilePath: boolean; ids: Set<string> }
+): any {
     if (!formData || !schema || !schema.properties) {
         return formData;
     }
@@ -436,6 +482,16 @@ export function formatFormDataForApi(formData: any, schema: any): any {
         if (formData[name] === undefined || formData[name] === null) {
             delete result[name];
             return;
+        }
+
+        if (property.enum && (property.type === 'integer' || property.type === 'number')) {
+            const enumValues = getSchemaEnumValues(property);
+            const labels = property.enumNames ?? property['x-enumNames'] ?? property.enum;
+            const labelIndex = labels.indexOf(formData[name]);
+            if (labelIndex >= 0) {
+                result[name] = Number(enumValues[labelIndex]);
+                return;
+            }
         }
 
         const isFileField =
@@ -462,7 +518,7 @@ export function formatFormDataForApi(formData: any, schema: any): any {
         }
 
         if (!isFileField && property.type === 'array' && property.items?.type === 'object' && Array.isArray(formData[name])) {
-            result[name] = formData[name].map((item: any) => formatFormDataForApi(item, property.items));
+            result[name] = formData[name].map((item: any) => formatFormDataForApi(item, property.items, fileOptions));
             return;
         }
 
@@ -487,17 +543,25 @@ export function formatFormDataForApi(formData: any, schema: any): any {
                     delete result[name];
                 }
             } else {
-                result[name] = formatFormDataForApi(formData[name], property);
+                result[name] = formatFormDataForApi(formData[name], property, fileOptions);
             }
         }
 
         if (isFileField) {
-            const fileId = (file: any) =>
-                typeof file === 'string' ? file : file?.id;
+            const fileValue = (file: any) => {
+                const id = typeof file === 'string'
+                    ? (/^(?:\/|https?:\/\/)/i.test(file) ? undefined : file)
+                    : file?.id;
+                if (id) fileOptions?.ids.add(id);
+                if (fileOptions?.useFilePath) {
+                    return typeof file === 'string' ? file : file?.filePath || file?.path || id;
+                }
+                return typeof file === 'string' ? file : id;
+            };
 
             result[name] = Array.isArray(formData[name])
-                ? formData[name].map(fileId).filter(Boolean)
-                : fileId(formData[name]);
+                ? formData[name].map(fileValue).filter(Boolean)
+                : fileValue(formData[name]);
         }
 
         // Convert date objects to ISO string format

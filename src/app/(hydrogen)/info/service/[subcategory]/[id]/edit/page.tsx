@@ -358,6 +358,7 @@ import ServiceDisplaySettings, {
   ServiceDisplaySettingsValues,
 } from '@/app/shared/info/service/service-display-settings';
 import { getServiceDisplaySettingsErrors } from '@/app/shared/info/service/form-utils';
+import { restoreServiceFileMetadata } from '@/utils/schema-converter';
 
 export default function ServiceEditPage() {
   const { subcategory, id } = useParams();
@@ -404,6 +405,11 @@ export default function ServiceEditPage() {
 
           setServiceData({
             ...response.data,
+            data: restoreServiceFileMetadata(
+              response.data.data,
+              response.data.serviceSchemaDTO?.schemaDefinition,
+              serviceFiles
+            ),
             logo: logoFile?.id || '',
             backgroundImage: backgroundFile?.id || '',
             currentLogo: logoFile?.filePath || response.data.logo,
@@ -485,8 +491,9 @@ export default function ServiceEditPage() {
         return;
       }
 
+      const dynamicPayload = dynamicFormValidateRef.current?.getServiceFormData();
       const formattedDynamicFormData =
-        dynamicFormValidateRef.current?.getFormattedData() ??
+        dynamicPayload?.data ??
         serviceData.data ??
         {};
 
@@ -494,6 +501,7 @@ export default function ServiceEditPage() {
         ...(serviceData.galleryFiles || []).map((file) => file.id),
         serviceData.logo,
         serviceData.backgroundImage,
+        ...(dynamicPayload?.galleryFiles || []).map((file) => file.id),
       ]
         .filter((fileId): fileId is string => Boolean(fileId))
         .filter((fileId, index, allIds) => allIds.indexOf(fileId) === index)

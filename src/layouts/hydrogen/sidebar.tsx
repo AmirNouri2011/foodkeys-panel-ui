@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
@@ -133,6 +133,25 @@ export default function Sidebar({ className }: { className?: string }) {
   const [failedAvatarUrl, setFailedAvatarUrl] = useState<string | null>(null);
   const { closeDrawer } = useDrawer();
   const [search, setSearch] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const handleSearchShortcut = (event: KeyboardEvent) => {
+      const input = searchInputRef.current;
+      if (
+        (event.ctrlKey || event.metaKey) &&
+        !event.altKey &&
+        !event.shiftKey &&
+        (event.code === 'KeyK' || event.key.toLowerCase() === 'k') &&
+        input?.getClientRects().length
+      ) {
+        event.preventDefault();
+        input.focus();
+        input.select();
+      }
+    };
+    window.addEventListener('keydown', handleSearchShortcut);
+    return () => window.removeEventListener('keydown', handleSearchShortcut);
+  }, []);
   const [createOpen, setCreateOpen] = useState(false);
   const groups: { label: string; items: MenuItem[] }[] = [
     {
@@ -322,23 +341,49 @@ export default function Sidebar({ className }: { className?: string }) {
           <span>ثبت کسب‌وکار یا خدمت</span>
           <ChevronLeft size={15} />
         </button>
-        <label className={styles.search}>
-          <Search size={15} />
+        <div className={cn(styles.search, search && styles.searchActive)}>
+          <span className={styles.searchIcon} aria-hidden="true">
+            <Search size={17} />
+          </span>
           <input
+            ref={searchInputRef}
             aria-label="جست‌وجو در منو"
-            placeholder="دنبال چه بخشی می‌گردید؟"
+            aria-keyshortcuts="Control+k Meta+k"
+            placeholder="جست‌وجو در منو"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') {
+                event.preventDefault();
+                event.stopPropagation();
+                setSearch('');
+                event.currentTarget.blur();
+              }
+            }}
           />
-          {search && (
+          {search ? (
             <button
-              onClick={() => setSearch('')}
+              type="button"
+              onClick={() => {
+                setSearch('');
+                searchInputRef.current?.focus();
+              }}
               aria-label="پاک کردن جست‌وجوی منو"
             >
               <X size={13} />
             </button>
+          ) : (
+            <span
+              className={styles.searchShortcut}
+              dir="ltr"
+              aria-hidden="true"
+            >
+              <kbd>Ctrl</kbd>
+              <span>+</span>
+              <kbd>K</kbd>
+            </span>
           )}
-        </label>
+        </div>
         <nav className={styles.navigation} aria-label="بخش‌های پنل">
           {filtered.map((group) => (
             <section key={group.label}>

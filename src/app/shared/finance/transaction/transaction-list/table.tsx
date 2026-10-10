@@ -5,13 +5,14 @@ import Link from 'next/link';
 import { useQuery } from 'react-query';
 import toast from 'react-hot-toast';
 import {
-  ArrowDownLeft,
-  ArrowUpLeft,
+  Plus,
+  Minus,
+  ShoppingCart,
   ArrowLeft,
   ArrowRight,
   CheckCircle2,
+  XCircle,
   ChevronLeft,
-  Copy,
   CreditCard,
   Download,
   Eye,
@@ -31,8 +32,28 @@ import {
   amountValue,
   transactionDate,
   transactionTime,
+  transactionKind,
+  transactionAmountLabel,
 } from './transaction-utils';
 import styles from './transactions.module.css';
+
+const transactionIcons = {
+  credit: Plus,
+  debit: Minus,
+  subscription: ShoppingCart,
+  unknown: CreditCard,
+};
+
+function TransactionIcon({
+  row,
+  size = 19,
+}: {
+  row: Transaction;
+  size?: number;
+}) {
+  const Icon = transactionIcons[transactionKind(row)];
+  return <Icon size={size} aria-hidden="true" />;
+}
 
 export default function TransactionsTable() {
   const axios = useAxiosPrivate();
@@ -76,16 +97,73 @@ export default function TransactionsTable() {
     { keepPreviousData: true }
   );
   const rows = useMemo(() => query.data?.rows ?? [], [query.data?.rows]);
+  const summary = useQuery(
+    ['transaction-summary'],
+    async ({ signal }) => {
+      const seen = new Set<string>();
+      let total = 0;
+      let successful = 0;
+      let failed = 0;
+      let successfulAmount = 0;
+      let pageNumber = 1;
+
+      // The API is paginated; finish reading all pages before publishing totals.
+      do {
+        const response = await axios
+          .get('/transaction', {
+            params: { pageNumber, pageSize: 50 },
+            signal,
+          })
+          .catch((error) => {
+            throw new Error(
+              `Transaction summary page ${pageNumber} failed (${
+                error.response?.status ?? error.code ?? 'network'
+              }); received ${seen.size} of ${total}; ${
+                error.response?.data?.message ?? ''
+              }`
+            );
+          });
+        const data = response.data;
+        const count = Number(data.pagination?.totalElements);
+        if (
+          data.statusCode !== 200 ||
+          !Array.isArray(data.data) ||
+          !Number.isSafeInteger(count) ||
+          count < 0
+        )
+          throw new Error('Invalid transaction summary response');
+
+        total = count;
+        const previousSize = seen.size;
+        for (const row of data.data as Transaction[]) {
+          if (seen.has(row.id)) continue;
+          seen.add(row.id);
+          const tone = transactionStatus(row).tone;
+          if (tone === 'success') {
+            successful++;
+            successfulAmount += amountValue(row);
+          } else if (tone === 'failed') {
+            failed++;
+          }
+        }
+        if (seen.size < total && seen.size === previousSize)
+          throw new Error('Incomplete transaction summary');
+        pageNumber++;
+      } while (seen.size < total);
+
+      return { total, successful, failed, successfulAmount };
+    },
+    { staleTime: 60_000, retry: 1 }
+  );
   const total = query.data?.total ?? 0;
   const pages = Math.max(1, Math.ceil(total / pageSize));
-  const gateways = Array.from(new Set(rows.map(gatewayLabel)));
+  // const gateways = Array.from(new Set(rows.map(gatewayLabel)));
   const visible = useMemo(() => {
     const result = rows.filter(
       (row) =>
         (status === 'all' || transactionStatus(row).tone === status) &&
         (gateway === 'all' || gatewayLabel(row) === gateway) &&
         [
-          row.id,
           row.refId,
           row.serviceNameFa,
           row.serviceName,
@@ -106,26 +184,12 @@ export default function TransactionsTable() {
             : amountValue(a) - amountValue(b)
         );
   }, [rows, status, gateway, sort, search]);
-  const success = rows.filter(
-    (row) => transactionStatus(row).tone === 'success'
-  );
-  const pending = rows.filter(
-    (row) => transactionStatus(row).tone === 'pending'
-  );
   const filtered = status !== 'all' || gateway !== 'all';
   const reset = () => {
     setInput('');
     setStatus('all');
     setGateway('all');
     setSort('default');
-  };
-  const copy = async (value: string) => {
-    try {
-      await navigator.clipboard.writeText(value);
-      toast.success('شناسه کپی شد');
-    } catch {
-      toast.error('امکان کپی شناسه وجود ندارد');
-    }
   };
   const downloadBill = async (row: Transaction) => {
     if (!row.id || downloading[row.id]) return;
@@ -143,7 +207,7 @@ export default function TransactionsTable() {
       );
       const link = document.createElement('a');
       link.href = url;
-      link.download = `bill_${row.id}.xlsx`;
+      link.download = 'invoice.xlsx';
       link.click();
       URL.revokeObjectURL(url);
       toast.success('فاکتور دانلود شد');
@@ -160,7 +224,6 @@ export default function TransactionsTable() {
         .replace(/"/g, '""')}"`;
     const values = [
       [
-        'شماره تراکنش',
         'نوع تراکنش',
         'مبلغ (ریال)',
         'درگاه پرداخت',
@@ -170,7 +233,6 @@ export default function TransactionsTable() {
         'کد پیگیری',
       ],
       ...visible.map((row) => [
-        row.id,
         row.serviceNameFa || row.serviceName,
         amountValue(row),
         gatewayLabel(row),
@@ -225,13 +287,18 @@ export default function TransactionsTable() {
         </div>
         <div className={styles.actions}>
           <button
-            onClick={() => query.refetch()}
-            disabled={query.isFetching}
+            onClick={() => {
+              void query.refetch();
+              void summary.refetch();
+            }}
+            disabled={query.isFetching || summary.isFetching}
             className={styles.button}
           >
             <RefreshCw
               size={16}
-              className={query.isFetching ? styles.spin : ''}
+              className={
+                query.isFetching || summary.isFetching ? styles.spin : ''
+              }
             />
             به‌روزرسانی
           </button>
@@ -246,35 +313,35 @@ export default function TransactionsTable() {
         {[
           {
             label: 'تعداد کل تراکنش‌ها',
-            value: query.data ? numberFa(total) : '—',
+            value: summary.data
+              ? numberFa(summary.data.total)
+              : query.data
+              ? numberFa(query.data.total)
+              : '—',
             hint: 'تمام سوابق حساب',
             icon: History,
             tone: 'brand',
           },
           {
             label: 'مبلغ تراکنش‌های موفق',
-            value: query.data
-              ? numberFa(
-                  success.reduce((sum, row) => sum + amountValue(row), 0)
-                )
-              : '—',
-            hint: 'ریال · در صفحه جاری',
+            value: summary.data ? numberFa(summary.data.successfulAmount) : '—',
+            hint: 'ریال · تمام سوابق حساب',
             icon: CreditCard,
             tone: 'brand',
           },
           {
             label: 'پرداخت‌های موفق',
-            value: query.data ? numberFa(success.length) : '—',
-            hint: 'تراکنش در صفحه جاری',
+            value: summary.data ? numberFa(summary.data.successful) : '—',
+            hint: 'تراکنش در تمام سوابق حساب',
             icon: CheckCircle2,
             tone: 'success',
           },
           {
-            label: 'در انتظار تأیید',
-            value: query.data ? numberFa(pending.length) : '—',
-            hint: 'تراکنش در صفحه جاری',
-            icon: History,
-            tone: 'pending',
+            label: 'پرداخت‌های ناموفق',
+            value: summary.data ? numberFa(summary.data.failed) : '—',
+            hint: 'تراکنش در تمام سوابق حساب',
+            icon: XCircle,
+            tone: 'failed',
           },
         ].map((item) => (
           <article className={styles.stat} key={item.label}>
@@ -287,6 +354,12 @@ export default function TransactionsTable() {
           </article>
         ))}
       </section>
+      {summary.isError && (
+        <p role="alert" className={styles.note}>
+          دریافت آمار کل تراکنش‌ها انجام نشد. برای تلاش دوباره، به‌روزرسانی را
+          بزنید.
+        </p>
+      )}
       <section
         className={styles.panel}
         aria-labelledby="transaction-list-title"
@@ -314,7 +387,7 @@ export default function TransactionsTable() {
               aria-label="جست‌وجوی تراکنش‌ها"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="جست‌وجوی نوع یا شناسه در این صفحه…"
+              placeholder="جست‌وجوی نوع یا کد پیگیری در این صفحه…"
             />
             {input && (
               <button
@@ -325,6 +398,7 @@ export default function TransactionsTable() {
               </button>
             )}
           </div>
+          {/* فیلتر درگاه و مرتب‌سازی فعلاً غیرفعال هستند.
           <label className={styles.select}>
             درگاه
             <select
@@ -347,6 +421,7 @@ export default function TransactionsTable() {
               <option value="low">کمترین مبلغ</option>
             </select>
           </label>
+          */}
         </div>
         <div className={styles.filterLine}>
           <div className={styles.tabs} aria-label="فیلتر وضعیت">
@@ -442,26 +517,21 @@ export default function TransactionsTable() {
                   <tr key={row.id}>
                     <td>
                       <div className={styles.transaction}>
-                        <span className={styles.rowIcon}>
-                          {row.serviceName === 'BUY_SUBSCRIPTION' ? (
-                            <ArrowUpLeft size={19} />
-                          ) : (
-                            <ArrowDownLeft size={19} />
-                          )}
+                        <span
+                          className={`${styles.rowIcon} ${
+                            styles[transactionKind(row)]
+                          }`}
+                        >
+                          <TransactionIcon row={row} />
                         </span>
                         <div>
-                          <strong>
+                          <strong
+                            className={`${styles.typeLabel} ${
+                              styles[transactionKind(row)]
+                            }`}
+                          >
                             {row.serviceNameFa || row.serviceName || 'تراکنش'}
                           </strong>
-                          <button
-                            title={row.id}
-                            className={styles.id}
-                            onClick={() => copy(row.id)}
-                            aria-label={`کپی شماره تراکنش ${row.id}`}
-                          >
-                            <span dir="ltr">{row.id?.slice(0, 8)}…</span>
-                            <Copy size={12} />
-                          </button>
                         </div>
                       </div>
                     </td>
@@ -472,8 +542,13 @@ export default function TransactionsTable() {
                       </small>
                     </td>
                     <td>
-                      <strong className={styles.amount}>
-                        {numberFa(amountValue(row))}
+                      <strong
+                        className={`${styles.amount} ${
+                          styles[transactionKind(row)]
+                        }`}
+                        dir="ltr"
+                      >
+                        {transactionAmountLabel(row)}
                       </strong>
                     </td>
                     <td>
@@ -493,7 +568,7 @@ export default function TransactionsTable() {
                         <button
                           onClick={() => setSelected(row)}
                           className={styles.iconButton}
-                          aria-label={`جزئیات تراکنش ${row.id}`}
+                          aria-label="جزئیات تراکنش"
                           title="جزئیات تراکنش"
                         >
                           <Eye size={17} />
@@ -502,8 +577,8 @@ export default function TransactionsTable() {
                           <button
                             onClick={() => downloadBill(row)}
                             disabled={downloading[row.id]}
-                            className={styles.iconButton}
-                            aria-label={`دانلود فاکتور ${row.id}`}
+                            className={`${styles.iconButton} ${styles.downloadButton}`}
+                            aria-label="دانلود فاکتور"
                             title="دانلود فاکتور"
                           >
                             {downloading[row.id] ? (
@@ -511,6 +586,7 @@ export default function TransactionsTable() {
                             ) : (
                               <Download size={17} />
                             )}
+                            <span>دانلود فاکتور</span>
                           </button>
                         )}
                       </div>
@@ -595,10 +671,14 @@ export default function TransactionsTable() {
                 <X size={20} />
               </button>
             </div>
-            <div className={styles.detailAmount}>
-              <CreditCard size={25} />
+            <div
+              className={`${styles.detailAmount} ${
+                styles[transactionKind(selected)]
+              }`}
+            >
+              <TransactionIcon row={selected} size={25} />
               <strong>
-                {numberFa(amountValue(selected))}
+                <bdi dir="ltr">{transactionAmountLabel(selected)}</bdi>
                 <small> ریال</small>
               </strong>
               {badge(selected)}
@@ -613,33 +693,18 @@ export default function TransactionsTable() {
                 ['تاریخ', transactionDate(selected)],
                 ['ساعت', transactionTime(selected) || '—'],
                 ['کد پیگیری', selected.refId || '—'],
-                ['شماره تراکنش', selected.id],
                 ['شماره فاکتور', selected.invoiceId || selected.billId || '—'],
               ].map(([label, value]) => (
                 <div key={label}>
                   <dt>{label}</dt>
                   <dd
                     dir={
-                      [
-                        'شماره تراکنش',
-                        'کد پیگیری',
-                        'شماره فاکتور',
-                        'ساعت',
-                      ].includes(label)
+                      ['کد پیگیری', 'شماره فاکتور', 'ساعت'].includes(label)
                         ? 'ltr'
                         : 'rtl'
                     }
                   >
                     {value}
-                    {label === 'شماره تراکنش' && (
-                      <button
-                        onClick={() => copy(selected.id)}
-                        aria-label="کپی شماره تراکنش"
-                        className={styles.iconButton}
-                      >
-                        <Copy size={14} />
-                      </button>
-                    )}
                   </dd>
                 </div>
               ))}

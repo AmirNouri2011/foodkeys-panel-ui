@@ -63,6 +63,28 @@ export function transactionStatus(row: Transaction) {
   };
 }
 export const numberFa = (value: number) => value.toLocaleString('fa-IR');
+export function transactionKind(row: Transaction) {
+  const label = (row.serviceNameFa || '')
+    .replace(/ي/g, 'ی')
+    .replace(/ك/g, 'ک')
+    .replace(/[\s‌]+/g, '');
+  if (row.serviceName === 'BUY_SUBSCRIPTION' || label === 'خریداشتراک')
+    return 'subscription';
+  if (label === 'افزایشاعتبار') return 'credit';
+  if (label === 'کاهشاعتبار') return 'debit';
+  return 'unknown';
+}
+
+export function transactionAmountLabel(row: Transaction) {
+  const kind = transactionKind(row);
+  const amount = amountValue(row);
+  // A pending or failed request must not look like a confirmed balance change.
+  if (transactionStatus(row).tone === 'success' && amount !== 0) {
+    if (kind === 'credit') return `+${numberFa(Math.abs(amount))}`;
+    if (kind === 'debit') return `−${numberFa(Math.abs(amount))}`;
+  }
+  return numberFa(amount);
+}
 export const amountValue = (row: Transaction) =>
   Number.isFinite(Number(row.amount)) ? Number(row.amount) : 0;
 export const transactionDate = (row: Transaction) =>

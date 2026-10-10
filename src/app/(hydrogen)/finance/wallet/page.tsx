@@ -16,6 +16,8 @@ import PageHeader from '@/app/shared/page-header';
 import { routes } from '@/config/routes';
 import { RootState } from '@/store/store';
 import cn from '@/utils/class-names';
+import useWalletTopUp from '@/hooks/use-wallet-top-up';
+import WalletTopUpErrorModal from '@/components/wallet-top-up-error-modal';
 
 const defaultAmounts = [1_000_000, 2_000_000, 5_000_000, 10_000_000];
 
@@ -41,6 +43,8 @@ const normalizeAmount = (value: string) => {
 };
 
 export default function IncreaseCreditPage() {
+  const { startPayment, loading, paymentError, dismissPaymentError } =
+    useWalletTopUp();
   const walletCredit = useSelector((state: RootState) => state.wallet.credit);
   const [amount, setAmount] = useState('');
   const [amountError, setAmountError] = useState('');
@@ -62,20 +66,20 @@ export default function IncreaseCreditPage() {
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!Number.isSafeInteger(numericAmount) || numericAmount <= 0) {
+    if (!Number.isSafeInteger(numericAmount * 10) || numericAmount <= 0) {
       setAmountError('لطفاً مبلغی بزرگ‌تر از صفر وارد کنید.');
       return;
     }
-    alert(
-      `در حال هدایت به درگاه بانکی برای پرداخت مبلغ ${numericAmount.toLocaleString(
-        'fa-IR'
-      )} تومان`
-    );
+    void startPayment(numericAmount);
   };
 
   return (
     <>
       <PageHeader title={pageHeader.title} breadcrumb={pageHeader.breadcrumb} />
+      <WalletTopUpErrorModal
+        isOpen={paymentError}
+        onClose={dismissPaymentError}
+      />
 
       <main className="mx-auto w-full max-w-6xl pb-10" dir="rtl">
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
@@ -204,10 +208,11 @@ export default function IncreaseCreditPage() {
 
               <button
                 type="submit"
-                disabled={numericAmount <= 0}
+                disabled={numericAmount <= 0 || loading}
+                aria-busy={loading}
                 className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-primary-dark focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500 disabled:shadow-none"
               >
-                ادامه و پرداخت
+                {loading ? 'در حال اتصال به درگاه…' : 'ادامه و پرداخت'}
                 <ArrowLeft className="h-4 w-4" />
               </button>
 

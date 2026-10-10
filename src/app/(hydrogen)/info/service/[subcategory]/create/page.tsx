@@ -877,13 +877,18 @@ export default function ServiceCreatePage() {
 
       // Read directly from DynamicForm at submit time. Its onChange callback is
       // debounced, so relying on state here can otherwise omit the latest edit.
-      const formattedDynamicFormData =
-        dynamicFormValidateRef.current?.getFormattedData() ?? dynamicFormData;
+      const dynamicPayload = dynamicFormValidateRef.current?.getServiceFormData();
+      const formattedDynamicFormData = dynamicPayload?.data ?? dynamicFormData;
       setIsValidationPopupOpen(false);
       setValidationItems([]);
 
-      const galleryFiles = [serviceData.logo, serviceData.backgroundImage]
+      const galleryFiles = [
+        serviceData.logo,
+        serviceData.backgroundImage,
+        ...(dynamicPayload?.galleryFiles || []).map((file) => file.id),
+      ]
         .filter((id): id is string => Boolean(id))
+        .filter((id, index, ids) => ids.indexOf(id) === index)
         .map((id) => ({ id }));
 
       // Uploaded images are temporary file IDs. The service endpoint attaches

@@ -77,14 +77,14 @@ html {
     /* ----------------------------------- */
     /* primary/brand colors */
     /* ----------------------------------- */
-    /* For rgb(215 227 254 / <alpha-value>) = #D7E3FE */
-    --primary-lighter: 215 227 254;
-    /* For rgb(96 142 251 / <alpha-value>) = #608EFB */
-    --primary-light: 96 142 251;
-    /* For rgb(56 114 250 / <alpha-value>) = #3872FA */
-    --primary-default: 56 114 250;
-    /* For rgb(29 88 216 / <alpha-value>) = #1d58d8 */
-    --primary-dark: 29 88 216;
+    /* For rgb(204 251 241 / <alpha-value>) = #ccfbf1 */
+    --primary-lighter: 204 251 241;
+    /* For rgb(94 234 212 / <alpha-value>) = #5eead4 */
+    --primary-light: 94 234 212;
+    /* For rgb(13 148 136 / <alpha-value>) = #0d9488 */
+    --primary-default: 13 148 136;
+    /* For rgb(17 94 89 / <alpha-value>) = #115e59 */
+    --primary-dark: 17 94 89;
 
     /* ----------------------------------- */
     /* secondary colors */

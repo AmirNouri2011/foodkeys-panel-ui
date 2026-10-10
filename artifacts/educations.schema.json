@@ -1,0 +1,274 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "اطلاعات آموزشی",
+  "description": "فرم اطلاعات دوره، رویداد یا برنامه آموزشی",
+  "type": "object",
+  "properties": {
+    "title": {
+      "title": "عنوان یا تیتر دوره",
+      "description": "",
+      "type": "string",
+      "uniforms": {
+        "clientDisplay": [
+          "ADMIN_PANEL",
+          "USER_PANEL"
+        ]
+      },
+      "clientDisplay": [
+        "ADMIN_PANEL",
+        "USER_PANEL"
+      ],
+      "placeHolder": "",
+      "defaultValue": ""
+    },
+    "type": {
+      "title": "نوع برگزاری",
+      "description": "",
+      "type": "integer",
+      "enum": [
+        0,
+        1,
+        2
+      ],
+      "uniforms": {
+        "component": "SelectField",
+        "clientDisplay": [
+          "ADMIN_PANEL",
+          "USER_PANEL"
+        ]
+      },
+      "clientDisplay": [
+        "ADMIN_PANEL",
+        "USER_PANEL"
+      ],
+      "defaultValue": 0,
+      "enumNames": [
+        "حضوری",
+        "مجازی",
+        "هردو"
+      ]
+    },
+    "organizer": {
+      "title": "برگزارکننده",
+      "description": "",
+      "type": "string",
+      "uniforms": {
+        "clientDisplay": [
+          "ADMIN_PANEL",
+          "USER_PANEL"
+        ]
+      },
+      "clientDisplay": [
+        "ADMIN_PANEL",
+        "USER_PANEL"
+      ],
+      "placeHolder": "",
+      "defaultValue": ""
+    },
+    "country": {
+      "title": "کشور",
+      "description": "",
+      "type": "string",
+      "uniforms": {
+        "clientDisplay": [
+          "ADMIN_PANEL",
+          "USER_PANEL"
+        ]
+      },
+      "clientDisplay": [
+        "ADMIN_PANEL",
+        "USER_PANEL"
+      ],
+      "placeHolder": "",
+      "defaultValue": ""
+    },
+    "venue": {
+      "title": "محل برگزاری",
+      "description": "",
+      "type": "string",
+      "uniforms": {
+        "clientDisplay": [
+          "ADMIN_PANEL",
+          "USER_PANEL"
+        ]
+      },
+      "clientDisplay": [
+        "ADMIN_PANEL",
+        "USER_PANEL"
+      ],
+      "placeHolder": "",
+      "defaultValue": ""
+    },
+    "startDate": {
+      "title": "تاریخ شروع",
+      "description": "",
+      "type": "string",
+      "format": "date",
+      "uniforms": {
+        "clientDisplay": [
+          "ADMIN_PANEL",
+          "USER_PANEL"
+        ]
+      },
+      "clientDisplay": [
+        "ADMIN_PANEL",
+        "USER_PANEL"
+      ],
+      "placeHolder": "",
+      "defaultValue": ""
+    },
+    "endDate": {
+      "title": "تاریخ پایان",
+      "description": "",
+      "type": "string",
+      "format": "date",
+      "uniforms": {
+        "clientDisplay": [
+          "ADMIN_PANEL",
+          "USER_PANEL"
+        ]
+      },
+      "clientDisplay": [
+        "ADMIN_PANEL",
+        "USER_PANEL"
+      ],
+      "placeHolder": "",
+      "defaultValue": ""
+    },
+    "description": {
+      "title": "توضیحات",
+      "description": "",
+      "type": "string",
+      "uniforms": {
+        "component": "LongTextField",
+        "clientDisplay": [
+          "ADMIN_PANEL",
+          "USER_PANEL"
+        ]
+      },
+      "clientDisplay": [
+        "ADMIN_PANEL",
+        "USER_PANEL"
+      ],
+      "placeHolder": "",
+      "defaultValue": ""
+    },
+    "tel": {
+      "title": "شماره تلفن ثابت",
+      "description": "",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 11,
+        "maxLength": 11,
+        "pattern": "^0[1-9][0-9]{9}$"
+      },
+      "uniforms": {
+        "clientDisplay": [
+          "ADMIN_PANEL",
+          "USER_PANEL"
+        ]
+      },
+      "clientDisplay": [
+        "ADMIN_PANEL",
+        "USER_PANEL"
+      ],
+      "placeHolder": "02112345678",
+      "defaultValue": []
+    },
+    "fax": {
+      "title": "فکس",
+      "description": "",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 11,
+        "maxLength": 11,
+        "pattern": "^0[1-9][0-9]{9}$"
+      },
+      "uniforms": {
+        "clientDisplay": [
+          "ADMIN_PANEL",
+          "USER_PANEL"
+        ]
+      },
+      "clientDisplay": [
+        "ADMIN_PANEL",
+        "USER_PANEL"
+      ],
+      "placeHolder": "02112345678",
+      "defaultValue": []
+    },
+    "price": {
+      "title": "قیمت دوره",
+      "type": "number",
+      "minimum": 0,
+      "format": "price",
+      "x-price": {
+        "currency": "IRR",
+        "displayCurrency": "تومان"
+      },
+      "uniforms": {
+        "component": "PriceField",
+        "clientDisplay": [
+          "ADMIN_PANEL",
+          "USER_PANEL"
+        ]
+      },
+      "clientDisplay": [
+        "ADMIN_PANEL",
+        "USER_PANEL"
+      ],
+      "defaultValue": 0
+    },
+    "website": {
+      "title": "وب‌سایت",
+      "description": "(مثال: https://example.com)",
+      "type": "string",
+      "format": "uri",
+      "uniforms": {
+        "clientDisplay": [
+          "ADMIN_PANEL",
+          "USER_PANEL"
+        ]
+      },
+      "clientDisplay": [
+        "ADMIN_PANEL",
+        "USER_PANEL"
+      ],
+      "placeHolder": "",
+      "defaultValue": ""
+    },
+    "banner": {
+      "title": "بنر دوره",
+      "description": "",
+      "type": "string",
+      "format": "file",
+      "x-file": {
+        "mode": "single",
+        "maxFiles": 1
+      },
+      "uniforms": {
+        "clientDisplay": [
+          "ADMIN_PANEL",
+          "USER_PANEL"
+        ]
+      },
+      "clientDisplay": [
+        "ADMIN_PANEL",
+        "USER_PANEL"
+      ]
+    }
+  },
+  "required": [
+    "title",
+    "type",
+    "organizer",
+    "venue",
+    "startDate",
+    "endDate",
+    "description",
+    "tel"
+  ],
+  "additionalProperties": false
+}

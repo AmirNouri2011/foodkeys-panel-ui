@@ -1294,6 +1294,7 @@ import {
   FieldType,
   convertSchemaToFields,
   formatFormDataForApi,
+  formatServiceFormData,
   filterSchemaDefinitionForUserPanel,
   filterFormDataByUserPanelSchema,
   resolveFieldRequirements,
@@ -1315,6 +1316,7 @@ import {
 export type DynamicFormValidateRef = {
   validate: () => Promise<boolean>;
   getFormattedData: () => any;
+  getServiceFormData: () => ReturnType<typeof formatServiceFormData>;
   validateWithStatus: () => Promise<DynamicFormValidationResult>;
   focusField: (fieldName: string) => void;
 };
@@ -1599,6 +1601,14 @@ export default function DynamicForm({
             .map(({ required: _required, ...item }) => item);
 
           return { isValid, items };
+        },
+        getServiceFormData: () => {
+          const schemaDefinition = effectiveSchemaDefinition || schema?.schemaDefinition;
+          const values = getValues();
+          const scopedData = schemaDefinition
+            ? filterFormDataByUserPanelSchema(values, schemaDefinition)
+            : values;
+          return formatServiceFormData(scopedData, schemaDefinition);
         },
         getFormattedData: () => {
           const values = getValues();
@@ -1960,7 +1970,7 @@ export default function DynamicForm({
                           field.fileServiceType || 'COMPANY_LOGO'
                                                 }
                                                 onUploadSuccess={(uploadedFile) => {
-                                                    onChange(uploadedFile.id);
+                                                    onChange(uploadedFile);
                                                     onBlur();
                                                 }}
                         onRemove={() => {
@@ -2157,15 +2167,20 @@ export default function DynamicForm({
             <Select
               label={fieldLabel}
               placeholder={field.placeholder || 'انتخاب کنید'}
-              value={value || ''}
-              onChange={onChange}
+              value={value === undefined || value === null ? '' : String(value)}
+              onChange={(selected) => {
+                const optionIndex = field.enumValues?.findIndex(
+                  (option) => String(option) === selected
+                ) ?? -1;
+                onChange(optionIndex >= 0 ? field.enumValues![optionIndex] : selected);
+              }}
               onBlur={onBlur}
               error={fieldError?.message as string}
               disabled={loading}
               options={
-                field.enum?.map((option) => ({
+                field.enum?.map((option, index) => ({
                   label: option,
-                  value: option,
+                  value: String(field.enumValues?.[index] ?? option),
                 })) || []
               }
               helperText={field.description}

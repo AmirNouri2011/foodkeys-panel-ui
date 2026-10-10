@@ -161,6 +161,9 @@ export const Select = ({
             onBlur={onBlur}
             getOptionValue={(option) => option.value}
             getOptionDisplayValue={(option) => option.label ?? option.name}
+            displayValue={(selectedValue) =>
+                options.find((option) => option.value === selectedValue)?.label ?? selectedValue
+            }
             error={error}
             helperText={helperText}
         />

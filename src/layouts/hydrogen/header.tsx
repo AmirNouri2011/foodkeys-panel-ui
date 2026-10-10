@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { ActionIcon } from '@/components/ui/action-icon';
 import RingBellSolidIcon from '@/components/icons/ring-bell-solid';
@@ -13,8 +14,8 @@ import HamburgerButton from '@/layouts/hydrogen/hamburger-button';
 import cn from '@/utils/class-names';
 import Logo from '@/components/logo';
 import { Button } from 'rizzui';
-import { useEffect, useState } from 'react';
-import WalletTopUpModal from '@/components/wallet-top-up-modal';
+import { useEffect } from 'react';
+// import WalletTopUpModal from '@/components/wallet-top-up-modal';
 import { PiPlusBold, PiSignOutBold, PiWalletDuotone } from 'react-icons/pi';
 import useAxiosPrivate from '@/hooks/use-axios-private';
 import { useNotifications } from '@/context/NotificationContext';
@@ -27,33 +28,62 @@ const formatCredit = (value: number) =>
   new Intl.NumberFormat('fa-IR').format(Number.isFinite(value) ? value : 0);
 
 function HeaderMenuRight() {
-  const auth = useAuth() as { logout: () => void } | null;
-  const [isOpen, setIsOpen] = useState(false);
+  const auth = useAuth() as {
+    logout: () => void;
+    state: { token: string };
+  } | null;
+  const pathname = usePathname();
+  const router = useRouter();
+  const token = auth?.state.token;
+  // const [isOpen, setIsOpen] = useState(false);
   const { unreadCount } = useNotifications();
   const _axios = useAxiosPrivate();
   const dispatch = useDispatch();
   const credit = useSelector((state: RootState) => state.wallet.credit);
 
   useEffect(() => {
-    let active = true;
+    if (!token) return;
+    let controller: AbortController | undefined;
 
     const fetchCredit = async () => {
+      if (document.visibilityState === 'hidden') return;
+      controller?.abort();
+      const request = new AbortController();
+      controller = request;
       try {
-        const response = await _axios.get('/user/credit');
-        if (active && response.data.status === 'SUCCESS') {
-          const nextCredit = Number(response.data.data);
+        const response = await _axios.get('/user/credit', {
+          signal: request.signal,
+        });
+        const value = response.data.data;
+        if (
+          !request.signal.aborted &&
+          response.data.status === 'SUCCESS' &&
+          value !== null && value !== undefined && value !== ''
+        ) {
+          const nextCredit = Number(value);
           if (Number.isFinite(nextCredit)) dispatch(setCredit(nextCredit));
         }
       } catch (error) {
-        console.error('Error fetching wallet credit:', error);
+        if (!request.signal.aborted)
+          console.error('Error fetching wallet credit:', error);
       }
     };
 
-    fetchCredit();
+    const refresh = () => void fetchCredit();
+    refresh();
+    window.addEventListener('focus', refresh);
+    window.addEventListener('pageshow', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    // A callback may finish updating the balance after the panel has loaded.
+    const interval = window.setInterval(refresh, 30_000);
     return () => {
-      active = false;
+      controller?.abort();
+      window.clearInterval(interval);
+      window.removeEventListener('focus', refresh);
+      window.removeEventListener('pageshow', refresh);
+      document.removeEventListener('visibilitychange', refresh);
     };
-  }, [_axios, dispatch]);
+  }, [_axios, dispatch, pathname, token]);
 
   return (
     <div className="ms-auto flex h-16 shrink-0 items-center gap-1 rounded-2xl border border-gray-200/70 bg-gray-0 p-2 text-gray-600 shadow-sm print:hidden sm:gap-2">
@@ -91,7 +121,7 @@ function HeaderMenuRight() {
       </NotificationDropdown>
 
       {/* Wallet summary and top-up action */}
-      <WalletTopUpModal isOpen={isOpen} onClose={() => setIsOpen(false)} />
+      {/* <WalletTopUpModal isOpen={isOpen} onClose={() => setIsOpen(false)} /> */}
       <div className="flex h-12 items-center gap-2 rounded-xl bg-gray-50 px-1.5 sm:gap-3 sm:px-2">
         <div className="hidden min-w-0 items-center gap-2.5 sm:flex">
           <span className="hidden h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary lg:grid">
@@ -118,7 +148,7 @@ function HeaderMenuRight() {
           type="button"
           size="sm"
           variant="text"
-          onClick={() => setIsOpen(true)}
+          onClick={() => router.push('/finance/wallet')}
           className="border-primary/15 h-9 gap-1.5 whitespace-nowrap rounded-lg border bg-primary/10 px-2.5 text-xs font-semibold text-primary shadow-none transition-colors hover:bg-primary/20 focus-visible:ring-2 focus-visible:ring-primary/40 sm:px-3"
           aria-label={`افزایش اعتبار؛ اعتبار فعلی ${formatCredit(
             credit
